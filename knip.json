@@ -27,6 +27,9 @@
     "apps/desktop": {
       "entry": ["electron/src/main.ts"]
     },
+    "apps/mobile": {
+      "entry": ["app/**/*.tsx", "scripts/**/*.mjs"]
+    },
     "packages/ordo-shared": {
       "entry": ["src/index.ts"]
     }

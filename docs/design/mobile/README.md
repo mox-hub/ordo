@@ -49,11 +49,11 @@ apps/mobile/** 代码
 | 7 | [后端适配清单.md](./后端适配清单.md) | 移动端需补的端点/字段，分级「阻断/增强」 | ✅ 已落 |
 | 8 | [测试策略.md](./测试策略.md) | 单测/契约/组件（RN TL）/e2e（Maestro）/真机矩阵 | ✅ 已落 |
 | 9 | [发布与分发方案.md](./发布与分发方案.md) | EAS Build/Submit/Update、iOS 签名、Android keystore、内测通道 | ✅ 已落 |
-| 10 | [spike-Expo-RN-报告.md](./spike-Expo-RN-报告.md) | spike 结论 + 实测数据 | ⏳ 待跑（跑法见 ADR-M-001 §5） |
+| 10 | [spike-Expo-RN-报告.md](./spike-Expo-RN-报告.md) | spike 结论 + 实测数据 | ✅ 已跑（2026-10-17：判据 1/2·HTTP/7 过、3/4 代码链路过、5/6 待设备与 EAS 账号） |
 | 11 | [排期与出口判据.md](./排期与出口判据.md) | M0–M3 阶段、每阶段出口、与 0.8.x/0.9.x 咬合 | ✅ 已落 |
 | 12 | `CHANGELOG.md` 行 | 每批材料落地登记一行，满足 `check:docs-sync` | ✅ 已落 |
 
-> **例外说明**：`spike`（#10）是本轮**唯一会写 `docs/design/` 之外代码**的动作（会创建 `apps/mobile/` 试验工程）。**该试验工程的落地需单独取得确认**；未确认前 #10 保持「待跑」，不影响其余材料的完整性。
+> **例外说明**：`spike`（#10）是本轮**唯一会写 `docs/design/` 之外代码**的动作（会创建 `apps/mobile/` 试验工程）。**该试验工程的落地需单独取得确认**——2026-10-17 已取得确认并落地（`feat/mobile-m1-skeleton`：spike + M1 工程骨架起步 + CI/knip/lint-staged 接入点），报告见 [spike-Expo-RN-报告](./spike-Expo-RN-报告.md)。
 
 ## 四、与需求治理的钩子
 

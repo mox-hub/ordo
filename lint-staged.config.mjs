@@ -59,4 +59,8 @@ export default {
       designCheck('check-semantic-classes.mjs'),
       designCheck('check-ui-governance.mjs'),
     ].join(' && '),
+  // 移动端：eslint 走自己的 flat config（RN 无 CSS 产物，前端设计脚本不适用；
+  // RN 版 check-*.mjs 治理脚本按工程接入方案 §五 在后续批次接入）。
+  'apps/mobile/**/*.{ts,tsx}': (files) =>
+    `pnpm --filter mobile exec eslint --fix --no-error-on-unmatched-pattern ${files.map((f) => `"${f}"`).join(' ')}`,
 };

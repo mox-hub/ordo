@@ -6,6 +6,36 @@
   "license": "UNLICENSED",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./errors": {
+      "types": "./dist/errors.d.ts",
+      "default": "./dist/errors.js"
+    },
+    "./ordo-ref": {
+      "types": "./dist/ordo-ref.d.ts",
+      "default": "./dist/ordo-ref.js"
+    },
+    "./events/domain-events": {
+      "types": "./dist/events/domain-events.d.ts",
+      "default": "./dist/events/domain-events.js"
+    },
+    "./http/ordo-client": {
+      "types": "./dist/http/ordo-client.d.ts",
+      "default": "./dist/http/ordo-client.js"
+    },
+    "./http/envelope": {
+      "types": "./dist/http/envelope.d.ts",
+      "default": "./dist/http/envelope.js"
+    },
+    "./runtime/protocol": {
+      "types": "./dist/runtime/protocol.d.ts",
+      "default": "./dist/runtime/protocol.js"
+    }
+  },
   "files": [
     "dist"
   ],
