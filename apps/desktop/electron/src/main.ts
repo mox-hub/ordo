@@ -26,12 +26,7 @@ import { createTray, hasTray } from './tray';
 import { checkForUpdates, initAutoUpdater, setUpdateStatusBroadcaster } from './updater';
 import { setInitError, state, stopAllProcesses } from './state';
 import { loadDesktopState, saveDesktopState } from './desktop-state';
-import {
-  createAuthWindow,
-  hardenWebContents,
-  registerMainWindowFactory,
-  resolveFrontendTarget,
-} from './windows';
+import { hardenWebContents, resolveFrontendTarget } from './windows';
 
 const DEEP_LINK_SCHEME = 'ordo';
 
@@ -61,13 +56,10 @@ let pendingDeepLink: string | null = null;
 let mainWindow: BrowserWindow | null = null;
 
 /**
- * 当前承载 boot 屏/前端的窗口：认证面期间（首启无会话启动 / 401 或登出回登录页）
- * 为认证窗，否则主窗。启动进度文案、前端加载、深链转发都发给它。
+ * 当前承载 boot 屏/前端的窗口：单窗编排下恒为主窗。
+ * 启动进度文案、前端加载、深链转发都发给它。
  */
 function activeWindow(): BrowserWindow | null {
-  if (state.authWindow && !state.authWindow.isDestroyed()) {
-    return state.authWindow;
-  }
   return mainWindow;
 }
 
@@ -136,14 +128,9 @@ function shouldAutoOpenDevTools(): boolean {
 }
 
 /**
- * 主窗（正常形态，承载工作台）+ 首启无会话时的认证窗创建。
- * 认证面进出（/login·/register·/welcome）由 set_compact_mode 命令切窗（windows.ts）。
- */
-/**
- * 主窗工厂：建窗 + 事件绑定（close→托盘保活 / ready-to-show / boot 屏状态 /
- * closed 清理），不加载内容——启动路径由 createWindow 加载 boot 屏，切窗路径
- * 由 switchAuthSurface 直接加载前端目标。赋值模块级 mainWindow 供
- * activeWindow()/persistWindowBounds 消费。
+ * 主窗（正常形态，承载工作台与认证面居中卡片，2026-10-22 恢复全大窗）：
+ * 建窗 + 事件绑定（close→托盘保活 / ready-to-show / boot 屏状态 / closed 清理）。
+ * 赋值模块级 mainWindow 供 activeWindow()/persistWindowBounds 消费。
  */
 function createMainWindow(): BrowserWindow {
   const saved = loadDesktopState(config.userDataDir).window_bounds;
@@ -200,20 +187,8 @@ function createMainWindow(): BrowserWindow {
 }
 
 function createWindow(): void {
-  // 首启/未登录（壳侧无会话镜像）→ 前端必然落在认证面：直接以认证窗启动（品牌
-  // 启动屏也在小窗呈现），避免大窗→小窗闪变
-  const startCompact = !loadDesktopState(config.userDataDir).access_token;
-  if (startCompact) {
-    const auth = createAuthWindow();
-    auth.once('ready-to-show', () => auth.show());
-    auth.webContents.once('did-finish-load', () => {
-      bootScreenReady = true;
-      setBootStatus(bootStatus.message, bootStatus.detail);
-    });
-    void auth.loadURL(bootScreenUrl());
-    return;
-  }
-
+  // 恒以主窗启动（2026-10-22 恢复全大窗）：认证面以居中卡片渲染在同一大窗内，
+  // 不再按登录态区分窗口形态（旧「首启小窗」编排整体退役）
   createMainWindow().loadURL(bootScreenUrl());
 }
 
@@ -284,8 +259,10 @@ async function bootstrapServer(): Promise<void> {
     setBootStatus('正在启动本地服务…', '首次启动需要初始化数据库，可能需要一小会儿');
     await commandHandlers.start_all_services();
 
-    setBootStatus('正在连接 AI 执行运行时…');
-    await autoStartRuntimeDaemon();
+    // 守护进程后台拉起（2026-10-22 启动提速）：AI 执行面非首屏依赖，且 daemon
+    // 自身有一段 node 冷启（秒级），不再串行阻塞前端加载；失败已在函数内记日志
+    // （设置页可手动重试），不影响 UI 主流程
+    void autoStartRuntimeDaemon();
 
     setBootStatus('正在加载界面…');
     await loadAppSurface();
@@ -381,8 +358,6 @@ function bootstrap(): void {
   });
   registerIpc();
   registerGlobalErrorHandlers();
-  // 切窗路径可能需要现建主窗（认证窗启动进程登录成功切回，见 windows.ts）
-  registerMainWindowFactory(createMainWindow);
   createWindow();
   void bootstrapServer();
 }

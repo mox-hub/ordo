@@ -420,12 +420,11 @@ export const commandHandlers = {
     );
   },
 
-  // ---------- 登录态紧凑窗口（CAP-A-14 切片：认证面小窗 + 隐藏标题栏） ----------
+  // ---------- 认证面紧凑窗（已退役，2026-10-22 恢复全大窗） ----------
 
   /**
-   * 进入/退出认证面紧凑窗（双窗编排见 windows.ts）。进入：认证窗加载前端并
-   * 显示、主窗隐藏；退出：主窗重载前端（登录态已更新）并显示、认证窗销毁。
-   * 幂等：重复进入/退出直接返回；web 端无壳桥不会调到这里。
+   * 单窗编排下认证面以居中卡片渲染在主窗内，本命令保留协议兼容、实现体为
+   * 幂等 no-op（windows.ts）；web 端无壳桥不会调到这里。
    */
   async set_compact_mode(args?: { enabled?: boolean }): Promise<ActionResult> {
     await switchAuthSurface(args?.enabled === true);

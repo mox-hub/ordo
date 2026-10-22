@@ -1,5 +1,4 @@
 import { AuthVisual } from './auth-visual';
-import { useDesktopCompactWindow } from '@/modules/desktop';
 import { cn } from '@/lib/utils';
 
 interface AuthShellProps {
@@ -17,16 +16,14 @@ interface AuthShellProps {
 }
 
 /**
- * 认证面分栏壳（登录/注册/欢迎页共用）：桌面端左文右图，
- * 左栏纵向三段（品牌区 → 主体 my-auto 居中 → 操作区贴底），
- * 右栏满高圆角视觉面板；窄屏（<lg）隐藏右栏、表单全宽居中。
- * 极简区定位（宪法 §1.2）：留白、少 chrome、层级分明。
+ * 认证面分栏壳（欢迎页在用）：左文右图全宽分栏（2026-10-22 恢复全大窗后
+ * 在主窗 1440 宽下自然铺开），左栏纵向三段（品牌区 → 主体 my-auto 居中 →
+ * 操作区贴底），右栏满高圆角视觉面板；窄屏（<920px 容器宽）隐藏右栏、
+ * 表单全宽居中。极简区定位（宪法 §1.2）：留白、少 chrome、层级分明。
  */
 export function AuthShell({ header, children, footer, visual, className, aiPage }: AuthShellProps) {
-  // 桌面壳：认证面期间主窗口收缩为紧凑小窗并隐藏标题栏（web 端 no-op）
-  useDesktopCompactWindow();
   return (
-    // 分栏显隐用容器查询而非视口断点（lg）：桌面认证窗 944px 需保持左文右图双栏
+    // 分栏显隐用容器查询而非视口断点（lg）：中等宽度窗口下保持左文右图双栏
     // （右栏身份工牌是欢迎页主体），视口 lg=1024 会把它打成单列；断点值 = 左栏
     // 416+80 边距 + 右栏工牌 336+80 边距
     <div className="@container flex min-h-screen bg-background" data-ai-page={aiPage}>
@@ -36,13 +33,7 @@ export function AuthShell({ header, children, footer, visual, className, aiPage 
           className,
         )}
       >
-        {/* 品牌行兼桌面紧凑窗口拖动区（-webkit-app-region 浏览器端无效） */}
-        <div
-          className="flex min-h-10 items-center"
-          style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
-        >
-          {header}
-        </div>
+        <div className="flex min-h-10 items-center">{header}</div>
         <div className="my-auto flex flex-col py-10">{children}</div>
         <div className="flex items-center justify-between gap-4">{footer}</div>
       </div>

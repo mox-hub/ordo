@@ -1,7 +1,6 @@
 export * from './hooks/useDesktop';
 export * from './hooks/use-process-stats';
 export * from './hooks/use-desktop-logs';
-export * from './hooks/use-desktop-compact-window';
 export * from './components/BackendStatusBadge';
 export * from './components/desktop-gate';
 export * from './components/process-monitor-card';
