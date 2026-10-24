@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { FlatList, View } from 'react-native';
+import { FlatList, Platform, View } from 'react-native';
 import { AppText, Chip } from '../../../src/components/primitives';
 import { PressableRow } from '../../../src/components/list';
 import { AsyncBoundary, Screen } from '../../../src/components/screen';
@@ -45,8 +45,8 @@ export default function ExecutionsScreen() {
             if (runs.hasNextPage && !runs.isFetchingNextPage) void runs.fetchNextPage();
           }}
           onEndReachedThreshold={0.3}
-          refreshing={runs.isRefetching}
-          onRefresh={() => void runs.refetch()}
+          {...(Platform.OS !== 'web' ? { refreshing: runs.isRefetching } : {})}
+          onRefresh={Platform.OS !== 'web' ? () => void runs.refetch() : undefined}
           renderItem={({ item }) => (
             <PressableRow onPress={() => router.push(`/executions/${item.id}`)}>
               <View style={{ gap: 4 }}>

@@ -1,4 +1,4 @@
-import { ActivityIndicator, RefreshControl, ScrollView, View, type StyleProp, type ViewStyle } from 'react-native';
+import { ActivityIndicator, Platform, RefreshControl, ScrollView, View, type StyleProp, type ViewStyle } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { AppButton, AppText } from './primitives';
 import { pageMargin, spacing, usePalette } from '../theme/tokens';
@@ -26,7 +26,10 @@ export function Screen({ scroll = true, padded = true, refreshing, onRefresh, st
         <ScrollView
           contentContainerStyle={{ paddingBottom: spacing.xxl, flexGrow: 1 }}
           refreshControl={
-            onRefresh ? <RefreshControl refreshing={refreshing ?? false} onRefresh={onRefresh} /> : undefined
+            // RN-Web 不实现 RefreshControl——仅原生端挂下拉刷新
+            onRefresh && Platform.OS !== 'web' ? (
+              <RefreshControl refreshing={refreshing ?? false} onRefresh={onRefresh} />
+            ) : undefined
           }
           keyboardShouldPersistTaps="handled"
         >

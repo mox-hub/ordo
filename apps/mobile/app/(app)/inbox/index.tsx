@@ -1,5 +1,5 @@
 import { useRouter } from 'expo-router';
-import { FlatList, View } from 'react-native';
+import { FlatList, Platform, View } from 'react-native';
 import { AppText, Chip } from '../../../src/components/primitives';
 import { PressableRow } from '../../../src/components/list';
 import { AsyncBoundary, Screen, SectionTitle } from '../../../src/components/screen';
@@ -66,12 +66,16 @@ export default function InboxScreen() {
             }
           }}
           onEndReachedThreshold={0.3}
-          refreshing={notifications.isRefetching}
-          onRefresh={() => {
-            void notifications.refetch();
-            void decisions.refetch();
-            void unread.refetch();
-          }}
+          {...(Platform.OS !== 'web' ? { refreshing: notifications.isRefetching } : {})}
+          onRefresh={
+            Platform.OS !== 'web'
+              ? () => {
+                  void notifications.refetch();
+                  void decisions.refetch();
+                  void unread.refetch();
+                }
+              : undefined
+          }
           ListHeaderComponent={
             <View>
               <SectionTitle
