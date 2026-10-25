@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Param,
-  Body,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Param, Body } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -15,7 +7,6 @@ import {
   ApiOkResponse,
   ApiParam,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import {
   DocumentStorageService,
   type StorageConfig,
@@ -38,7 +29,6 @@ import {
 @ApiTags('Document Storage')
 @ApiBearerAuth('JWT-auth')
 @Controller('documents/storage')
-@UseGuards(JwtAuthGuard)
 export class DocumentStorageController {
   constructor(
     private readonly storage: DocumentStorageService,
@@ -83,7 +73,6 @@ export class DocumentStorageController {
 @ApiTags('Document Sync')
 @ApiBearerAuth('JWT-auth')
 @Controller('documents/sync')
-@UseGuards(JwtAuthGuard)
 export class DocumentSyncController {
   constructor(private readonly asyncFileSync: AsyncFileSyncService) {}
 
@@ -112,7 +101,6 @@ export class DocumentSyncController {
 @ApiTags('Document Storage')
 @ApiBearerAuth('JWT-auth')
 @Controller('documents/:id/storage')
-@UseGuards(JwtAuthGuard)
 export class DocumentFileController {
   constructor(private readonly storage: DocumentStorageService) {}
 

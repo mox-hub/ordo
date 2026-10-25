@@ -7,7 +7,6 @@ import {
   Delete,
   Body,
   Param,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,7 +17,6 @@ import {
   ApiOkResponse,
   ApiCreatedResponse,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { DocumentSectionService } from '../services/document-section.service';
 import { MarkdownParserService } from '../services/markdown-parser.service';
 import {
@@ -30,7 +28,6 @@ import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 
 @ApiTags('Document Sections')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('documents/:documentId/sections')
 export class DocumentSectionController {
   constructor(

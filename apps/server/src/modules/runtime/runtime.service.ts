@@ -4,7 +4,7 @@ import {
   NotFoundException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { randomBytes, randomUUID } from 'crypto';
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'crypto';
 import { PrismaService } from '@/core/database/prisma.service';
 import { LoggerService } from '@/core/logger/logger.service';
 import { MessageBusService } from '@/core/message-bus/message-bus.service';
@@ -27,7 +27,13 @@ type RuntimeRegistrationRecord = {
   availableProviders: string[];
   cliProviders: string[];
   runtimeSessionId: string;
-  runtimeSessionToken: string;
+  /**
+   * T8 加固：token 只存 SHA-256（此前明文随 appConfig JSON 落库，与 PAT 的
+   * 哈希落库标准不一致）。存量明文行由 validateSession 首次校验后就地升级。
+   */
+  runtimeSessionTokenHash?: string;
+  /** @deprecated T8 之前的明文存储，仅迁移期读取（校验通过即升级为哈希） */
+  runtimeSessionToken?: string;
   status: 'online' | 'offline';
   heartbeatIntervalSeconds: number;
   serverTime: string;
@@ -39,8 +45,31 @@ type RuntimeRegistrationRecord = {
 type RuntimeSessionValidation = {
   runtimeId: string;
   runtimeSessionId: string;
-  runtimeSessionToken: string;
 };
+
+/** 派发终态集合：submitExecutionResult 对终态重复上报幂等短路 */
+const TERMINAL_DISPATCH_STATUSES = new Set([
+  'completed',
+  'failed',
+  'expired',
+  'cancelled',
+]);
+
+/** runtime 会话 token 只存哈希（T8）：与 PAT 的 tokenHash 落库标准对齐 */
+function hashRuntimeSessionToken(token: string): string {
+  return createHash('sha256').update(token, 'utf8').digest('hex');
+}
+
+/** 恒长恒时比较：两侧都归一到 SHA-256 摘要再比，避免时序侧信道与长度差 */
+function safeEqualHash(storedHex: string, candidateToken: string): boolean {
+  const stored = Buffer.from(storedHex, 'hex');
+  const candidate = createHash('sha256')
+    .update(candidateToken, 'utf8')
+    .digest();
+  return (
+    stored.length === candidate.length && timingSafeEqual(stored, candidate)
+  );
+}
 
 type RuntimeDispatchRecord = {
   executionRunId: string;
@@ -54,6 +83,9 @@ type RuntimeDispatchRecord = {
   approvalState?: string;
   policySnapshot?: Record<string, unknown>;
   status?: string;
+  /** T3 认领语义：GET 拉取时置 dispatched，记录认领时间与认领方 */
+  claimedAt?: string;
+  claimedByRuntimeId?: string;
   createdAt?: string;
   updatedAt?: string;
   // 执行载荷（Phase C：守护进程据此执行）
@@ -108,7 +140,8 @@ export class RuntimeService {
       availableProviders: dto.availableProviders,
       cliProviders: dto.cliProviders,
       runtimeSessionId,
-      runtimeSessionToken,
+      // T8 加固：只落哈希，明文仅在注册响应里返回一次给 daemon
+      runtimeSessionTokenHash: hashRuntimeSessionToken(runtimeSessionToken),
       status: 'online',
       heartbeatIntervalSeconds: RuntimeService.HEARTBEAT_SECONDS,
       serverTime: now,
@@ -244,6 +277,16 @@ export class RuntimeService {
     };
   }
 
+  /**
+   * 守护进程拉取派发（认领语义，协议零变更）：
+   * - status=pending（默认轮询）：返回前逐条原子认领 pending → dispatched
+   *   （写前重读 + updatedAt 乐观锁，SQLite 单写者下并发轮询只有一个赢家）。
+   *   此前 GET 纯只读，结果上报一次网络抖动派发就滞留 pending，15s 后整条
+   *   命令被无限重跑烧 token——认领后该循环被斩断；
+   * - status=dispatched：取本 runtime 已认领未回报的派发，供 daemon 重启时
+   *   重放恢复（配合结果上报幂等，重放不会双计费用）。悬挂兜底由
+   *   execution-reconcile 的 failStalledRuns 收敛（dispatched → failed）。
+   */
   async getDispatches(runtimeId: string, status = 'pending', limit = 20) {
     await this.ensureRuntimeRegistered(runtimeId);
 
@@ -260,31 +303,70 @@ export class RuntimeService {
       take: Math.max(limit * 3, limit),
     });
 
-    const dispatches = records
-      .map((item) => item.value as RuntimeDispatchRecord)
-      .filter((item) => (item.status ?? 'pending') === status)
-      .slice(0, limit)
-      .map((item) => ({
-        executionRunId: item.executionRunId,
-        projectId: item.projectId,
-        issueId: item.issueId,
-        subjectType: item.subjectType,
-        subjectId: item.subjectId,
-        contextPackRef: item.contextPackRef,
-        requestedActions: item.requestedActions ?? [],
-        toolScopes: item.toolScopes ?? [],
-        approvalState: item.approvalState ?? 'not_required_for_read',
-        policySnapshot: item.policySnapshot ?? {},
-        // 执行载荷透出
-        prompt: item.prompt,
-        workspaceRoot: item.workspaceRoot,
-        providerId: item.providerId,
-        model: item.model,
-        allowedTools: item.allowedTools,
-        timeout: item.timeout,
-      }));
+    const matched = records
+      .map((item) => ({ item, value: item.value as RuntimeDispatchRecord }))
+      .filter(({ value }) => (value.status ?? 'pending') === status)
+      .slice(0, limit);
 
-    return dispatches;
+    const resolved =
+      status === 'pending'
+        ? (
+            await Promise.all(
+              matched.map(({ item, value }) =>
+                this.tryClaimDispatch(item.id, value, runtimeId),
+              ),
+            )
+          ).filter((v): v is RuntimeDispatchRecord => v !== null)
+        : matched.map(({ value }) => value);
+
+    return resolved.map((item) => ({
+      executionRunId: item.executionRunId,
+      projectId: item.projectId,
+      issueId: item.issueId,
+      subjectType: item.subjectType,
+      subjectId: item.subjectId,
+      contextPackRef: item.contextPackRef,
+      requestedActions: item.requestedActions ?? [],
+      toolScopes: item.toolScopes ?? [],
+      approvalState: item.approvalState ?? 'not_required_for_read',
+      policySnapshot: item.policySnapshot ?? {},
+      // 执行载荷透出
+      prompt: item.prompt,
+      workspaceRoot: item.workspaceRoot,
+      providerId: item.providerId,
+      model: item.model,
+      allowedTools: item.allowedTools,
+      timeout: item.timeout,
+    }));
+  }
+
+  /** 认领单条派发：仍 pending 才写 dispatched（乐观锁防并发双认领）；输家返回 null */
+  private async tryClaimDispatch(
+    configId: string,
+    _stale: RuntimeDispatchRecord,
+    runtimeId: string,
+  ): Promise<RuntimeDispatchRecord | null> {
+    const now = new Date().toISOString();
+    const fresh = await this.prisma.appConfig.findUnique({
+      where: { id: configId },
+    });
+    const value = fresh?.value as RuntimeDispatchRecord | undefined;
+    if (!fresh || !value || (value.status ?? 'pending') !== 'pending') {
+      return null;
+    }
+    const claimed: RuntimeDispatchRecord = {
+      ...value,
+      status: 'dispatched',
+      claimedAt: now,
+      claimedByRuntimeId: runtimeId,
+      updatedAt: now,
+    };
+    const res = await this.prisma.appConfig.updateMany({
+      // updatedAt 列 @updatedAt：比对读取时的旧值，输家 count=0 放弃
+      where: { id: configId, updatedAt: fresh.updatedAt },
+      data: { value: claimed as Prisma.InputJsonValue },
+    });
+    return res.count > 0 ? claimed : null;
   }
 
   async getExecutionContext(executionRunId: string, runtimeId: string) {
@@ -385,6 +467,24 @@ export class RuntimeService {
     await this.assertExecutionOwnedByRuntime(runtimeId, executionRunId);
     const now = new Date().toISOString();
 
+    const dispatchMeta = await this.findDispatchConfigByExecutionRunId(
+      executionRunId,
+      runtimeId,
+    );
+
+    // 幂等上报：派发已终态的重复提交直接短路——不重写状态、不重复记
+    // 审计/用量/事件（worker 退避重试与 daemon 重启重放都会再发一次，
+    // 不短路会把 AIUsageLog 的 token 用量双计）。
+    if (dispatchMeta) {
+      const dispatch = dispatchMeta.value as RuntimeDispatchRecord;
+      if (TERMINAL_DISPATCH_STATUSES.has(dispatch.status ?? 'pending')) {
+        this.logger.log(
+          `Duplicate execution result ignored: ${executionRunId} (dispatch=${dispatch.status})`,
+        );
+        return { accepted: true, timestamp: now, duplicate: true };
+      }
+    }
+
     await this.upsertRuntimeConfig(
       this.getExecutionStatusKey(executionRunId),
       'runtime.execution.status',
@@ -397,11 +497,6 @@ export class RuntimeService {
         error: dto.error ?? null,
         updatedAt: now,
       },
-    );
-
-    const dispatchMeta = await this.findDispatchConfigByExecutionRunId(
-      executionRunId,
-      runtimeId,
     );
 
     if (dispatchMeta) {
@@ -520,23 +615,50 @@ export class RuntimeService {
       throw new UnauthorizedException('RUNTIME_NOT_REGISTERED');
     }
 
-    const hit = registrations
-      .map((item) => item.value as RuntimeRegistrationRecord)
-      .find(
-        (item) =>
-          item.runtimeSessionId === runtimeSessionId &&
-          item.runtimeSessionToken === runtimeSessionToken,
-      );
+    for (const item of registrations) {
+      const rec = item.value as RuntimeRegistrationRecord;
+      if (rec.runtimeSessionId !== runtimeSessionId) continue;
 
-    if (!hit) {
-      throw new UnauthorizedException('RUNTIME_AUTH_FAILED');
+      if (rec.runtimeSessionTokenHash) {
+        // 现行路径：哈希 + 恒时比较（防时序侧信道），不再整行明文比对
+        if (safeEqualHash(rec.runtimeSessionTokenHash, runtimeSessionToken)) {
+          return {
+            runtimeId: rec.runtimeId,
+            runtimeSessionId: rec.runtimeSessionId,
+          };
+        }
+        throw new UnauthorizedException('RUNTIME_AUTH_FAILED');
+      }
+
+      // 迁移兼容（一次性）：T8 之前的存量注册行存明文 token——本次校验
+      // 通过后就地升级为哈希存储，此后走哈希路径
+      if (
+        rec.runtimeSessionToken &&
+        safeEqualHash(
+          hashRuntimeSessionToken(rec.runtimeSessionToken),
+          runtimeSessionToken,
+        )
+      ) {
+        const upgraded: RuntimeRegistrationRecord = {
+          ...rec,
+          runtimeSessionTokenHash: hashRuntimeSessionToken(runtimeSessionToken),
+        };
+        delete (upgraded as Record<string, unknown>).runtimeSessionToken;
+        await this.prisma.appConfig.update({
+          where: { id: item.id },
+          data: { value: upgraded as Prisma.InputJsonValue },
+        });
+        this.logger.log(
+          `Runtime registration token upgraded to hashed storage: ${rec.runtimeId}`,
+        );
+        return {
+          runtimeId: rec.runtimeId,
+          runtimeSessionId: rec.runtimeSessionId,
+        };
+      }
     }
 
-    return {
-      runtimeId: hit.runtimeId,
-      runtimeSessionId: hit.runtimeSessionId,
-      runtimeSessionToken: hit.runtimeSessionToken,
-    };
+    throw new UnauthorizedException('RUNTIME_AUTH_FAILED');
   }
 
   async assertRuntimeAccess(

@@ -37,6 +37,7 @@ import {
   PrismaService,
   WorkspaceConnectionAdmin,
 } from '@/core/database/prisma.service';
+import { EventVisibilityService } from '@/gateways/event-visibility.service';
 import {
   DEFAULT_WORKSPACE_ID,
   WorkspaceRecord,
@@ -85,6 +86,7 @@ export class WorkspaceBackupService {
   constructor(
     private readonly logger: LoggerService,
     private readonly prisma: PrismaService,
+    private readonly eventVisibility: EventVisibilityService,
   ) {
     this.logger.setContext('WorkspaceBackup');
   }
@@ -240,14 +242,20 @@ export class WorkspaceBackupService {
       { reason: 'pre-restore' },
     );
 
-    // 4. 执行恢复：失效连接 → 覆盖文件 → 重连基座
+    // 4. 执行恢复：置停写闸门 → 失效连接 → 覆盖文件 → 重连基座
     const admin = this.prisma as unknown as Partial<WorkspaceConnectionAdmin>;
     const canInvalidate =
       typeof admin.invalidateWorkspaceConnections === 'function';
     const canReconnect = typeof admin.reconnectBaseConnection === 'function';
+    const canGate = typeof admin.setRestoreWriteGate === 'function';
     const dbUrls = Array.from(new Set(plan.flatMap((t) => t.dbUrls)));
 
     try {
+      // 停写闸门：覆盖段内任何数据访问 503——否则在途/新到请求会经 getClient
+      // 惰性重建 PrismaClient 重新持有库文件句柄，Windows 上覆盖必失败
+      if (canGate) {
+        admin.setRestoreWriteGate!(true);
+      }
       if (canInvalidate) {
         const disconnected =
           await admin.invalidateWorkspaceConnections!(dbUrls);
@@ -271,6 +279,9 @@ export class WorkspaceBackupService {
         this.restoreDatabaseFile(backupDir, target);
       }
 
+      // 库文件被整体替换：事件可见性缓存（项目归属/成员集）全部作废
+      this.eventVisibility.invalidateCaches();
+
       return {
         restoredBackupId: meta.id,
         preRestoreBackupId: preRestore.id,
@@ -285,7 +296,14 @@ export class WorkspaceBackupService {
         `恢复失败：${message}。当前现场可用恢复前备份 ${preRestore.id} 手动回滚。`,
       );
     } finally {
-      // 无论成败都把 default 基座连接拉起来，绝不把服务器留在断连状态
+      // 无论成败都解除闸门并拉起 default 基座连接，绝不把服务器留在断连状态
+      if (canGate) {
+        try {
+          admin.setRestoreWriteGate!(false);
+        } catch (e) {
+          this.logger.error(`恢复后解除停写闸门失败：${(e as Error).message}`);
+        }
+      }
       if (canReconnect) {
         try {
           await admin.reconnectBaseConnection!();
@@ -386,25 +404,17 @@ export class WorkspaceBackupService {
   }
 
   /**
-   * 单库快照：运行库（default 恒为运行库；其余按 -wal/-shm 判定）走
-   * VACUUM INTO（专用短连客户端，显式指定源 URL——数据层代理按请求上下文
-   * 路由，与「要备份哪个库」无关，不能借用）；静态库直接复制。
+   * 单库快照：一律走 VACUUM INTO（专用短连客户端，显式指定源 URL——数据层
+   * 代理按请求上下文路由，与「要备份哪个库」无关，不能借用）。
+   * 2026-10-25 弃用「-wal/-shm 存在 = 运行库」判定：WAL 化后空闲库也可能
+   * 残留 sidecar，而「无 sidecar = 静态库裸拷」在库正在使用时会撕裂备份——
+   * VACUUM INTO 本身读到一致性已提交快照，静态库走它只是略慢，正确性优先。
    */
   private async snapshotDatabase(
     sourceDbPath: string,
     targetPath: string,
     isDefault: boolean,
   ): Promise<void> {
-    const hasWalSidecar =
-      fs.existsSync(sourceDbPath + '-wal') ||
-      fs.existsSync(sourceDbPath + '-shm');
-    const useVacuum = isDefault || hasWalSidecar;
-
-    if (!useVacuum) {
-      fs.copyFileSync(sourceDbPath, targetPath);
-      return;
-    }
-
     const url = isDefault ? process.env.DATABASE_URL : dbFileUrl(sourceDbPath);
     if (!url) throw new Error('DATABASE_URL 未配置，无法快照默认工作区');
     // VACUUM INTO 要求目标文件不存在；目录是新建的，此处防御性清理

@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,7 +17,6 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { DocumentReferenceService } from '../services/document-reference.service';
 import {
   DocumentReferenceResponseDto,
@@ -29,7 +27,6 @@ import {
 
 @ApiTags('Document References')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('documents/:documentId/references')
 export class DocumentReferenceController {
   constructor(private readonly referenceService: DocumentReferenceService) {}
@@ -82,7 +79,6 @@ export class DocumentReferenceController {
 // 独立的引用控制器（用于来源侧查询）
 @ApiTags('Document References (Source)')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('references')
 export class SourceReferenceController {
   constructor(private readonly referenceService: DocumentReferenceService) {}

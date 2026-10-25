@@ -3,6 +3,7 @@ import {
   NotFoundException,
   OnModuleDestroy,
   OnModuleInit,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { LoggerService } from '../logger/logger.service';
 
@@ -19,12 +20,23 @@ import {
   resolveWorkspaceDbUrl,
 } from './workspace-registry.util';
 
+/** SQLite 连接参数：单连接池（默认 CPU×2+1 在 SQLite 单写者下互斥放大 SQLITE_BUSY） */
+export function withSqliteConnectionParams(url: string): string {
+  if (!url.startsWith('file:')) return url;
+  return `${url}${url.includes('?') ? '&' : '?'}connection_limit=1`;
+}
+
 @Injectable()
 export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
   constructor(private readonly logger: LoggerService) {
+    const baseDatasources = process.env.DATABASE_URL
+      ? {
+          db: { url: withSqliteConnectionParams(process.env.DATABASE_URL) },
+        }
+      : undefined;
     super({
       log: [
         { emit: 'event', level: 'query' },
@@ -32,6 +44,7 @@ export class PrismaService
         { emit: 'event', level: 'info' },
         { emit: 'event', level: 'warn' },
       ],
+      ...(baseDatasources ? { datasources: baseDatasources } : {}),
     });
 
     this.logger.setContext('Prisma');
@@ -59,6 +72,26 @@ export class PrismaService
   async onModuleInit() {
     try {
       await this.$connect();
+      // 默认库 WAL 收敛（幂等）：模板修复前创建的存量库可能仍是 legacy
+      // DELETE 模式（读写互斥 + 备份撕裂备份根因）；打包链路另有启动期
+      // sweep（startup-migrations），此处兜 dev 与早于编排的场景。
+      try {
+        const mode = (await this.$queryRawUnsafe<
+          Array<{
+            journal_mode?: string;
+          }>
+        >('PRAGMA journal_mode=WAL;')) as Array<{ journal_mode?: string }>;
+        const current = mode?.[0]?.journal_mode?.toLowerCase();
+        if (current && current !== 'wal') {
+          this.logger.warn(
+            `Default database journal_mode=${current}（WAL 切换未生效，文件可能被外部占用）`,
+          );
+        }
+      } catch (e) {
+        this.logger.warn(
+          `Default database WAL enable failed: ${(e as Error).message}`,
+        );
+      }
       await this.repairInvalidSqliteJsonValues();
       this.logger.log('Database connected');
     } catch (err: any) {
@@ -168,6 +201,23 @@ export interface WorkspaceConnectionAdmin {
   invalidateWorkspaceConnections(dbUrls: string[]): Promise<string[]>;
   /** 重连 default 基座实例（恢复 default 库文件后调用；工作区池无需重连） */
   reconnectBaseConnection(): Promise<void>;
+  /**
+   * 恢复停写闸门：置位后所有经 getClient 的数据访问抛 503 RESTORE_IN_PROGRESS。
+   * 修复恢复竞态——此前 invalidate 与文件覆盖之间，在途/新到请求会同步惰性
+   * 重建 PrismaClient 重新持有库文件句柄（Windows 上 rmSync/renameSync 失败，
+   * 恢复中断）。恢复流程进入覆盖段前置位、finally 解除。
+   */
+  setRestoreWriteGate(on: boolean): void;
+}
+
+/**
+ * 显式按工作区取连接池 client（网关事件可见性过滤等无 ALS 上下文场景）。
+ * 与请求级路由共用同一连接池：恢复流程 invalidateWorkspaceConnections 照常命中。
+ * 未注册 / 库文件缺失返回 null（不抛），由调用方决定跳过或告警。
+ * 用法同 WorkspaceConnectionAdmin：`prisma as PrismaService & WorkspaceClientAccessor`。
+ */
+export interface WorkspaceClientAccessor {
+  workspaceClient(wsId: string | null): PrismaClient | null;
 }
 
 /**
@@ -184,8 +234,40 @@ export function createWorkspaceAwarePrismaService(
 ): PrismaService {
   const base = new PrismaService(logger);
   const pool = new Map<string, PrismaClient>();
+  /** 恢复停写闸门（见 WorkspaceConnectionAdmin.setRestoreWriteGate） */
+  let restoreWriteGate = false;
+
+  // 池键一律用原始 URL（备份/恢复的失效与 dbFileUrl 对表），连接参数只在
+  // PrismaClient 构造时追加，避免键漂移导致失效失配。
+  const clientForUrl = (url: string): PrismaClient => {
+    if (url === process.env.DATABASE_URL) return base;
+    let client = pool.get(url);
+    if (!client) {
+      client = new PrismaClient({
+        datasources: { db: { url: withSqliteConnectionParams(url) } },
+      });
+      pool.set(url, client);
+      logger.log(`Workspace database client created: ${url}`);
+      // 建池即补挂 WAL（幂等）：模板修复前的存量库可能是 DELETE 模式；
+      // 文件被占用时失败仅告警，下次建池重试。
+      void client
+        .$queryRawUnsafe('PRAGMA journal_mode=WAL;')
+        .catch((e: unknown) =>
+          logger.warn(
+            `Workspace WAL enable failed (${url}): ${(e as Error).message}`,
+          ),
+        );
+    }
+    return client;
+  };
 
   const getClient = (): PrismaClient => {
+    if (restoreWriteGate) {
+      throw new ServiceUnavailableException({
+        code: 'RESTORE_IN_PROGRESS',
+        message: '备份恢复进行中，请稍后重试',
+      });
+    }
     const wsId = getCurrentWorkspaceId();
     // 无头（后台任务/未带头的请求）与显式 default 恒走默认库
     if (!wsId || wsId === DEFAULT_WORKSPACE_ID) return base;
@@ -203,16 +285,7 @@ export function createWorkspaceAwarePrismaService(
         message: '工作区不存在或未注册',
       });
     }
-    if (url === process.env.DATABASE_URL) return base;
-    let client = pool.get(url);
-    if (!client) {
-      client = new PrismaClient({
-        datasources: { db: { url } },
-      });
-      pool.set(url, client);
-      logger.log(`Workspace database client created: ${url}`);
-    }
-    return client;
+    return clientForUrl(url);
   };
 
   const proxy = new Proxy<PrismaService>(base, {
@@ -272,6 +345,26 @@ export function createWorkspaceAwarePrismaService(
         return async (): Promise<void> => {
           await base.$connect();
           logger.log('Default database reconnected after restore');
+        };
+      }
+      // 恢复停写闸门（见 WorkspaceConnectionAdmin.setRestoreWriteGate 注释）
+      if (prop === 'setRestoreWriteGate') {
+        return (on: boolean): void => {
+          restoreWriteGate = on;
+          logger.log(
+            on
+              ? '恢复停写闸门：置位（数据访问暂拒 RESTORE_IN_PROGRESS）'
+              : '恢复停写闸门：解除',
+          );
+        };
+      }
+      // 显式按工作区取池内 client（见 WorkspaceClientAccessor 注释）
+      if (prop === 'workspaceClient') {
+        return (wsId: string | null): PrismaClient | null => {
+          if (!wsId || wsId === DEFAULT_WORKSPACE_ID) return base;
+          const url = resolveWorkspaceDbUrl(wsId);
+          if (!url) return null;
+          return clientForUrl(url);
         };
       }
 

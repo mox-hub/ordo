@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -26,12 +25,10 @@ import {
   DocumentFolderTreeNodeDto,
   DocumentFolderDetailResponseDto,
 } from './dto/folder-response.dto';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 
 @ApiTags('Document Folders')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('documents/folders')
 export class FolderController {
   constructor(private readonly folderService: FolderService) {}

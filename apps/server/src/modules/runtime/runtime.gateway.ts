@@ -42,9 +42,12 @@ export class RuntimeGateway
         client,
         'runtimeSessionId',
       );
-      const runtimeSessionToken =
-        this.readHandshakeValue(client, 'runtimeSessionToken') ||
-        this.readHandshakeValue(client, 'token');
+      // T8：仅接受 handshake.auth（daemon 已在 auth 载荷携带）——query 传
+      // token 会进代理/壳层访问日志，泄露面不可控
+      const runtimeSessionToken = this.readHandshakeValue(
+        client,
+        'runtimeSessionToken',
+      );
 
       if (!runtimeSessionId || !runtimeSessionToken) {
         client.disconnect();
@@ -171,14 +174,10 @@ export class RuntimeGateway
   }
 
   private readHandshakeValue(client: Socket, key: string): string | undefined {
+    // T8：仅收 handshake.auth，不再回落 query（query 会进代理/壳层日志）
     const authValue = client.handshake.auth?.[key];
     if (typeof authValue === 'string' && authValue.length > 0) {
       return authValue;
-    }
-
-    const queryValue = client.handshake.query?.[key];
-    if (typeof queryValue === 'string' && queryValue.length > 0) {
-      return queryValue;
     }
 
     return undefined;

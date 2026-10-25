@@ -1,5 +1,5 @@
 // 需求修订影响 Controller（CAP-P-01 批一 P0 最小闭环）
-import { Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Controller, Get, Param, Post } from '@nestjs/common';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -8,7 +8,6 @@ import {
   ApiParam,
   ApiResponse,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RevisionImpactService } from '../services/revision-impact.service';
 import {
   RevisionImpactStatusResponseDto,
@@ -18,7 +17,6 @@ import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 
 @ApiTags('Documents')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('documents/:documentId/revision-impact')
 export class RevisionImpactController {
   constructor(private readonly revisionImpactService: RevisionImpactService) {}

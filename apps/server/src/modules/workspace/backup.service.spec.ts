@@ -14,6 +14,7 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 
 import { LoggerService } from '@/core/logger/logger.service';
 import { PrismaService } from '@/core/database/prisma.service';
+import { EventVisibilityService } from '@/gateways/event-visibility.service';
 import {
   DEFAULT_WORKSPACE_ID,
   createWorkspace,
@@ -87,7 +88,15 @@ describe('WorkspaceBackupService', () => {
       error: vi.fn(),
       debug: vi.fn(),
     } as unknown as LoggerService;
-    service = new WorkspaceBackupService(loggerStub, prismaStub);
+    // T4：恢复完成会失效事件可见性缓存（构造器新增依赖）
+    const eventVisibilityStub = {
+      invalidateCaches: vi.fn(),
+    } as unknown as EventVisibilityService;
+    service = new WorkspaceBackupService(
+      loggerStub,
+      prismaStub,
+      eventVisibilityStub,
+    );
   });
 
   afterAll(async () => {

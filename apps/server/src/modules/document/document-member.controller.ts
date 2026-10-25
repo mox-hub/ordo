@@ -6,7 +6,6 @@ import {
   Delete,
   Body,
   Param,
-  UseGuards,
   Request,
 } from '@nestjs/common';
 import {
@@ -18,7 +17,6 @@ import {
   ApiResponse,
   ApiParam,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 import { DocumentMemberService } from './document-member.service';
 import {
@@ -35,7 +33,6 @@ import {
 
 @ApiTags('Document Authors & Reviewers')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('document-bindings')
 export class DocumentMemberController {
   constructor(private readonly service: DocumentMemberService) {}

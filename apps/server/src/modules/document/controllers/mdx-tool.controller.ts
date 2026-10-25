@@ -1,17 +1,15 @@
-import { Controller, Post, Body, UseGuards } from '@nestjs/common';
+import { Controller, Post, Body } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiBearerAuth,
   ApiResponse,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import { MdxToolService, type ParseResult } from '../services/mdx-tool.service';
 
 @ApiTags('Documents MDX')
 @ApiBearerAuth('JWT-auth')
 @Controller('documents/mdx')
-@UseGuards(JwtAuthGuard)
 export class MdxToolController {
   constructor(private readonly mdxTool: MdxToolService) {}
 

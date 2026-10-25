@@ -7,7 +7,6 @@ import {
   Param,
   Body,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -18,7 +17,6 @@ import {
   ApiCreatedResponse,
   ApiParam,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard';
 import {
   DocumentTagService,
   type CreateTagInput,
@@ -35,7 +33,6 @@ import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 @ApiTags('Document Tags')
 @ApiBearerAuth('JWT-auth')
 @Controller('documents/tags')
-@UseGuards(JwtAuthGuard)
 export class DocumentTagController {
   constructor(private readonly tagService: DocumentTagService) {}
 
@@ -93,7 +90,6 @@ export class DocumentTagController {
 @ApiTags('Document Tags')
 @ApiBearerAuth('JWT-auth')
 @Controller('documents/:id/tags')
-@UseGuards(JwtAuthGuard)
 export class DocumentTagLinkController {
   constructor(private readonly tagService: DocumentTagService) {}
 

@@ -1,14 +1,5 @@
 // Document Version Controller
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Body,
-  Param,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Param, Query } from '@nestjs/common';
 import {
   ApiTags,
   ApiBearerAuth,
@@ -18,7 +9,6 @@ import {
   ApiCreatedResponse,
   ApiParam,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { DocumentVersionService } from '../services/document-version.service';
 import {
   DocumentVersionDto,
@@ -28,7 +18,6 @@ import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 
 @ApiTags('Document Versions')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('documents/:documentId/versions')
 export class DocumentVersionController {
   constructor(private readonly versionService: DocumentVersionService) {}

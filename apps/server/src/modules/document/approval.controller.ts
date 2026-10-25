@@ -6,7 +6,6 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -25,12 +24,10 @@ import {
 } from './dto/approval.dto';
 import { ApprovalResponseDto } from './dto/approval-response.dto';
 import { ApiStandardErrors } from '../../common/decorators/api-response.decorator';
-import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 
 @ApiTags('Document Approvals')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('documents')
 export class ApprovalController {
   constructor(private readonly approvalService: ApprovalService) {}

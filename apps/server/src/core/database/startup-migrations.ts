@@ -21,6 +21,7 @@
  */
 import * as fs from 'fs';
 import * as path from 'path';
+import { PrismaClient } from '@prisma/client';
 import {
   DEFAULT_WORKSPACE_ID,
   dbFileUrl,
@@ -117,6 +118,31 @@ export async function runPackagedStartupMigrations(
         error: err instanceof Error ? err.message : String(err),
       });
     }
+  }
+
+  // WAL 收敛（幂等）：模板 WAL 化（build-template PRAGMA）之前创建的存量库
+  // 仍是 legacy DELETE 模式。逐库短连切换，失败（文件被外部占用等）只告警
+  // 不阻断启动——数据层建池/基座建连时还会各补挂一次。
+  for (const target of targets) {
+    try {
+      await enableSqliteWal(target.dbUrl);
+    } catch (err) {
+      console.warn(
+        `[migrate] 库「${target.dbLabel}」切 WAL 失败（不阻断启动）：${
+          err instanceof Error ? err.message : String(err)
+        }`,
+      );
+    }
+  }
+}
+
+/** 短连切 WAL（journal_mode 是库头持久属性，幂等）；用完即断不进连接池 */
+async function enableSqliteWal(dbUrl: string): Promise<void> {
+  const client = new PrismaClient({ datasources: { db: { url: dbUrl } } });
+  try {
+    await client.$queryRawUnsafe('PRAGMA journal_mode=WAL;');
+  } finally {
+    await client.$disconnect().catch(() => undefined);
   }
 }
 

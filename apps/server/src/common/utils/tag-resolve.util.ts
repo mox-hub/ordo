@@ -6,10 +6,11 @@
 //   - 都没有 → 按需创建（项目域或全局域）
 // 任务（resourceType='task'）与文档（'document'）各自独立域, 不共享。
 
-import type { PrismaClient } from '@prisma/client';
+import type { Prisma, PrismaClient } from '@prisma/client';
 
 export async function resolveTagIds(
-  prisma: PrismaClient,
+  // PrismaClient 可赋值给 TransactionClient：既收事务 tx 也收常规客户端
+  prisma: Prisma.TransactionClient | PrismaClient,
   options: {
     projectId: string | null;
     entries: string[];

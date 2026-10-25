@@ -264,7 +264,7 @@ export class DocumentService {
       updateData.publishedAt = new Date();
     }
 
-    // 标签重建（元素可为 tag id 或名字）
+    // 标签重建（元素可为 tag id 或名字）；T5 事务化：删旧+建新同生共死
     if (updateDocumentDto.tags !== undefined) {
       const tagIds = await resolveTagIds(this.prisma, {
         projectId: document.projectId,
@@ -272,16 +272,14 @@ export class DocumentService {
         userId: userId ?? document.authorId,
         resourceType: 'document',
       });
-      await this.prisma.documentTag.deleteMany({ where: { documentId: id } });
-      await Promise.all(
-        tagIds.map((tagId) =>
-          this.prisma.documentTag.upsert({
-            where: { documentId_tagId: { documentId: id, tagId } },
-            create: { documentId: id, tagId },
-            update: {},
-          }),
-        ),
-      );
+      await this.prisma.$transaction(async (tx) => {
+        await tx.documentTag.deleteMany({ where: { documentId: id } });
+        if (tagIds.length > 0) {
+          await tx.documentTag.createMany({
+            data: tagIds.map((tagId) => ({ documentId: id, tagId })),
+          });
+        }
+      });
     }
 
     const updated = await this.prisma.document.update({

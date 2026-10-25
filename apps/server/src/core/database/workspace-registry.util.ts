@@ -46,6 +46,36 @@ function toFileUrl(p: string): string {
   return 'file:' + p.replace(/\\/g, '/');
 }
 
+/**
+ * 原子写：临时文件 + 同目录 rename（Node 在 Windows 上以
+ * MOVEFILE_REPLACE_EXISTING 语义 rename，可覆盖已存在目标）。
+ * 直写中途崩溃会留下截断文件——workspaces.json 截断后 listWorkspaces
+ * 静默返回空数组，用户视角等于全部工作区消失。
+ */
+function atomicWriteFile(target: string, data: string): void {
+  const tmp = `${target}.tmp-${process.pid}-${Date.now()}`;
+  fs.writeFileSync(tmp, data, 'utf-8');
+  fs.renameSync(tmp, target);
+}
+
+const SQLITE_HEADER_BYTES = Buffer.from('SQLite format 3\0', 'binary');
+
+/** 校验文件头是 SQLite magic（半截复制产物会被拒之门外） */
+function isValidSqliteFile(p: string): boolean {
+  try {
+    const fd = fs.openSync(p, 'r');
+    try {
+      const buf = Buffer.alloc(SQLITE_HEADER_BYTES.length);
+      const read = fs.readSync(fd, buf, 0, buf.length, 0);
+      return read === buf.length && buf.equals(SQLITE_HEADER_BYTES);
+    } finally {
+      fs.closeSync(fd);
+    }
+  } catch {
+    return false;
+  }
+}
+
 export function listWorkspaces(): WorkspaceRecord[] {
   const file = registryPath();
   let records: WorkspaceRecord[] = [];
@@ -127,7 +157,18 @@ export function createWorkspace(input: {
 
   const targetDb = path.join(dir, 'data', 'ordo.db');
   if (!fs.existsSync(targetDb)) {
-    fs.copyFileSync(template, targetDb);
+    // T7 原子复制：直写目标中途崩溃会留下半库，而 existsSync 守卫会让
+    // 同目录重试把残库当有效库注册（建连报 file is not a database）——
+    // 先写临时文件、校验头、再 rename 原子生效。
+    const tmpDb = `${targetDb}.tmp-${process.pid}-${Date.now()}`;
+    fs.copyFileSync(template, tmpDb);
+    if (!isValidSqliteFile(tmpDb)) {
+      fs.rmSync(tmpDb, { force: true });
+      throw new WorkspaceCreateError(
+        '模板库复制校验失败（文件头非 SQLite），已中止创建',
+      );
+    }
+    fs.renameSync(tmpDb, targetDb);
   }
   fs.writeFileSync(
     path.join(dir, 'workspace.json'),
@@ -158,5 +199,6 @@ export function activateWorkspace(id: string): WorkspaceRecord | null {
 }
 
 function persist(records: WorkspaceRecord[]) {
-  fs.writeFileSync(registryPath(), JSON.stringify(records, null, 2), 'utf-8');
+  // T7 原子写：直写截断 → listWorkspaces 静默返回空数组（全部工作区「消失」）
+  atomicWriteFile(registryPath(), JSON.stringify(records, null, 2));
 }

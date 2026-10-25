@@ -4,7 +4,6 @@ import {
   Controller,
   Param,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -13,7 +12,6 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RuntimeService } from './runtime.service';
 import { CreateDispatchDto } from './dto/create-dispatch.dto';
 import { ResolveApprovalDto } from './dto/resolve-approval.dto';
@@ -21,7 +19,6 @@ import { CancelExecutionDto } from './dto/cancel-execution.dto';
 
 @ApiTags('Runtime')
 @Controller('runtime/control')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class RuntimeControlController {
   constructor(private readonly runtimeService: RuntimeService) {}

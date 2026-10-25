@@ -19,7 +19,6 @@ import {
 } from '@nestjs/swagger';
 import { IsString, MinLength, MaxLength } from 'class-validator';
 
-import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { Public } from '@/common/decorators/public.decorator';
@@ -83,7 +82,6 @@ export class WorkspaceController {
     private readonly backupService: WorkspaceBackupService,
     private readonly publicSettings: WorkspacePublicSettingsService,
   ) {}
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @Get()
   @ApiOperation({ summary: '工作区列表（含默认工作区）' })
@@ -133,7 +131,7 @@ export class WorkspaceController {
   }
 
   @Put('public-list')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('admin')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
@@ -159,7 +157,7 @@ export class WorkspaceController {
   }
 
   @Post()
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('admin')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: '创建并初始化新工作区（指定目录，复制模板库）' })
@@ -178,7 +176,6 @@ export class WorkspaceController {
     }
   }
 
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @Post(':id/activate')
   @ApiOperation({ summary: '标记工作区最近打开（前端切换时调用）' })
@@ -195,7 +192,7 @@ export class WorkspaceController {
   // ---------------------------------------------------------------- 备份与恢复（CAP-A-03）
 
   @Post('backups')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('admin')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
@@ -214,7 +211,6 @@ export class WorkspaceController {
   }
 
   @Get('backups')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: '备份列表（按创建时间倒序）' })
   @ApiOkResponse({
@@ -226,7 +222,7 @@ export class WorkspaceController {
   }
 
   @Post('backups/:backupId/restore')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('admin')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
