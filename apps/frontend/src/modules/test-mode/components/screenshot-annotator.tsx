@@ -14,6 +14,19 @@ const STROKE_COLOR = 'hsl(var(--accent-red))';
 const STROKE_WIDTH = 3;
 const UNDO_LIMIT = 10;
 
+/**
+ * canvas 2d context 不解析 CSS 变量字面量（strokeStyle 会静默回落黑色）——
+ * 用临时元素经 getComputedStyle 解析成实际色值后再交给画笔。
+ */
+function resolveStrokeColor(cssColor: string): string {
+  const probe = document.createElement('span');
+  probe.style.color = cssColor;
+  document.documentElement.appendChild(probe);
+  const resolved = getComputedStyle(probe).color;
+  probe.remove();
+  return resolved;
+}
+
 export function ScreenshotAnnotator({
   src,
   onChange,
@@ -103,7 +116,7 @@ export function ScreenshotAnnotator({
     origin.current = toCanvasPoint(e);
     const ctx = baseRef.current?.getContext('2d');
     if (toolRef.current === 'pen' && ctx) {
-      ctx.strokeStyle = STROKE_COLOR;
+      ctx.strokeStyle = resolveStrokeColor(STROKE_COLOR);
       ctx.lineWidth = STROKE_WIDTH;
       ctx.lineCap = 'round';
       ctx.beginPath();
@@ -149,7 +162,7 @@ export function ScreenshotAnnotator({
     const ctx = baseRef.current?.getContext('2d');
     const live = liveRef.current;
     if (toolRef.current === 'rect' && ctx && live) {
-      ctx.strokeStyle = STROKE_COLOR;
+      ctx.strokeStyle = resolveStrokeColor(STROKE_COLOR);
       ctx.lineWidth = STROKE_WIDTH;
       ctx.strokeRect(
         Math.min(origin.current.x, point.x),

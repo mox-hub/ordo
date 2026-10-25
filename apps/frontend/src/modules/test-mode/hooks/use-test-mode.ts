@@ -4,6 +4,7 @@
  */
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { testModeApi } from '../api/test-mode-api';
+import type { TestModeElementMeta } from '@/shared/types/electron-api';
 
 const QUEUE_KEY = ['test-mode-queue'] as const;
 const STATUS_KEY = ['test-mode-status'] as const;
@@ -32,7 +33,23 @@ export function useTestModeToggle() {
 }
 
 export function useTestModeCapture() {
-  return useMutation({ mutationFn: () => testModeApi.capture() });
+  return useMutation({
+    mutationFn: (element?: TestModeElementMeta | null) => testModeApi.capture(element),
+  });
+}
+
+/** 操作录制控制（从头开始录制 / 清除已录操作）：成功后同步状态缓存 */
+export function useTestModeOpsControls() {
+  const queryClient = useQueryClient();
+  const recordStart = useMutation({
+    mutationFn: () => testModeApi.opsRecordStart(),
+    onSuccess: (status) => queryClient.setQueryData(STATUS_KEY, status),
+  });
+  const clear = useMutation({
+    mutationFn: () => testModeApi.opsClear(),
+    onSuccess: (status) => queryClient.setQueryData(STATUS_KEY, status),
+  });
+  return { recordStart, clear };
 }
 
 export function useBugReportQueue(options?: { enabled?: boolean }) {

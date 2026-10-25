@@ -11,6 +11,7 @@ import {
   type BugReportSaveArgs,
   type BugReportSaveResult,
   type TestModeCaptureResult,
+  type TestModeElementMeta,
   type TestModeStatusResult,
 } from '@/shared/types/electron-api';
 
@@ -27,11 +28,19 @@ export const testModeApi = {
   status(): Promise<TestModeStatusResult> {
     return invoke<TestModeStatusResult>('test_mode_status');
   },
-  capture(): Promise<TestModeCaptureResult> {
-    return invoke<TestModeCaptureResult>('test_mode_capture');
+  capture(element?: TestModeElementMeta | null): Promise<TestModeCaptureResult> {
+    return invoke<TestModeCaptureResult>('test_mode_capture', { element: element ?? null });
+  },
+  /** 从头开始录制：清空已录操作 + 打开录制门 */
+  opsRecordStart(): Promise<TestModeStatusResult> {
+    return invoke<TestModeStatusResult>('test_mode_ops_record_start');
+  },
+  /** 清除已录操作（不改动录制门状态） */
+  opsClear(): Promise<TestModeStatusResult> {
+    return invoke<TestModeStatusResult>('test_mode_ops_clear');
   },
   saveReport(args: BugReportSaveArgs): Promise<BugReportSaveResult> {
-    return invoke<BugReportSaveResult>('bug_report_save', args as unknown as Record<string, unknown>);
+    return saveReportWithChunkedScreenshot(args);
   },
   queueAdd(args: { bundlePath: string; payload: Record<string, unknown>; error?: string }): Promise<{ ok: true }> {
     return invoke('bug_report_queue_add', args as unknown as Record<string, unknown>);
@@ -44,20 +53,43 @@ export const testModeApi = {
   },
 };
 
+/**
+ * 落盘前的截图分块上传：desktop:command IPC 面有 64KB 参数守卫（实机反馈
+ * 「命令参数过大」），标注后的 PNG dataURL 常达数 MB——按 48KB/块先传主进程，
+ * bug_report_save 只携 uploadId。
+ */
+const SCREENSHOT_CHUNK_SIZE = 48_000;
+
+async function saveReportWithChunkedScreenshot(args: BugReportSaveArgs): Promise<BugReportSaveResult> {
+  const { uploadId } = await invoke<{ uploadId: string }>('bug_report_screenshot_begin');
+  const { screenshotDataUrl, ...rest } = args;
+  for (let i = 0; i < screenshotDataUrl.length; i += SCREENSHOT_CHUNK_SIZE) {
+    await invoke('bug_report_screenshot_chunk', {
+      uploadId,
+      chunk: screenshotDataUrl.slice(i, i + SCREENSHOT_CHUNK_SIZE),
+    });
+  }
+  return invoke<BugReportSaveResult>('bug_report_save', {
+    ...(rest as unknown as Record<string, unknown>),
+    screenshotUploadId: uploadId,
+  });
+}
+
 export interface BugIssueForm {
-  title: string;
-  description?: string;
+  title: string;  description?: string;
   severity: BugSeverity;
   expectedResult?: string;
   actualResult?: string;
   /** 用户改写后的复现步骤；空则回落抓取现场的自动生成稿 */
   stepsToReproduce?: string;
+  /** 组件选择模式：被选中组件的 CSS 选择器（用户可改，随描述落工单） */
+  selector?: string;
 }
 
 /**
  * 建单直映射（CreateTaskRequest bug 专用字段逐一对账，GAP-T-71）：
- * title→title；description→description（拼 bundle 路径引用）；severity→severity；
- * 四个 bug* 字段一一对应；type 恒 'bug'；tags 恒 ['实机测试']（溯源入口）。
+ * title→title；description→description（拼 bundle 路径引用与组件选择器行）；
+ * severity→severity；四个 bug* 字段一一对应；type 恒 'bug'；tags 恒 ['实机测试']（溯源入口）。
  */
 export function buildBugIssuePayload(
   form: BugIssueForm,
@@ -66,6 +98,7 @@ export function buildBugIssuePayload(
 ): CreateTaskRequest {
   const parts = [
     form.description?.trim(),
+    form.selector?.trim() ? `[组件选择器] \`${form.selector.trim()}\`` : '',
     bundlePath ? `[实机测试现场] ${bundlePath}` : '',
   ].filter(Boolean);
   return {

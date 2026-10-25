@@ -7,7 +7,17 @@
     "exit": "Exit",
     "notActive": "Inactive",
     "recording": "Recording",
-    "capture": "Capture Scene",
+    "captureFull": "Capture Full Screen",
+    "captureElement": "Pick an Element",
+    "elementMode": "Element Mode",
+    "elementSelector": "Element selector (CSS, editable)",
+    "record": {
+      "paused": "Operation recording not started",
+      "start": "Start Recording",
+      "restart": "Restart Recording",
+      "clear": "Clear Recorded Ops",
+      "recordingN": "{{count}} ops recorded"
+    },
     "capturedSummary": "{{operations}} operations · {{network}} requests",
     "errorRequests": "{{count}} failing requests",
     "formTitle": "Issue Title",

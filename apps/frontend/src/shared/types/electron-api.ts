@@ -97,6 +97,8 @@ export interface DesktopLogSnapshot {
 export interface TestModeStatusResult {
   active: boolean;
   startedAt: string | null;
+  /** 操作轨迹录制门（用户确认「开始录制」后才记操作；网络/console 不受此门控） */
+  recordingOps: boolean;
   networkCount: number;
   consoleCount: number;
   operationCount: number;
@@ -124,6 +126,12 @@ export interface TestModeOperation {
   url?: string;
 }
 
+/** 组件选择模式元数据（CSS 选择器 + 截断的 outerHTML，随 bundle 落 element.json） */
+export interface TestModeElementMeta {
+  selector: string;
+  outerHTML?: string;
+}
+
 /** 抓取现场返回的快照摘要（无 headers——展示面只给脱敏后的 method/url/status） */
 export interface TestModeCaptureReport {
   capturedAt: string;
@@ -134,6 +142,7 @@ export interface TestModeCaptureReport {
   operations: TestModeOperation[];
   environmentText: string;
   stepsToReproduce: string;
+  element?: TestModeElementMeta | null;
 }
 
 export interface TestModeCaptureResult {

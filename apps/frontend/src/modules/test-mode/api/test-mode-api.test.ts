@@ -44,6 +44,12 @@ describe('buildBugIssuePayload（CreateTaskRequest bug 字段逐一对账，GAP-
     expect(payload.bugStepsToReproduce).toBe('1. [点击] 提交');
   });
 
+  it('组件选择模式：选择器行拼进描述（用户可改稿）', () => {
+    const payload = buildBugIssuePayload({ ...FORM, selector: 'div > button#submit' }, REPORT, 'C:/x');
+    expect(payload.description).toContain('[组件选择器] `div > button#submit`');
+    expect(payload.description).toContain('[实机测试现场]');
+  });
+
   it('空可选字段输出 undefined（不发送空串）', () => {
     const payload = buildBugIssuePayload(
       { title: '  空字段检查  ', severity: 'low' },

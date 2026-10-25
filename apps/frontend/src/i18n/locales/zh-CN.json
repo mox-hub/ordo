@@ -7,7 +7,17 @@
     "exit": "退出模式",
     "notActive": "未开启",
     "recording": "采集中",
-    "capture": "抓取现场",
+    "captureFull": "抓取全屏现场",
+    "captureElement": "选择组件抓取",
+    "elementMode": "组件模式",
+    "elementSelector": "组件选择器（CSS，可修改）",
+    "record": {
+      "paused": "操作录制待确认开始",
+      "start": "开始录制操作",
+      "restart": "从头开始录制",
+      "clear": "清除已录操作",
+      "recordingN": "已录 {{count}} 条操作"
+    },
     "capturedSummary": "{{operations}} 条操作 · {{network}} 条请求",
     "errorRequests": "{{count}} 条异常请求",
     "formTitle": "问题标题",

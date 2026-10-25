@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { TestModePanel } from './test-mode-panel';
+import { useTestModeStore } from '../store/test-mode-store';
 
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
@@ -45,7 +46,7 @@ const CAPTURE_RESULT = {
     title: '工单列表',
     networkSummary: [{ method: 'GET', url: 'http://x/api', status: 500 }],
     consoleLines: [],
-    operations: [{ type: 'click', at: 1, target: { tag: 'button', id: 'b', text: '提交', entity: null } }],
+    operations: [{ type: 'click' as const, at: 1, target: { tag: 'button', id: 'b', text: '提交', entity: null } }],
     environmentText: '应用版本: 1.0.0',
     stepsToReproduce: '1. [点击] 提交',
   },
@@ -56,16 +57,18 @@ function mockInvoke(): void {
     switch (cmd) {
       case 'test_mode_status':
         return Promise.resolve({
-          active: false, startedAt: null, networkCount: 0, consoleCount: 0, operationCount: 0, url: '',
+          active: false, startedAt: null, recordingOps: false, networkCount: 0, consoleCount: 0, operationCount: 0, url: '',
         });
       case 'test_mode_start':
         return Promise.resolve({
-          active: true, startedAt: 'x', networkCount: 3, consoleCount: 1, operationCount: 2, url: 'http://x',
+          active: true, startedAt: 'x', recordingOps: false, networkCount: 3, consoleCount: 1, operationCount: 2, url: 'http://x',
         });
       case 'test_mode_capture':
         return Promise.resolve(CAPTURE_RESULT);
       case 'bug_report_save':
         return Promise.resolve({ id: 'bug-1', bundlePath: 'C:/ordo/bug-1.ordobug' });
+      case 'bug_report_screenshot_begin':
+        return Promise.resolve({ uploadId: 'shot-test-1' });
       case 'bug_report_queue_list':
         return Promise.resolve({ items: [] });
       default:
@@ -74,11 +77,22 @@ function mockInvoke(): void {
   });
 }
 
+function resetStore(): void {
+  useTestModeStore.setState({
+    panelOpen: false,
+    phase: 'idle',
+    capturing: false,
+    picking: false,
+    menuOpen: false,
+    captureState: null,
+  });
+}
+
 function renderPanel(): void {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
-      <TestModePanel open onOpenChange={() => undefined} />
+      <TestModePanel />
     </QueryClientProvider>,
   );
 }
@@ -88,24 +102,30 @@ describe('TestModePanel 提交链（CAP-A-31 批 1）', () => {
     invokeSpy.mockReset();
     createSpy.mockReset();
     mockInvoke();
+    resetStore();
   });
 
-  it('未开启时显示进入按钮，点击后转入采集中并出现抓取入口', async () => {
+  it('未开启时显示进入按钮，点击后转入采集中并出现抓取入口与录制确认门', async () => {
     renderPanel();
+    useTestModeStore.getState().setPanelOpen(true);
     expect(await screen.findByText('testMode.enter')).toBeTruthy();
     fireEvent.click(screen.getByText('testMode.enter'));
-    // start 链路（test_mode_start → 转 active）由下一用例的完整提交链共同覆盖
-    expect(await screen.findByText('testMode.capture')).toBeTruthy();
-    expect(screen.getByText('testMode.recording')).toBeTruthy();
+    expect(await screen.findByText('testMode.captureFull')).toBeTruthy();
+    expect(screen.getByText('testMode.captureElement')).toBeTruthy();
+    // 操作录制默认不开启（用户确认「开始录制」才记，实机反馈第 3 条）
+    expect(screen.getByText('testMode.record.paused')).toBeTruthy();
+    expect(screen.getByText('testMode.record.start')).toBeTruthy();
   });
 
-  it('抓取现场 → 表单预填 → 提交走 save + bug 字段直映射建单', async () => {
+  it('抓取全屏现场 → 表单预填 → 提交走 save + bug 字段直映射建单', async () => {
     createSpy.mockResolvedValue({ id: '42' });
     renderPanel();
-    fireEvent.click(await screen.findByText('testMode.enter'));
-    fireEvent.click(await screen.findByText('testMode.capture'));
+    useTestModeStore.getState().setPhase('active');
+    useTestModeStore.getState().setPanelOpen(true);
+    fireEvent.click(await screen.findByText('testMode.captureFull'));
 
-    const titleInput = (await screen.findByLabelText('testMode.formTitle')) as HTMLInputElement;
+    // runCapture 藏 UI → 350ms 等待 → capture → composing
+    const titleInput = (await screen.findByLabelText('testMode.formTitle', {}, { timeout: 3000 })) as HTMLInputElement;
     fireEvent.change(titleInput, { target: { value: '列表页 500' } });
     const stepsArea = screen.getByLabelText('testMode.stepsToReproduce') as HTMLTextAreaElement;
     expect(stepsArea.value).toBe('1. [点击] 提交');
@@ -113,7 +133,11 @@ describe('TestModePanel 提交链（CAP-A-31 批 1）', () => {
     fireEvent.click(screen.getByText('testMode.submit'));
     await waitFor(() => expect(createSpy).toHaveBeenCalledTimes(1));
 
-    expect(invokeSpy).toHaveBeenCalledWith('bug_report_save', expect.objectContaining({ title: '列表页 500' }));
+    expect(invokeSpy).toHaveBeenCalledWith('bug_report_screenshot_begin', undefined);
+    expect(invokeSpy).toHaveBeenCalledWith(
+      'bug_report_save',
+      expect.objectContaining({ title: '列表页 500', screenshotUploadId: 'shot-test-1' }),
+    );
     expect(createSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         title: '列表页 500',
@@ -129,12 +153,43 @@ describe('TestModePanel 提交链（CAP-A-31 批 1）', () => {
   it('建单失败时入补交队列并提示', async () => {
     createSpy.mockRejectedValue(new Error('ECONNREFUSED'));
     renderPanel();
-    fireEvent.click(await screen.findByText('testMode.enter'));
-    fireEvent.click(await screen.findByText('testMode.capture'));
-    fireEvent.change((await screen.findByLabelText('testMode.formTitle')) as HTMLInputElement, {
+    useTestModeStore.getState().setPhase('active');
+    useTestModeStore.getState().setPanelOpen(true);
+    fireEvent.click(await screen.findByText('testMode.captureFull'));
+    fireEvent.change((await screen.findByLabelText('testMode.formTitle', {}, { timeout: 3000 })) as HTMLInputElement, {
       target: { value: '断网报障' },
     });
     fireEvent.click(screen.getByText('testMode.submit'));
     await waitFor(() => expect(invokeSpy).toHaveBeenCalledWith('bug_report_queue_add', expect.objectContaining({ bundlePath: 'C:/ordo/bug-1.ordobug' })));
+  });
+
+  it('组件模式现场：composing 态展示选择器字段并拼进建单描述', async () => {
+    createSpy.mockResolvedValue({ id: '43' });
+    renderPanel();
+    useTestModeStore.setState({
+      panelOpen: true,
+      phase: 'composing',
+      captureState: {
+        screenshotDataUrl: 'data:image/png;base64,BBB',
+        annotatedDataUrl: 'data:image/png;base64,BBB',
+        report: {
+          ...CAPTURE_RESULT.report,
+          element: { selector: 'div > button#submit', outerHTML: '<button id="submit">提交</button>' },
+        },
+      },
+    });
+    const selectorInput = (await screen.findByLabelText('testMode.elementSelector')) as HTMLInputElement;
+    expect(selectorInput.value).toBe('div > button#submit');
+    expect(screen.getByText('testMode.elementMode')).toBeTruthy();
+
+    fireEvent.change(screen.getByLabelText('testMode.formTitle'), { target: { value: '组件模式报障' } });
+    fireEvent.click(screen.getByText('testMode.submit'));
+    await waitFor(() => expect(createSpy).toHaveBeenCalledTimes(1));
+    expect(createSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: '组件模式报障',
+        description: expect.stringContaining('[组件选择器] `div > button#submit`'),
+      }),
+    );
   });
 });
