@@ -41,15 +41,20 @@ import { initializeDirs, resolveNodeExe, restoreDefaultDbIfNeeded } from './setu
 import { state, setInitError, type BackendInfo, type FrontendInfo } from './state';
 import {
   addQueueItem,
+  appendScreenshotChunk,
+  beginScreenshotUpload,
   listQueueItems,
   removeQueueItem,
   saveBugReport,
+  takeScreenshotUpload,
 } from './bug-report';
 import { resolveTrayIconPath } from './tray';
 import {
   captureTestMode,
+  clearRecordedOps,
   consumeLastSnapshot,
   getTestModeStatus,
+  startOpsRecording,
   startTestMode,
   stopTestMode,
 } from './test-mode';
@@ -593,13 +598,39 @@ export const commandHandlers = {
     return getTestModeStatus();
   },
 
-  /** 抓取现场：截图 + 三缓冲快照固化（不清缓冲，支持连续抓取） */
-  async test_mode_capture() {
-    const { screenshotDataUrl, summary } = await captureTestMode();
+  /** 抓取现场：截图 + 三缓冲快照固化（不清缓冲，支持连续抓取）；
+   * element 为组件选择模式下渲染端选中的组件元数据（截图裁剪在渲染端完成） */
+  async test_mode_capture(args?: { element?: { selector: string; outerHTML?: string } | null }) {
+    const { screenshotDataUrl, summary } = await captureTestMode(args?.element ?? null);
     return { screenshotDataUrl, report: summary };
   },
 
-  /** 落盘 bundle（本地优先：先落盘后建单），消费最近一次 test_mode_capture 快照 */
+  /** 从头开始录制：清空已录操作 + 打开录制门（用户显式确认起点） */
+  async test_mode_ops_record_start(): Promise<ReturnType<typeof getTestModeStatus>> {
+    return startOpsRecording();
+  },
+
+  /** 清除已录操作（不改动录制门状态） */
+  async test_mode_ops_clear(): Promise<ReturnType<typeof getTestModeStatus>> {
+    return clearRecordedOps();
+  },
+
+  /** 截图分块上传会话：begin 取 id，chunk 逐块追加（每块 ≤48KB，绕开 64KB IPC 守卫），
+   * bug_report_save 携 uploadId 消费组装 */
+  async bug_report_screenshot_begin() {
+    return beginScreenshotUpload();
+  },
+
+  async bug_report_screenshot_chunk(args?: { uploadId?: string; chunk?: string }) {
+    if (!args?.uploadId || typeof args.chunk !== 'string') {
+      throw new Error('缺少上传 id 或分块数据');
+    }
+    return appendScreenshotChunk(args.uploadId, args.chunk);
+  },
+
+  /** 落盘 bundle（本地优先：先落盘后建单），消费最近一次 test_mode_capture 快照。
+   * 截图大文件走分块上传（bug_report_screenshot_begin/chunk），此处只传 uploadId——
+   * desktop:command IPC 面有 64KB 参数守卫，inline dataUrl 只兜小图 */
   async bug_report_save(args?: {
     title?: string;
     description?: string;
@@ -608,24 +639,28 @@ export const commandHandlers = {
     actualResult?: string;
     stepsToReproduce?: string;
     screenshotDataUrl?: string;
+    screenshotUploadId?: string;
   }) {
     const snapshot = consumeLastSnapshot();
     if (!snapshot) {
       throw new Error('没有可用的现场快照（请先「抓取现场」）');
     }
-    if (!args?.screenshotDataUrl) {
+    const screenshotDataUrl = args?.screenshotUploadId
+      ? takeScreenshotUpload(args.screenshotUploadId)
+      : args?.screenshotDataUrl;
+    if (!screenshotDataUrl) {
       throw new Error('缺少截图数据');
     }
     return saveBugReport({
       form: {
-        title: args.title ?? '',
-        description: args.description,
-        severity: args.severity ?? 'medium',
-        expectedResult: args.expectedResult,
-        actualResult: args.actualResult,
-        stepsToReproduce: args.stepsToReproduce,
+        title: args?.title ?? '',
+        description: args?.description,
+        severity: args?.severity ?? 'medium',
+        expectedResult: args?.expectedResult,
+        actualResult: args?.actualResult,
+        stepsToReproduce: args?.stepsToReproduce,
       },
-      screenshotDataUrl: args.screenshotDataUrl,
+      screenshotDataUrl,
       snapshot,
     });
   },

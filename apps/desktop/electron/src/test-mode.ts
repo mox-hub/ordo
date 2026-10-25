@@ -16,6 +16,7 @@ import {
   redactUrl,
   RingBuffer,
   type CapturedConsoleLine,
+  type CapturedElementMeta,
   type CapturedNetworkEntry,
   type CapturedOperation,
   type TestModeEnvironmentInput,
@@ -37,6 +38,8 @@ export interface TestModeSnapshot {
   consoleLines: CapturedConsoleLine[];
   operations: CapturedOperation[];
   environment: TestModeEnvironmentInput;
+  /** 组件选择模式才有：被选中组件的选择器与 outerHTML */
+  element?: CapturedElementMeta | null;
 }
 
 /** IPC 摘要（不含 headers——前端展示面只给脱敏后的 method/url/status） */
@@ -49,11 +52,14 @@ export interface TestModeSnapshotSummary {
   operations: CapturedOperation[];
   environmentText: string;
   stepsToReproduce: string;
+  element?: CapturedElementMeta | null;
 }
 
 export interface TestModeStatusResult {
   active: boolean;
   startedAt: string | null;
+  /** 操作轨迹录制门（用户确认「开始录制」后才记操作；网络/console 不受此门控） */
+  recordingOps: boolean;
   networkCount: number;
   consoleCount: number;
   operationCount: number;
@@ -62,6 +68,7 @@ export interface TestModeStatusResult {
 
 interface EngineState {
   active: boolean;
+  recordingOps: boolean;
   win: BrowserWindow | null;
   startedAt: string | null;
   network: RingBuffer<CapturedNetworkEntry>;
@@ -76,6 +83,7 @@ interface EngineState {
 
 const engine: EngineState = {
   active: false,
+  recordingOps: false,
   win: null,
   startedAt: null,
   network: new RingBuffer(NETWORK_LIMIT),
@@ -91,11 +99,14 @@ const engine: EngineState = {
  * 渲染端操作录制器（main world，spike 验证版扩展）：click/input 捕获阶段委托 +
  * SPA 路由钩子（pushState/replaceState/popstate），事件写 __ORDO_TEST_OPS__ 数组，
  * 主进程轮询 splice 收割。幂等标记防重复注入。
+ * 操作录制受 __ORDO_TEST_RECORDING__ 门控（用户确认「开始录制」才记，避免把无关
+ * 操作混进复现步骤）；同一输入框连续击键在注入端合并只留末值。
  */
 const RECORDER_SCRIPT = `(function () {
   if (window.__ORDO_TEST_RECORDER__) { return; }
   window.__ORDO_TEST_RECORDER__ = true;
   window.__ORDO_TEST_OPS__ = window.__ORDO_TEST_OPS__ || [];
+  window.__ORDO_TEST_RECORDING__ = window.__ORDO_TEST_RECORDING__ === true;
   function describe(el) {
     if (!el || !el.closest) { return null; }
     var entity = el.closest('[data-ai-entity]');
@@ -106,15 +117,29 @@ const RECORDER_SCRIPT = `(function () {
       entity: entity ? entity.getAttribute('data-ai-entity') : null
     };
   }
+  function push(op) {
+    if (window.__ORDO_TEST_RECORDING__ !== true) { return; }
+    window.__ORDO_TEST_OPS__.push(op);
+  }
   window.addEventListener('click', function (e) {
-    window.__ORDO_TEST_OPS__.push({ type: 'click', at: Date.now(), target: describe(e.target) });
+    push({ type: 'click', at: Date.now(), target: describe(e.target) });
   }, true);
   window.addEventListener('input', function (e) {
     var t = e.target;
-    window.__ORDO_TEST_OPS__.push({ type: 'input', at: Date.now(), target: describe(t), value: String((t && t.value) || '').slice(0, 120) });
+    var d = describe(t);
+    var value = String((t && t.value) || '').slice(0, 120);
+    var ops = window.__ORDO_TEST_OPS__;
+    var last = ops[ops.length - 1];
+    if (window.__ORDO_TEST_RECORDING__ === true && last && last.type === 'input' && d && last.target &&
+        last.target.tag === d.tag && last.target.id === d.id && last.target.entity === d.entity) {
+      last.value = value;
+      last.at = Date.now();
+      return;
+    }
+    push({ type: 'input', at: Date.now(), target: d, value: value });
   }, true);
   function recordNav(url) {
-    window.__ORDO_TEST_OPS__.push({ type: 'navigate', at: Date.now(), url: String(url || '') });
+    push({ type: 'navigate', at: Date.now(), url: String(url || '') });
   }
   var push = history.pushState && history.pushState.bind(history);
   if (push) {
@@ -240,6 +265,7 @@ export async function startTestMode(): Promise<TestModeStatusResult> {
   }
 
   engine.active = true;
+  engine.recordingOps = false;
   engine.win = win;
   engine.startedAt = new Date().toISOString();
   engine.network.clear();
@@ -284,9 +310,15 @@ function bindNavigation(win: BrowserWindow): () => void {
   const onDomReady = () => {
     // 导航后新 world：重注入录制器；旧 world 的未收割操作随页面销毁（导航本身已记为操作）
     void wc.executeJavaScript(RECORDER_SCRIPT, true).catch(() => undefined);
+    // 录制门跨导航保持：重注入默认 false，按引擎状态回写
+    void wc
+      .executeJavaScript(`window.__ORDO_TEST_RECORDING__ = ${engine.recordingOps}`, true)
+      .catch(() => undefined);
   };
   const onNavigate = (_event: unknown, url: string) => {
-    engine.operations.push({ type: 'navigate', at: Date.now(), url });
+    if (engine.recordingOps) {
+      engine.operations.push({ type: 'navigate', at: Date.now(), url });
+    }
   };
   wc.on('dom-ready', onDomReady);
   wc.on('did-navigate', onNavigate);
@@ -338,6 +370,7 @@ export function getTestModeStatus(): TestModeStatusResult {
   return {
     active: engine.active,
     startedAt: engine.startedAt,
+    recordingOps: engine.recordingOps,
     networkCount: engine.network.size,
     consoleCount: engine.consoleLines.size,
     operationCount: engine.operations.size,
@@ -345,8 +378,31 @@ export function getTestModeStatus(): TestModeStatusResult {
   };
 }
 
-/** capture：截图 + 三缓冲快照固化（不清缓冲，连续抓取可用；save 消费最近一次快照） */
-export async function captureTestMode(): Promise<{
+/** 从头开始录制：清空已录操作 + 打开录制门（用户显式确认起点，无关操作不入轨迹） */
+export async function startOpsRecording(): Promise<TestModeStatusResult> {
+  engine.operations.clear();
+  engine.recordingOps = true;
+  const win = engine.win;
+  if (win && !win.isDestroyed()) {
+    await win.webContents
+      .executeJavaScript('window.__ORDO_TEST_RECORDING__ = true', true)
+      .catch(() => undefined);
+  }
+  logger.info('操作轨迹录制已从头开始');
+  return getTestModeStatus();
+}
+
+/** 清除已录操作（不改动录制门状态，支持边录边清） */
+export async function clearRecordedOps(): Promise<TestModeStatusResult> {
+  engine.operations.clear();
+  return getTestModeStatus();
+}
+
+/** capture：截图 + 三缓冲快照固化（不清缓冲，连续抓取可用；save 消费最近一次快照）。
+ * element 为组件选择模式下渲染端选中的组件元数据（截图裁剪在渲染端 canvas 完成） */
+export async function captureTestMode(
+  element?: CapturedElementMeta | null,
+): Promise<{
   screenshotDataUrl: string;
   summary: TestModeSnapshotSummary;
 }> {
@@ -373,6 +429,7 @@ export async function captureTestMode(): Promise<{
     consoleLines: engine.consoleLines.snapshot(),
     operations: engine.operations.snapshot(),
     environment,
+    element: element ?? null,
   };
   engine.lastSnapshot = snapshot;
   return {
@@ -406,5 +463,6 @@ function toSummary(snapshot: TestModeSnapshot): TestModeSnapshotSummary {
     operations: snapshot.operations,
     environmentText: buildEnvironmentText(snapshot.environment),
     stepsToReproduce: buildStepsToReproduce(snapshot.operations),
+    element: snapshot.element,
   };
 }

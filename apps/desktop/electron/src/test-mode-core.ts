@@ -115,6 +115,21 @@ export interface CapturedOperation {
   url?: string;
 }
 
+/** 组件选择模式元数据（CSS 选择器 + 截断的 outerHTML，随 bundle 落 element.json） */
+export interface CapturedElementMeta {
+  selector: string;
+  outerHTML?: string;
+}
+
+/** 同一输入框判定键：连续击键合并只留末值（tag/id/entity 相同即同一控件） */
+function sameInputTarget(a: CapturedOperation, b: CapturedOperation): boolean {
+  return (
+    a.target?.tag === b.target?.tag &&
+    a.target?.id === b.target?.id &&
+    a.target?.entity === b.target?.entity
+  );
+}
+
 /** HAR 1.2 最小合规拼装（headers 落盘前脱敏） */
 export function buildMiniHar(
   entries: CapturedNetworkEntry[],
@@ -156,7 +171,17 @@ export function buildMiniHar(
 
 /** 操作轨迹 → 复现步骤文本（规则拼接，批 2 由 AI 起草接手升级） */
 export function buildStepsToReproduce(operations: CapturedOperation[]): string {
-  const steps = operations.slice(-50);
+  // 同一输入框的连续击键合并为一条（只留末值）——注入端已合并，这里兜底跨收割边界的散键
+  const merged: CapturedOperation[] = [];
+  for (const op of operations) {
+    const last = merged[merged.length - 1];
+    if (op.type === 'input' && last?.type === 'input' && sameInputTarget(last, op)) {
+      merged[merged.length - 1] = op;
+      continue;
+    }
+    merged.push(op);
+  }
+  const steps = merged.slice(-50);
   const lines = steps.map((op, index) => {
     const n = index + 1;
     if (op.type === 'navigate') {
@@ -217,7 +242,10 @@ export interface BugReportManifest {
     har: string;
     console: string;
     operations: string;
+    /** 组件选择模式才有：CSS 选择器 + outerHTML */
+    element?: string;
   };
+  element?: CapturedElementMeta;
   networkSummary: Array<{ method: string; url: string; status?: number }>;
   operationCount: number;
 }
@@ -230,6 +258,7 @@ export function buildManifest(input: {
   networkEntries: CapturedNetworkEntry[];
   consoleLines: CapturedConsoleLine[];
   operations: CapturedOperation[];
+  element?: CapturedElementMeta | null;
 }): BugReportManifest {
   return {
     formatVersion: 1,
@@ -242,7 +271,9 @@ export function buildManifest(input: {
       har: 'har.json',
       console: 'console.log',
       operations: 'operations.json',
+      ...(input.element ? { element: 'element.json' } : {}),
     },
+    ...(input.element ? { element: input.element } : {}),
     networkSummary: input.networkEntries.map((entry) => ({
       method: entry.request.method,
       url: redactUrl(entry.request.url),

@@ -131,6 +131,31 @@ describe('buildStepsToReproduce', () => {
     expect(text).toContain('50. [点击] 59');
     expect(text).not.toContain('1. [点击] 0');
   });
+
+  it('同一输入框连续击键合并只留末值，跨控件/导航不打断合并边界', () => {
+    const input = (at: number, id: string, value: string): CapturedOperation => ({
+      type: 'input',
+      at,
+      target: { tag: 'input', id, text: '', entity: null },
+      value,
+    });
+    const ops: CapturedOperation[] = [
+      input(1, 'title', '测'),
+      input(2, 'title', '测试'),
+      input(3, 'desc', 'a'),
+      input(4, 'title', '测试文'),
+      { type: 'click', at: 5, target: { tag: 'button', id: 'ok', text: '确定', entity: null } },
+      input(6, 'title', '最终'),
+      input(7, 'title', '最终值'),
+    ];
+    const text = buildStepsToReproduce(ops);
+    expect(text).toContain('1. [输入] title = "测试"');
+    expect(text).toContain('2. [输入] desc = "a"');
+    expect(text).toContain('3. [输入] title = "测试文"');
+    expect(text).toContain('5. [输入] title = "最终值"');
+    expect(text).not.toContain('"测"');
+    expect(text.split('\n').filter((line) => line.includes('[输入] title'))).toHaveLength(3);
+  });
 });
 
 describe('buildEnvironmentText / buildManifest / generateReportId', () => {
@@ -170,6 +195,21 @@ describe('buildEnvironmentText / buildManifest / generateReportId', () => {
       status: undefined,
     });
     expect(manifest.operationCount).toBe(0);
+  });
+
+  it('组件选择模式：manifest 带 element 元数据与 element.json 文件项', () => {
+    const manifest = buildManifest({
+      id: 'bug-2',
+      createdAt: '2026-10-25T00:00:00.000Z',
+      form: { title: 't', severity: 'high' },
+      environment: { os: 'win32' },
+      networkEntries: [],
+      consoleLines: [],
+      operations: [],
+      element: { selector: 'div > button#submit', outerHTML: '<button id="submit">提交</button>' },
+    });
+    expect(manifest.files.element).toBe('element.json');
+    expect(manifest.element?.selector).toBe('div > button#submit');
   });
 
   it('报告 id 形如 bug-<14位时间戳>-<6位随机>', () => {

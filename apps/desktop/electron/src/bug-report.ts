@@ -12,6 +12,7 @@ import {
   generateReportId,
   type BugReportForm,
   type CapturedConsoleLine,
+  type CapturedElementMeta,
   type CapturedNetworkEntry,
   type CapturedOperation,
   type PendingBugReportQueueItem,
@@ -22,7 +23,7 @@ const QUEUE_FILE = 'queue.json';
 
 export interface SaveBugReportInput {
   form: BugReportForm;
-  /** 前端标注后的截图（image/png dataURL） */
+  /** 前端标注后的截图（image/png dataURL；组件选择模式为组件裁剪图） */
   screenshotDataUrl: string;
   snapshot: {
     capturedAt: string;
@@ -32,6 +33,7 @@ export interface SaveBugReportInput {
     consoleLines: CapturedConsoleLine[];
     operations: CapturedOperation[];
     environment: TestModeEnvironmentInput;
+    element?: CapturedElementMeta | null;
   };
 }
 
@@ -77,6 +79,7 @@ export function saveBugReport(
     networkEntries: input.snapshot.network,
     consoleLines: input.snapshot.consoleLines,
     operations: input.snapshot.operations,
+    element: input.snapshot.element,
   });
 
   fs.writeFileSync(path.join(bundlePath, 'screenshot.png'), dataUrlToBuffer(input.screenshotDataUrl));
@@ -93,8 +96,62 @@ export function saveBugReport(
     path.join(bundlePath, 'operations.json'),
     JSON.stringify(input.snapshot.operations, null, 2),
   );
+  if (manifest.files.element && manifest.element) {
+    fs.writeFileSync(
+      path.join(bundlePath, manifest.files.element),
+      JSON.stringify(manifest.element, null, 2),
+    );
+  }
   fs.writeFileSync(path.join(bundlePath, 'manifest.json'), JSON.stringify(manifest, null, 2));
   return { id, bundlePath, manifest };
+}
+
+// ---------- 截图分块上传（desktop:command IPC 面有 64KB 参数守卫，标注后截图
+// dataURL 常达数 MB——先分块进主进程，save 只传 uploadId） ----------
+
+interface ScreenshotUpload {
+  chunks: string[];
+  createdAt: number;
+}
+
+const SCREENSHOT_UPLOAD_TTL_MS = 600_000;
+/** 单块上限（字符）：给 64KB 守卫留余量（args 包裹层 + JSON 转义膨胀） */
+export const SCREENSHOT_CHUNK_LIMIT = 48_000;
+
+const screenshotUploads = new Map<string, ScreenshotUpload>();
+
+export function beginScreenshotUpload(): { uploadId: string } {
+  const uploadId = `shot-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  screenshotUploads.set(uploadId, { chunks: [], createdAt: Date.now() });
+  // 顺手清残留：中断的上传会话 10 分钟后过期
+  for (const [key, upload] of screenshotUploads) {
+    if (Date.now() - upload.createdAt > SCREENSHOT_UPLOAD_TTL_MS) {
+      screenshotUploads.delete(key);
+    }
+  }
+  return { uploadId };
+}
+
+export function appendScreenshotChunk(uploadId: string, chunk: string): { received: number } {
+  const upload = screenshotUploads.get(uploadId);
+  if (!upload) {
+    throw new Error('截图上传会话不存在或已过期');
+  }
+  if (chunk.length > SCREENSHOT_CHUNK_LIMIT) {
+    throw new Error('截图分块过大');
+  }
+  upload.chunks.push(chunk);
+  return { received: upload.chunks.length };
+}
+
+/** 组装并移除上传会话（save 消费；失败不再残留内存） */
+export function takeScreenshotUpload(uploadId: string): string {
+  const upload = screenshotUploads.get(uploadId);
+  if (!upload) {
+    throw new Error('截图上传会话不存在或已过期');
+  }
+  screenshotUploads.delete(uploadId);
+  return upload.chunks.join('');
 }
 
 // ---------- 补交队列（queue.json；简单全量读写，条目量级为个位数） ----------

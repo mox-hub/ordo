@@ -4,9 +4,13 @@ import path from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import {
   addQueueItem,
+  appendScreenshotChunk,
+  beginScreenshotUpload,
   listQueueItems,
   removeQueueItem,
   saveBugReport,
+  SCREENSHOT_CHUNK_LIMIT,
+  takeScreenshotUpload,
 } from './bug-report';
 
 const SNAP_BASE = {
@@ -91,6 +95,26 @@ describe('saveBugReport', () => {
     expect(() =>
       saveBugReport({ form: FORM, screenshotDataUrl: 'data:image/jpeg;base64,x', snapshot: SNAP_BASE }, root),
     ).toThrow('image/png');
+  });
+});
+
+describe('截图分块上传（绕开 desktop:command 64KB 参数守卫）', () => {
+  it('begin → 分块 append → take 组装原样还原', () => {
+    const { uploadId } = beginScreenshotUpload();
+    // 每块带上块序号，验证顺序还原
+    const payload = Array.from({ length: 5 }, (_, i) => `chunk-${i}-`).join('');
+    for (let i = 0; i < payload.length; i += SCREENSHOT_CHUNK_LIMIT - 10) {
+      appendScreenshotChunk(uploadId, payload.slice(i, i + SCREENSHOT_CHUNK_LIMIT - 10));
+    }
+    expect(takeScreenshotUpload(uploadId)).toBe(payload);
+    // take 后会话即焚：重复消费报错
+    expect(() => takeScreenshotUpload(uploadId)).toThrow('不存在或已过期');
+  });
+
+  it('未知会话 / 超限分块拒绝', () => {
+    expect(() => appendScreenshotChunk('nope', 'x')).toThrow('不存在或已过期');
+    const { uploadId } = beginScreenshotUpload();
+    expect(() => appendScreenshotChunk(uploadId, 'x'.repeat(SCREENSHOT_CHUNK_LIMIT + 1))).toThrow('分块过大');
   });
 });
 
