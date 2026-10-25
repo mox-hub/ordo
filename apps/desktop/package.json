@@ -7,8 +7,10 @@
   "scripts": {
     "type-check": "tsc -p tsconfig.json --noEmit",
     "lint": "eslint electron/src/**/*.ts",
+    "test": "vitest run",
     "build:electron": "tsup",
     "desktop:dev": "tsup && electron .",
+    "spike:test-mode": "pnpm build:electron && node scripts/test-mode-spike.mjs",
     "pack:resources": "node scripts/pack.mjs",
     "desktop:pack": "pnpm pack:resources && pnpm build:electron && electron-builder --win nsis",
     "e2e:shell": "node scripts/e2e-shell.mjs"
@@ -20,7 +22,8 @@
     "eslint": "catalog:",
     "tsup": "^8.5.1",
     "typescript": "catalog:",
-    "typescript-eslint": "catalog:"
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
   },
   "dependencies": {
     "electron-updater": "^6.8.9"
