@@ -5,6 +5,7 @@ import {
   OnModuleInit,
   ServiceUnavailableException,
 } from '@nestjs/common';
+import * as fs from 'fs';
 import { LoggerService } from '../logger/logger.service';
 
 // IMPORTANT:
@@ -110,6 +111,16 @@ export class PrismaService
       return;
     }
 
+    // 修复过的库落 marker 跳过：此前的全表扫描（sqlite_master + 每表 PRAGMA
+    // + 每个 JSON 列一条 COUNT）阻塞 onModuleInit 且随数据量线性变慢，是启动
+    // 8~31s 的组成部分。本轮真修复过脏数据则不落 marker（下轮再查一遍收尾）。
+    // env ORDO_JSON_REPAIR=1 可强制复查。
+    const dbPath = databaseUrl.slice('file:'.length);
+    const markerPath = `${dbPath}.json-repair-ok`;
+    if (process.env.ORDO_JSON_REPAIR !== '1' && fs.existsSync(markerPath)) {
+      return;
+    }
+
     try {
       await this.$queryRawUnsafe(`SELECT json_valid('{}') as valid`);
     } catch {
@@ -179,6 +190,14 @@ export class PrismaService
     if (repairedCells > 0) {
       this.logger.warn(
         `SQLite JSON integrity repair completed: ${repairedCells} cells fixed`,
+      );
+      return; // 修过脏数据不落 marker，下次启动复查一遍确保收敛
+    }
+    try {
+      fs.writeFileSync(markerPath, new Date().toISOString(), 'utf-8');
+    } catch (e) {
+      this.logger.warn(
+        `JSON repair marker write failed (${markerPath}): ${(e as Error).message}`,
       );
     }
   }

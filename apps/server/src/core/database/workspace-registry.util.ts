@@ -76,8 +76,34 @@ function isValidSqliteFile(p: string): boolean {
   }
 }
 
+/** 注册表进程内缓存：热路径（每次 Prisma 属性访问）此前每跳都 readFileSync+parse */
+const REGISTRY_CACHE_TTL_MS = 1_000;
+let registryCache: {
+  records: WorkspaceRecord[];
+  mtimeMs: number;
+  checkedAt: number;
+} | null = null;
+
 export function listWorkspaces(): WorkspaceRecord[] {
   const file = registryPath();
+  // TTL 内零 IO：注册表变更是用户级低频事件，外部改写靠 mtime 失效兜底
+  if (
+    registryCache &&
+    Date.now() - registryCache.checkedAt < REGISTRY_CACHE_TTL_MS
+  ) {
+    return registryCache.records;
+  }
+  let mtimeMs = -1;
+  try {
+    mtimeMs = fs.statSync(file).mtimeMs;
+  } catch {
+    mtimeMs = -1;
+  }
+  if (registryCache && mtimeMs === registryCache.mtimeMs) {
+    registryCache.checkedAt = Date.now();
+    return registryCache.records;
+  }
+
   let records: WorkspaceRecord[] = [];
   try {
     records = JSON.parse(fs.readFileSync(file, 'utf-8')) as WorkspaceRecord[];
@@ -97,11 +123,17 @@ export function listWorkspaces(): WorkspaceRecord[] {
     });
     persist(records);
   }
+  registryCache = { records, mtimeMs, checkedAt: Date.now() };
   return records;
 }
 
 export function findWorkspace(id: string): WorkspaceRecord | null {
   return listWorkspaces().find((r) => r.id === id) ?? null;
+}
+
+/** 绕过 persist() 的带外写（如备份恢复 copyFileSync 覆盖注册表）后显式失效缓存 */
+export function invalidateRegistryCache(): void {
+  registryCache = null;
 }
 
 /** 解析工作区对应的 SQLite URL；default 返回 DATABASE_URL，未初始化的工作区返回 null */
@@ -201,4 +233,5 @@ export function activateWorkspace(id: string): WorkspaceRecord | null {
 function persist(records: WorkspaceRecord[]) {
   // T7 原子写：直写截断 → listWorkspaces 静默返回空数组（全部工作区「消失」）
   atomicWriteFile(registryPath(), JSON.stringify(records, null, 2));
+  registryCache = null; // 写后失效进程内缓存，下次读按新 mtime 重建
 }

@@ -43,6 +43,7 @@ import {
   WorkspaceRecord,
   dbFileUrl,
   findWorkspace,
+  invalidateRegistryCache,
   listWorkspaces,
   registryFilePath,
 } from '@/core/database/workspace-registry.util';
@@ -271,6 +272,8 @@ export class WorkspaceBackupService {
         const snapshotRegistry = path.join(backupDir, 'workspaces.json');
         if (fs.existsSync(snapshotRegistry)) {
           fs.copyFileSync(snapshotRegistry, registryFilePath());
+          // 带外写绕过了 persist()：显式失效进程内注册表缓存（点时还原立即生效）
+          invalidateRegistryCache();
           registryRestored = true;
         }
       }
