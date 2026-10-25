@@ -92,6 +92,78 @@ export interface DesktopLogSnapshot {
   filePath: string;
 }
 
+// ---------- 实机测试模式（CAP-A-31 批 1）：desktop 壳 IPC 契约镜像 ----------
+
+export interface TestModeStatusResult {
+  active: boolean;
+  startedAt: string | null;
+  networkCount: number;
+  consoleCount: number;
+  operationCount: number;
+  url: string;
+}
+
+export interface TestModeConsoleLine {
+  at: string;
+  level: string;
+  message: string;
+  sourceId?: string;
+  lineNumber?: number;
+}
+
+export interface TestModeOperation {
+  type: 'click' | 'input' | 'navigate';
+  at: number;
+  target?: {
+    tag: string | null;
+    id: string | null;
+    text: string;
+    entity: string | null;
+  } | null;
+  value?: string;
+  url?: string;
+}
+
+/** 抓取现场返回的快照摘要（无 headers——展示面只给脱敏后的 method/url/status） */
+export interface TestModeCaptureReport {
+  capturedAt: string;
+  url: string;
+  title: string;
+  networkSummary: Array<{ method: string; url: string; status?: number }>;
+  consoleLines: TestModeConsoleLine[];
+  operations: TestModeOperation[];
+  environmentText: string;
+  stepsToReproduce: string;
+}
+
+export interface TestModeCaptureResult {
+  screenshotDataUrl: string;
+  report: TestModeCaptureReport;
+}
+
+export interface BugReportSaveArgs {
+  title: string;
+  description?: string;
+  severity?: string;
+  expectedResult?: string;
+  actualResult?: string;
+  stepsToReproduce?: string;
+  screenshotDataUrl: string;
+}
+
+export interface BugReportSaveResult {
+  id: string;
+  bundlePath: string;
+}
+
+export interface BugReportQueueItem {
+  id: string;
+  bundlePath: string;
+  payload: Record<string, unknown>;
+  error?: string;
+  createdAt: string;
+}
+
 declare global {
   interface Window {
     /** 桌面壳桥（Electron preload 注入，ADR-014）：invoke 走主进程 desktop:command 路由 */

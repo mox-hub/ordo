@@ -66,6 +66,7 @@ import { useProjectDetail } from '@/modules/project/hooks/use-project-detail';
 import { ErrorBoundary } from '@/components/semantic/error-boundary';
 import { PageErrorFallback } from '@/components/semantic/page-error-fallback';
 import { AssistantFab } from '@/modules/assistant';
+import { TestModeFab } from '@/modules/test-mode/components/test-mode-fab';
 import { ConnectionBanner } from '@/shared/components/connection-banner';
 import { useGlobalHotkey } from '@/shared/hotkeys/use-global-hotkey';
 import { getEffectiveCombo } from '@/shared/hotkeys/hotkey-store';
@@ -816,6 +817,9 @@ export function ShellLayout() {
 
           {/* 主 AI 助手：右下角圆形按钮 + 浮窗对话（可放大） */}
           <AssistantFab />
+
+          {/* 实机测试模式（CAP-A-31）：仅桌面壳显示，抓现场建 bug 单 */}
+          <TestModeFab />
 
           {/* 局部侵入问答（CAP-C-07）：Ctrl/Cmd+左键卡片就地 AI 解释 */}
           <AISlotLayer />
