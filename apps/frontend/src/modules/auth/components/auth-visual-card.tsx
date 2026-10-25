@@ -3,7 +3,6 @@ import { useTranslation } from 'react-i18next';
 import { Logo } from '@/components/brand/logo';
 import { Button } from '@/components/ui/button';
 import { useTheme, type ResolvedTheme } from '@/shared/theme/theme-context';
-import { useDesktopCompactWindow } from '@/modules/desktop';
 import { BlueprintCanvas } from './visuals/blueprint-canvas';
 import { PrismCanvas } from './visuals/prism-canvas';
 import { ServerConfigDialog } from './server-config-dialog';
@@ -51,6 +50,12 @@ interface AuthVisualCardProps {
   aiPage?: string;
 }
 
+/**
+ * 认证面卡片壳（登录/注册共用，2026-10-22 恢复全大窗改版）：
+ * 双表面画布（蓝图 ⟷ 棱镜）铺满整窗作背景，登录/注册表单承载在窗口正中的
+ * 玻璃拟态卡片里。桌面壳不再切小窗——同一主窗内呈现（set_compact_mode 已退役）；
+ * web 端同构。右上角保留双表面翻转与日夜间切换。
+ */
 export function AuthVisualCard({
   children,
   isRegister: _isRegister = false,
@@ -59,8 +64,6 @@ export function AuthVisualCard({
   const { i18n } = useTranslation();
   const { resolvedMode, toggleTheme } = useSafeTheme();
   const isDark = resolvedMode === 'dark';
-  // 桌面壳：认证面期间主窗口收缩为紧凑小窗并隐藏标题栏（web 端 no-op）
-  useDesktopCompactWindow();
 
   // 双表面状态：一面人类控制面 (human)，一面 AI 执行面 (ai)
   const [surface, setSurface] = useState<SurfaceMode>(() => {
@@ -117,122 +120,103 @@ export function AuthVisualCard({
     },
   }[surface];
 
-  // 根据当前模式自适应左侧背景氛围色 (与右侧画布背景色精确同频交融)
-  // 人类控制面：清爽理智的工程蓝灰 (Light: 浅工程灰白, Dark: 深幽工程蓝黑)
-  // AI 执行面：深邃纯粹的光学暗室 (Light: 纯净 card 白, Dark: 极夜石墨黑)
-  // ⚠️ 深色两支与 visuals/ 画布美术（prism-canvas / blueprint-canvas）的底色是同一组
-  // 环境色，改色必须与画布同步（属「插画/美术资源」豁免类，见批 6b 报告存疑清单）。
-  const leftBgStyle = {
-    backgroundColor: isDark
-      ? isAi
-        ? '#060810'
-        : '#091224'
-      : isAi
-        ? 'var(--color-card)'
-        : 'rgba(248, 250, 252, 0.95)',
-  };
-
   return (
     <div
-      className="flex min-h-screen w-full bg-background transition-colors duration-slow"
+      className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-background transition-colors duration-slow"
       data-ai-page={aiPage}
     >
-      {/* 双栏一体化面板：铺满窗口（窗口即卡片，无外隙/圆角/边框），桌面认证窗
-          右上角 36px 由系统窗口控制 overlay（titleBarOverlay）占用 */}
-      <div className="relative flex min-h-screen w-full flex-col md:grid md:grid-cols-12 transition-colors duration-slow bg-card">
-        {/* 桌面紧凑窗口拖动区：盖住卡片顶部品牌行（右上控制按钮组 z-30 在其上可点；
-            -webkit-app-region 在浏览器端无效，不影响 web） */}
-        <div
-          className="absolute inset-x-0 top-0 z-dropdown h-10"
-          style={{ WebkitAppRegion: 'drag' } as React.CSSProperties}
-        />
-
-        {/* 右下角圆形悬浮控制按钮组 (反转卡片 + 日夜间切换)：右上角让位系统窗口控制 */}
-        <div className="absolute bottom-4 right-4 z-banner flex items-center gap-2">
-          {/* 1. 双表面反转圆形按钮 (role="switch") */}
-          <button
-            type="button"
-            role="switch"
-            aria-checked={isAi}
-            onClick={toggleSurface}
-            aria-label={surfaceMetadata.switchPrompt}
-            title={surfaceMetadata.switchPrompt}
-            className="flex size-9 items-center justify-center rounded-full border border-border/70 bg-card/85 text-foreground backdrop-blur-md transition-all hover:scale-105 hover:bg-muted active:scale-95 shadow-xs group"
-          >
-            <RotateCw
-              className={cn(
-                'size-4 transition-transform duration-slow',
-                isAi
-                  ? 'rotate-180 text-accent-blue'
-                  : 'text-primary group-hover:rotate-180',
-              )}
-            />
-          </button>
-
-          {/* 2. 日夜间切换圆形按钮 (role="switch") */}
-          <button
-            type="button"
-            role="switch"
-            aria-checked={isDark}
-            onClick={toggleTheme}
-            aria-label={isDark ? '切换至日间浅色模式' : '切换至夜间深色模式'}
-            title={isDark ? '切换至日间浅色模式' : '切换至夜间深色模式'}
-            className="flex size-9 items-center justify-center rounded-full border border-border/70 bg-card/85 text-foreground backdrop-blur-md transition-all hover:scale-105 hover:bg-muted active:scale-95 shadow-xs"
-          >
-            {isDark ? (
-              <Sun className="size-4 text-accent-yellow transition-transform" />
-            ) : (
-              <Moon className="size-4 text-muted-foreground transition-transform" />
-            )}
-          </button>
+      {/* 背景层：双表面画布铺满整窗 + 半透明遮罩压稳前景卡片对比度。
+          翻转只经右上角按钮触发（画布上不挂点击，防卡片外误触翻转） */}
+      <div className="absolute inset-0" aria-hidden>
+        <div className="decision-card-scene relative h-full w-full">
+          <div className={cn('decision-card-flipper', isAi && 'is-flipped')}>
+            <div className="decision-card-face decision-card-face-front">
+              <BlueprintCanvas isDark={isDark} />
+            </div>
+            <div className="decision-card-face decision-card-face-back">
+              <PrismCanvas isDark={isDark} />
+            </div>
+          </div>
         </div>
+        <div className="absolute inset-0 bg-background/55" />
+      </div>
 
-        {/* 左侧：人机交互、品牌叙事与表单操作区 (背景色随右侧模式联动自适应) */}
-        <div
-          style={leftBgStyle}
-          className="flex flex-col justify-between p-6 sm:p-8 md:col-span-6 lg:col-span-5 transition-colors duration-slow"
+      {/* 右上角控制按钮组 (反转卡片 + 日夜间切换) */}
+      <div className="absolute right-4 top-4 z-banner flex items-center gap-2">
+        {/* 1. 双表面反转圆形按钮 (role="switch") */}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={isAi}
+          onClick={toggleSurface}
+          aria-label={surfaceMetadata.switchPrompt}
+          title={surfaceMetadata.switchPrompt}
+          className="flex size-9 items-center justify-center rounded-full border border-border/70 bg-card/85 text-foreground backdrop-blur-md transition-all hover:scale-105 hover:bg-muted active:scale-95 shadow-xs group"
         >
-          <div>
-            {/* 品牌 Logo 与当前表面角标 */}
-            <div className="flex items-center justify-between">
-              <Logo
-                size="md"
-                variant="framed"
-                ariaLabel="Ordo"
+          <RotateCw
+            className={cn(
+              'size-4 transition-transform duration-slow',
+              isAi
+                ? 'rotate-180 text-accent-blue'
+                : 'text-primary group-hover:rotate-180',
+            )}
+          />
+        </button>
+
+        {/* 2. 日夜间切换圆形按钮 (role="switch") */}
+        <button
+          type="button"
+          role="switch"
+          aria-checked={isDark}
+          onClick={toggleTheme}
+          aria-label={isDark ? '切换至日间浅色模式' : '切换至夜间深色模式'}
+          title={isDark ? '切换至日间浅色模式' : '切换至夜间深色模式'}
+          className="flex size-9 items-center justify-center rounded-full border border-border/70 bg-card/85 text-foreground backdrop-blur-md transition-all hover:scale-105 hover:bg-muted active:scale-95 shadow-xs"
+        >
+          {isDark ? (
+            <Sun className="size-4 text-accent-yellow transition-transform" />
+          ) : (
+            <Moon className="size-4 text-muted-foreground transition-transform" />
+          )}
+        </button>
+      </div>
+
+      {/* 居中认证卡：品牌叙事 + 表单 + 底部动作组 */}
+      <div className="relative z-10 my-auto w-full max-w-md px-4 py-10">
+        <div className="rounded-2xl border border-border/60 bg-card/90 p-6 shadow-xs backdrop-blur-md sm:p-8">
+          {/* 品牌 Logo 与当前表面角标 */}
+          <div className="flex items-center justify-between">
+            <Logo size="md" variant="framed" ariaLabel="Ordo" />
+            <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-2xs font-medium text-muted-foreground">
+              <span
+                className={cn(
+                  'size-1.5 rounded-full transition-colors',
+                  isAi ? 'bg-accent-blue' : 'bg-accent-green',
+                )}
               />
-              <span className="inline-flex items-center gap-1 rounded-full border border-border/60 bg-muted/40 px-2.5 py-0.5 text-2xs font-medium text-muted-foreground">
-                <span
-                  className={cn(
-                    'size-1.5 rounded-full transition-colors',
-                    isAi ? 'bg-accent-blue' : 'bg-accent-green',
-                  )}
-                />
-                {surfaceMetadata.tag}
-              </span>
-            </div>
-
-            {/* 标题与欢迎诗意文案 (去除多余的 emoji 和图标，纯粹自然) */}
-            <div className="mt-5 space-y-2">
-              <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
-                欢迎你，我的朋友
-              </h1>
-
-              <div className="space-y-0.5 text-xs text-muted-foreground leading-relaxed">
-                {surfaceMetadata.quote.map((line, idx) => (
-                  <p key={idx}>{line}</p>
-                ))}
-              </div>
-            </div>
-
-            {/* 表单插槽（登录或注册） */}
-            <div className="mt-6">{children}</div>
+              {surfaceMetadata.tag}
+            </span>
           </div>
 
-          {/* 底部功能动作组（采用系统内置标准 Button 组件：接入端点 + 语言切换 + 无法登录反馈） */}
+          {/* 标题与欢迎诗意文案 */}
+          <div className="mt-5 space-y-2">
+            <h1 className="text-xl font-semibold tracking-tight text-foreground sm:text-2xl">
+              欢迎你，我的朋友
+            </h1>
+            <div className="space-y-0.5 text-xs text-muted-foreground leading-relaxed">
+              {surfaceMetadata.quote.map((line, idx) => (
+                <p key={idx}>{line}</p>
+              ))}
+            </div>
+          </div>
+
+          {/* 表单插槽（登录或注册） */}
+          <div className="mt-6">{children}</div>
+
+          {/* 底部功能动作组（接入端点 + 语言切换 + 无法登录反馈） */}
           <div className="mt-6 border-t border-border/60 pt-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                {/* 接入域名 / 服务配置：采用系统内置标准 Button */}
                 <Button
                   type="button"
                   role="link"
@@ -245,7 +229,6 @@ export function AuthVisualCard({
                   接入端点
                 </Button>
 
-                {/* 语言切换：采用系统内置标准 Button */}
                 <Button
                   type="button"
                   role="combobox"
@@ -262,7 +245,6 @@ export function AuthVisualCard({
                 </Button>
               </div>
 
-              {/* 无法登录 / 帮助反馈：采用系统内置 Button */}
               <Button
                 type="button"
                 role="link"
@@ -273,26 +255,6 @@ export function AuthVisualCard({
               >
                 无法登录？
               </Button>
-            </div>
-          </div>
-        </div>
-
-        {/* 右侧：基于系统内置 decision-card-scene 翻转规范的 3D 双面卡片 (一面人类，一面 AI；无遮挡翻转) */}
-        <div
-          className="decision-card-scene relative hidden md:block md:col-span-6 lg:col-span-7 border-l border-border/60 overflow-hidden cursor-pointer"
-          onClick={toggleSurface}
-          title={isAi ? '点击翻转至「人类控制面」' : '点击翻转至「AI 执行面」'}
-        >
-          {/* 系统内置 3D 翻转主体 (decision-card-flipper) */}
-          <div className={cn('decision-card-flipper', isAi && 'is-flipped')}>
-            {/* 正面 A：人类控制面 (Human Control Surface —— 建筑蓝图透视) */}
-            <div className="decision-card-face decision-card-face-front">
-              <BlueprintCanvas isDark={isDark} />
-            </div>
-
-            {/* 背面 B：AI 执行面 (AI Execution Surface —— 纯粹光影棱镜) */}
-            <div className="decision-card-face decision-card-face-back">
-              <PrismCanvas isDark={isDark} />
             </div>
           </div>
         </div>
@@ -315,22 +277,22 @@ export function AuthVisualCard({
 
             <div className="space-y-2 text-xs text-muted-foreground leading-relaxed">
               <p>
-                • <strong>本地运行</strong>：请确保后端已执行{' '}
+                • <strong>本地运行</strong>
+                ：桌面版启动时会自动拉起本地服务（进度见启动屏）；开发模式请在仓库运行{' '}
                 <code className="rounded-sm bg-muted px-1 py-0.5 text-foreground font-mono">
-                  pnpm dev:server
+                  pnpm dev
                 </code>
-                ，端口处于 3000。
+                ，接口统一走 <code className="rounded-sm bg-muted px-1 py-0.5 text-foreground font-mono">/_api</code> 前缀。
               </p>
               <p>
-                • <strong>初始账号</strong>：默认内置开发者账号为{' '}
-                <code className="rounded-sm bg-muted px-1 py-0.5 text-foreground font-mono">
-                  admin
-                </code>
-                ，首次安装请跑数据库迁移。
+                • <strong>初始账号</strong>
+                ：首次使用请先{' '}
+                <strong>邮箱注册</strong>
+                ，或使用团队发放的邀请链接加入工作区。
               </p>
               <p>
                 • <strong>私有服务</strong>
-                ：若连接远端工作区，请点击左下方“接入端点”配置完整的 API 地址。
+                ：若连接远端工作区，请点击下方“接入端点”配置完整的 API 地址。
               </p>
             </div>
 

@@ -4,7 +4,6 @@ import { useTranslation } from 'react-i18next';
 import { ArrowRight, FileWarning, RefreshCw, ScrollText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/brand/logo';
-import { useDesktopCompactWindow } from '@/modules/desktop';
 import { BootProgressBar } from '../components/boot-progress-bar';
 import { BootChecklist } from '../components/boot-checklist';
 import { BootErrorDrawer } from '../components/boot-error-drawer';
@@ -14,9 +13,6 @@ import { useBootRunner } from '../hooks/use-boot-runner';
 export function BootPage() {
   const { t } = useTranslation();
   const navigate = useNavigate();
-  // 初始化页归入桌面壳紧凑面（CAP-A-14）：与登录/注册同用认证小窗（944×620），
-  // 「进入登录」因此在同一小窗内路由切换，不触发壳切窗重载
-  useDesktopCompactWindow();
   const runner = useBootRunner();
   const { state, environment, start, toggleSkipNextTime } = runner;
   const [drawerOpen, setDrawerOpen] = useState(false);
