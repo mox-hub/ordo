@@ -13,7 +13,12 @@ import {
 } from "react"
 import { useNavigate } from "react-router-dom"
 import { useQuery } from "@tanstack/react-query"
-import ReactMarkdown from "react-markdown"
+import { lazy, Suspense } from "react"
+
+// AI 回答的 markdown 渲染懒岛：react-markdown 全链只在该回答首渲时按需加载
+const AiResponseMarkdown = lazy(() =>
+  import("./ai-response-markdown").then((m) => ({ default: m.AiResponseMarkdown })),
+)
 import {
   ArrowDownIcon,
   ArrowLeftIcon,
@@ -565,7 +570,13 @@ export function CommandPaletteProvider({
                         aria-live="polite"
                         className="text-foreground text-sm [&_a]:underline [&_a]:underline-offset-4 [&_code]:rounded-md [&_code]:bg-muted [&_code]:px-[0.3rem] [&_code]:py-[0.2rem] [&_code]:font-mono [&_p]:not-first:mt-3 [&_p]:leading-relaxed"
                       >
-                        <ReactMarkdown>{ai.response}</ReactMarkdown>
+                        <Suspense
+                          fallback={
+                            <span className="whitespace-pre-wrap">{ai.response}</span>
+                          }
+                        >
+                          <AiResponseMarkdown text={ai.response} />
+                        </Suspense>
                       </div>
                     ) : null}
                     {!ai.isGenerating && !ai.response && ai.channel === 'runtime' ? (

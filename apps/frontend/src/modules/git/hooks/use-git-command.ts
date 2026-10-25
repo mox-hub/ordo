@@ -32,6 +32,7 @@ export function useCommandHistory(repoId: string, limit = 10) {
     queryKey: ['command-history', repoId, { limit }],
     queryFn: () => gitApi.getCommandHistory(repoId, limit),
     enabled: !!repoId,
-    refetchInterval: 15000,
+    // 历史是用户驱动数据：命令 mutation onSuccess 已定向失效本键（useExecuteCommand），
+    // 不再挂 15s 轮询（启动提速批：无 WS 桥前用户驱动查询不加轮询）
   });
 }

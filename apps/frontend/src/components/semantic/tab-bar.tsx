@@ -22,7 +22,9 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useTabs, type Tab } from '@/shared/tabs/tabs-context';
-import { OPEN_COMMAND_PALETTE_EVENT } from '@/shared/command-palette/command-palette-provider';
+// 从独立事件文件取常量（本文件在入口 chunk）：provider 链含 react-markdown
+// 与三个模块 API，为拿一个常量把整链拖进首屏是启动提速批清掉的回退点
+import { OPEN_COMMAND_PALETTE_EVENT } from '@/shared/command-palette/open-command-palette-event';
 import { RoutePreviewTrigger } from '@/shared/route-preview/route-preview-trigger';
 import { ContextMenu, createMenuItems } from '@/components/ui/context-menu';
 import { Button } from '@/components/ui/button';

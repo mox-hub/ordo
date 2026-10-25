@@ -25,7 +25,8 @@
     "test:coverage": "vitest --coverage",
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
-    "e2e:report": "playwright show-report"
+    "e2e:report": "playwright show-report",
+    "check:bundle": "node ../../scripts/check-bundle.mjs"
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.93",

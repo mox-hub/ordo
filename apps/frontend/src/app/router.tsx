@@ -1,146 +1,273 @@
 import { lazy, Suspense, useEffect } from 'react';
+import type { ComponentType } from 'react';
 import { createBrowserRouter, Navigate, useLocation, useParams } from 'react-router-dom';
 import { LoginPage } from '@/modules/auth/pages/login-page';
 import { WelcomePage } from '@/modules/auth/pages/welcome-page';
 import { AuthGuard } from '@/modules/auth/components/auth-guard';
 import { ShellLayout } from '@/shared/layout/shell-layout';
-import { ProjectListPage } from '@/modules/project/pages/project-list-page';
-import { ProjectDashboardPage } from '@/modules/project/pages/project-dashboard-page';
-import { ProjectTasksPage } from '@/modules/project/pages/project-tasks-page';
-import { ProjectMilestonesPage } from '@/modules/project/pages/project-milestones-page';
-import { ProjectProfilePage } from '@/modules/project/pages/project-profile-page';
-import { ProjectPlaybookPage } from '@/modules/project/pages/project-playbook-page';
-import { ProjectTeamPage } from '@/modules/project/pages/project-team-page';
-import { DashboardPage } from '@/modules/project/pages/dashboard-page';
 import { ErrorPage } from '@/shared/pages/error-page';
-// TerminalPage 已废弃 - Terminal模块已并入Runtime模块的terminal capability
-import { SettingsPage } from '@/modules/settings/pages/settings-page';
-import { AppearanceSettingsSection } from '@/modules/settings/pages/sections/appearance-section';
-import { DockSettingsSection } from '@/modules/settings/pages/sections/dock-section';
-import { ShortcutsSettingsSection } from '@/modules/settings/pages/sections/shortcuts-section';
-import { ProfileSettingsSection } from '@/modules/settings/pages/sections/profile-section';
-import { GitSettingsSection } from '@/modules/settings/pages/sections/git-section';
-import { TerminalSettingsSection } from '@/modules/settings/pages/sections/terminal-section';
-import {
-  LabelsSettingsSection,
-  StatusesSettingsSection,
-  RolesSettingsSection,
-  TemplatesSettingsSection,
-  StorageSettingsSection,
-} from '@/modules/settings/pages/sections/manager-sections';
-import { ShortIdSettingsSection } from '@/modules/settings/pages/sections/short-id-section';
-import { BackupsSection } from '@/modules/settings/pages/sections/backups-section';
-import { WorkspaceSection } from '@/modules/settings/pages/sections/workspace-section';
-import { IssueTypesSettingsSection } from '@/modules/settings/pages/sections/issue-types-section';
-import { IssueTypeDetailSection } from '@/modules/settings/pages/sections/issue-type-detail-section';
-import { ChecklistsSettingsSection } from '@/modules/settings/pages/sections/checklists-section';
-import { AiManagementSection } from '@/modules/settings/pages/sections/ai-management-section';
-import { MemorySection } from '@/modules/settings/pages/sections/memory-section';
-import { PromptsSettingsSection } from '@/modules/settings/pages/sections/prompts-section';
-import { RuntimeSettingsSection } from '@/modules/settings/pages/sections/runtime-section';
-import { AboutSection } from '@/modules/settings/pages/sections/about-section';
-import { RuntimeMachineDetailSection } from '@/modules/settings/pages/sections/runtime-machine-detail-section';
-import { AccessTokensSettingsSection } from '@/modules/settings/pages/sections/access-tokens-section';
-import { IntegrationsSettingsSection } from '@/modules/settings/pages/sections/integrations-section';
-import { GithubIntegrationSection } from '@/modules/settings/pages/sections/github-integration-section';
-import { LinearIntegrationSection } from '@/modules/settings/pages/sections/linear-integration-section';
-import { ProjectSettingsPage } from '@/modules/project/pages/project-settings-page';
-import { ProjectInitPage } from '@/modules/project/pages/project-init-page';
-import { NotificationCenterPage } from '@/modules/notification/pages/notification-center-page';
-import { RepositoryListPage } from '@/modules/git/pages/repository-list-page';
-import { RepositoryDetailPage } from '@/modules/git/pages/repository-detail-page';
-import { RepositorySettingsPage } from '@/modules/git/pages/repository-settings-page';
-import { AnalyticsPage } from '@/modules/analytics/pages/analytics-page';
-import { DocumentsPage } from '@/modules/document/pages/documents-page';
-import { DocumentViewPage } from '@/modules/document/pages/document-view-page';
-import { DocumentEditPage } from '@/modules/document/pages/document-edit-page';
-import { DesktopInitPage } from '@/modules/desktop/pages/desktop-init-page';
 import { BootPage } from '@/modules/boot/pages/boot-page';
-import { TasksPage } from '@/modules/issue/pages/tasks-page';
-import { BugsPage } from '@/modules/issue/pages/bugs-page';
-import { TaskDetailPage } from '@/modules/issue/pages/task-detail-page';
-import { BugDetailPage } from '@/modules/issue/pages/bug-detail-page';
-import { AcceptanceDetailPage } from '@/modules/acceptance/pages/acceptance-detail-page';
-import { AcceptanceListPage } from '@/modules/acceptance/pages/acceptance-list-page';
-import { ExecutionsPage } from '@/modules/executions/pages/executions-page';
-import { WorkflowListPage } from '@/modules/workflow/pages/workflow-list-page';
-import { WorkflowDetailPage } from '@/modules/workflow/pages/workflow-detail-page';
-import { ReleaseListPage } from '@/modules/release/pages/release-list-page';
-import { ReleaseDetailPage } from '@/modules/release/pages/release-detail-page';
-import { HelpPage } from '@/modules/help/pages/help-page';
-import { OPEN_COMMAND_PALETTE_EVENT } from '@/shared/command-palette/command-palette-provider';
+import { DesktopInitPage } from '@/modules/desktop/pages/desktop-init-page';
+import { OPEN_COMMAND_PALETTE_EVENT } from '@/shared/command-palette/open-command-palette-event';
 
 /**
- * 旧 AI / 集成页面路由已迁入设置页（2026-08-19）。
- * 旧路径保留重定向以兼容书签与历史跳转，保留 query 参数（如 ?tab= 深链）
- * 与 location.state（命令面板的 initialPrompt 等）。
+ * 路由级代码分割（启动提速批）：页面一律 lazy，登录/引导/错误页保持静态
+ * （冷启动首屏与错误兜底必须零等待）。
+ *
+ * Suspense 边界策略：只在 /app 与 /app/settings 两个父路由元素各包一层
+ * `<Suspense fallback={null}>`——lazy 子路由挂起时冒泡到最近的祖先边界，
+ * 无需逐路由包裹；独立全屏路由（register/invite/workspaces/new）本就走了
+ * react-router 的 route-level lazy（内部自带边界）。
+ *
+ * 注意：manualChunks 只影响「文件切分」不影响「何时加载」——静态可达的
+ * chunk 启动即载（CodeMirror 曾因此常驻关键路径），新增页面勿回退成静态
+ * import。
  */
-function RedirectToSettings({ to }: { to: string }) {
-  const { search, state } = useLocation();
-  return <Navigate to={{ pathname: to, search }} state={state} replace />;
+
+/** 按命名导出转 default 的 lazy 包装（与下方既有 lazy 常量同语义，少写样板） */
+function lazyNamed(
+  load: () => Promise<Record<string, unknown>>,
+  name: string,
+): ComponentType {
+  return lazy(async () => ({
+    default: (await load())[name] as ComponentType,
+  }));
 }
 
-/** 旧「AI 执行中心」退场重定向（2026-10-02 UI 收口）：执行域落执行记录页，?tab=trust 落办公室页 */
-function RedirectExecutions() {
-  const { search } = useLocation();
-  const tab = new URLSearchParams(search).get('tab');
-  return <Navigate to={tab === 'trust' ? '/app/office' : '/app/executions'} replace />;
-}
+// ---------- 项目域 ----------
+const ProjectListPage = lazyNamed(
+  () => import('@/modules/project/pages/project-list-page'),
+  'ProjectListPage',
+);
+const DashboardPage = lazyNamed(
+  () => import('@/modules/project/pages/dashboard-page'),
+  'DashboardPage',
+);
+const ProjectDashboardPage = lazyNamed(
+  () => import('@/modules/project/pages/project-dashboard-page'),
+  'ProjectDashboardPage',
+);
+const ProjectTasksPage = lazyNamed(
+  () => import('@/modules/project/pages/project-tasks-page'),
+  'ProjectTasksPage',
+);
+const ProjectMilestonesPage = lazyNamed(
+  () => import('@/modules/project/pages/project-milestones-page'),
+  'ProjectMilestonesPage',
+);
+const ProjectProfilePage = lazyNamed(
+  () => import('@/modules/project/pages/project-profile-page'),
+  'ProjectProfilePage',
+);
+const ProjectPlaybookPage = lazyNamed(
+  () => import('@/modules/project/pages/project-playbook-page'),
+  'ProjectPlaybookPage',
+);
+const ProjectTeamPage = lazyNamed(
+  () => import('@/modules/project/pages/project-team-page'),
+  'ProjectTeamPage',
+);
+const ProjectSettingsPage = lazyNamed(
+  () => import('@/modules/project/pages/project-settings-page'),
+  'ProjectSettingsPage',
+);
+const ProjectInitPage = lazyNamed(
+  () => import('@/modules/project/pages/project-init-page'),
+  'ProjectInitPage',
+);
 
-/** 旧 Linear 集成详情路径重定向（携带动态 integrationId） */
-function LinearIntegrationRedirect() {
-  const { integrationId } = useParams<{ integrationId: string }>();
-  return (
-    <Navigate to={`/app/settings/integrations/linear/${integrationId ?? ''}`} replace />
-  );
-}
+// ---------- 工单域 ----------
+const TasksPage = lazyNamed(() => import('@/modules/issue/pages/tasks-page'), 'TasksPage');
+const BugsPage = lazyNamed(() => import('@/modules/issue/pages/bugs-page'), 'BugsPage');
+const TaskDetailPage = lazyNamed(
+  () => import('@/modules/issue/pages/task-detail-page'),
+  'TaskDetailPage',
+);
+const BugDetailPage = lazyNamed(
+  () => import('@/modules/issue/pages/bug-detail-page'),
+  'BugDetailPage',
+);
 
-/**
- * 详情页路由包装：按 :id 给页面实例加 key。
- * 路由元素是模块级常量，仅参数变化时 React 会复用同一页面实例，
- * 弹窗开关/草稿等本地状态会跨实体残留（如 A 任务的指派弹窗出现在 B 任务）；
- * key 化后每个详情页（标签页）拿到独立实例。
- */
-function IssueDetailRoute() {
-  const { issueId } = useParams<{ issueId: string }>();
-  return <TaskDetailPage key={issueId} />;
-}
+// ---------- 治理/执行/发版 ----------
+const AcceptanceDetailPage = lazyNamed(
+  () => import('@/modules/acceptance/pages/acceptance-detail-page'),
+  'AcceptanceDetailPage',
+);
+const AcceptanceListPage = lazyNamed(
+  () => import('@/modules/acceptance/pages/acceptance-list-page'),
+  'AcceptanceListPage',
+);
+const ExecutionsPage = lazyNamed(
+  () => import('@/modules/executions/pages/executions-page'),
+  'ExecutionsPage',
+);
+const WorkflowListPage = lazyNamed(
+  () => import('@/modules/workflow/pages/workflow-list-page'),
+  'WorkflowListPage',
+);
+const WorkflowDetailPage = lazyNamed(
+  () => import('@/modules/workflow/pages/workflow-detail-page'),
+  'WorkflowDetailPage',
+);
+const ReleaseListPage = lazyNamed(
+  () => import('@/modules/release/pages/release-list-page'),
+  'ReleaseListPage',
+);
+const ReleaseDetailPage = lazyNamed(
+  () => import('@/modules/release/pages/release-detail-page'),
+  'ReleaseDetailPage',
+);
 
-function BugDetailRoute() {
-  const { bugId } = useParams<{ bugId: string }>();
-  return <BugDetailPage key={bugId} />;
-}
+// ---------- 文档/仓库/分析/通知/帮助 ----------
+const DocumentsPage = lazyNamed(
+  () => import('@/modules/document/pages/documents-page'),
+  'DocumentsPage',
+);
+const DocumentViewPage = lazyNamed(
+  () => import('@/modules/document/pages/document-view-page'),
+  'DocumentViewPage',
+);
+const DocumentEditPage = lazyNamed(
+  () => import('@/modules/document/pages/document-edit-page'),
+  'DocumentEditPage',
+);
+const RepositoryListPage = lazyNamed(
+  () => import('@/modules/git/pages/repository-list-page'),
+  'RepositoryListPage',
+);
+const RepositoryDetailPage = lazyNamed(
+  () => import('@/modules/git/pages/repository-detail-page'),
+  'RepositoryDetailPage',
+);
+const RepositorySettingsPage = lazyNamed(
+  () => import('@/modules/git/pages/repository-settings-page'),
+  'RepositorySettingsPage',
+);
+const AnalyticsPage = lazyNamed(
+  () => import('@/modules/analytics/pages/analytics-page'),
+  'AnalyticsPage',
+);
+const NotificationCenterPage = lazyNamed(
+  () => import('@/modules/notification/pages/notification-center-page'),
+  'NotificationCenterPage',
+);
+const HelpPage = lazyNamed(() => import('@/modules/help/pages/help-page'), 'HelpPage');
 
-/** 旧项目子页签链接重定向（board→issues、roles→team，2026-08-23 tab 合并）。
- * 必须显式拼 :projectId：相对路径 `../issues` 按路由层级解析会落到 /app/issues，丢失项目段。
- */
-function ProjectTabRedirect({ to }: { to: string }) {
-  const { projectId } = useParams<{ projectId: string }>();
-  return <Navigate to={`/app/projects/${projectId}/${to}`} replace />;
-}
+// ---------- 设置页骨架 + 全部分区 ----------
+const SettingsPage = lazyNamed(
+  () => import('@/modules/settings/pages/settings-page'),
+  'SettingsPage',
+);
+const AppearanceSettingsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/appearance-section'),
+  'AppearanceSettingsSection',
+);
+const DockSettingsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/dock-section'),
+  'DockSettingsSection',
+);
+const ShortcutsSettingsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/shortcuts-section'),
+  'ShortcutsSettingsSection',
+);
+const ProfileSettingsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/profile-section'),
+  'ProfileSettingsSection',
+);
+const GitSettingsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/git-section'),
+  'GitSettingsSection',
+);
+const TerminalSettingsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/terminal-section'),
+  'TerminalSettingsSection',
+);
+const LabelsSettingsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/manager-sections'),
+  'LabelsSettingsSection',
+);
+const StatusesSettingsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/manager-sections'),
+  'StatusesSettingsSection',
+);
+const RolesSettingsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/manager-sections'),
+  'RolesSettingsSection',
+);
+const TemplatesSettingsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/manager-sections'),
+  'TemplatesSettingsSection',
+);
+const StorageSettingsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/manager-sections'),
+  'StorageSettingsSection',
+);
+const ShortIdSettingsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/short-id-section'),
+  'ShortIdSettingsSection',
+);
+const BackupsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/backups-section'),
+  'BackupsSection',
+);
+const WorkspaceSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/workspace-section'),
+  'WorkspaceSection',
+);
+const IssueTypesSettingsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/issue-types-section'),
+  'IssueTypesSettingsSection',
+);
+const IssueTypeDetailSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/issue-type-detail-section'),
+  'IssueTypeDetailSection',
+);
+const ChecklistsSettingsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/checklists-section'),
+  'ChecklistsSettingsSection',
+);
+const AiManagementSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/ai-management-section'),
+  'AiManagementSection',
+);
+const MemorySection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/memory-section'),
+  'MemorySection',
+);
+const PromptsSettingsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/prompts-section'),
+  'PromptsSettingsSection',
+);
+const RuntimeSettingsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/runtime-section'),
+  'RuntimeSettingsSection',
+);
+const AboutSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/about-section'),
+  'AboutSection',
+);
+const RuntimeMachineDetailSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/runtime-machine-detail-section'),
+  'RuntimeMachineDetailSection',
+);
+const AccessTokensSettingsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/access-tokens-section'),
+  'AccessTokensSettingsSection',
+);
+const IntegrationsSettingsSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/integrations-section'),
+  'IntegrationsSettingsSection',
+);
+const GithubIntegrationSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/github-integration-section'),
+  'GithubIntegrationSection',
+);
+const LinearIntegrationSection = lazyNamed(
+  () => import('@/modules/settings/pages/sections/linear-integration-section'),
+  'LinearIntegrationSection',
+);
 
-/** 旧全局任务路由重定向（2026-09-06 Task→Issue 命名收尾，存量书签/收藏兜底） */
-function LegacyTasksRedirect() {
-  return <Navigate to="/app/issues" replace />;
-}
-
-function LegacyTaskDetailRedirect() {
-  const { taskId } = useParams<{ taskId: string }>();
-  return <Navigate to={`/app/issues/${taskId}`} replace />;
-}
-
-/**
- * 全局搜索退役重定向（v0.7.4 搜索悬浮化）：搜索不再有页面，落点 = 打开命令面板
- * （全局搜索唯一形态）并回到项目列表兜底；存量收藏/书签经此自动升级到新交互。
- */
-function SearchOverlayRedirect() {
-  const { search, state } = useLocation();
-  useEffect(() => {
-    window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT));
-  }, []);
-  return <Navigate to={{ pathname: '/app/projects', search }} state={state} replace />;
-}
-
+// ---------- 既有 lazy 页面（维持原样） ----------
 const DesignSystemPage = lazy(() =>
   import('@/modules/design-system/pages/design-system-page').then((m) => ({
     default: m.DesignSystemPage,
@@ -197,6 +324,85 @@ const RequirementIntakePage = lazy(() =>
     default: m.RequirementIntakePage,
   })),
 );
+
+/**
+ * 旧 AI / 集成页面路由已迁入设置页（2026-08-19）。
+ * 旧路径保留重定向以兼容书签与历史跳转，保留 query 参数（如 ?tab= 深链）
+ * 与 location.state（命令面板的 initialPrompt 等）。
+ */
+function RedirectToSettings({ to }: { to: string }) {
+  const { search, state } = useLocation();
+  return <Navigate to={{ pathname: to, search }} state={state} replace />;
+}
+
+/** 旧「AI 执行中心」退场重定向（2026-10-02 UI 收口）：执行域落执行记录页，?tab=trust 落办公室页 */
+function RedirectExecutions() {
+  const { search } = useLocation();
+  const tab = new URLSearchParams(search).get('tab');
+  return <Navigate to={tab === 'trust' ? '/app/office' : '/app/executions'} replace />;
+}
+
+/** 旧 Linear 集成详情路径重定向（携带动态 integrationId） */
+function LinearIntegrationRedirect() {
+  const { integrationId } = useParams<{ integrationId: string }>();
+  return (
+    <Navigate to={`/app/settings/integrations/linear/${integrationId ?? ''}`} replace />
+  );
+}
+
+/**
+ * 详情页路由包装：按 :id 给页面实例加 key。
+ * 路由元素是模块级常量，仅参数变化时 React 会复用同一页面实例，
+ * 弹窗开关/草稿等本地状态会跨实体残留（如 A 任务的指派弹窗出现在 B 任务）；
+ * key 化后每个详情页（标签页）拿到独立实例。
+ */
+function IssueDetailRoute() {
+  const { issueId } = useParams<{ issueId: string }>();
+  return (
+    <Suspense fallback={null}>
+      <TaskDetailPage key={issueId} />
+    </Suspense>
+  );
+}
+
+function BugDetailRoute() {
+  const { bugId } = useParams<{ bugId: string }>();
+  return (
+    <Suspense fallback={null}>
+      <BugDetailPage key={bugId} />
+    </Suspense>
+  );
+}
+
+/** 旧项目子页签链接重定向（board→issues、roles→team，2026-08-23 tab 合并）。
+ * 必须显式拼 :projectId：相对路径 `../issues` 按路由层级解析会落到 /app/issues，丢失项目段。
+ */
+function ProjectTabRedirect({ to }: { to: string }) {
+  const { projectId } = useParams<{ projectId: string }>();
+  return <Navigate to={`/app/projects/${projectId}/${to}`} replace />;
+}
+
+/** 旧全局任务路由重定向（2026-09-06 Task→Issue 命名收尾，存量书签/收藏兜底） */
+function LegacyTasksRedirect() {
+  return <Navigate to="/app/issues" replace />;
+}
+
+function LegacyTaskDetailRedirect() {
+  const { taskId } = useParams<{ taskId: string }>();
+  return <Navigate to={`/app/issues/${taskId}`} replace />;
+}
+
+/**
+ * 全局搜索退役重定向（v0.7.4 搜索悬浮化）：搜索不再有页面，落点 = 打开命令面板
+ * （全局搜索唯一形态）并回到项目列表兜底；存量收藏/书签经此自动升级到新交互。
+ */
+function SearchOverlayRedirect() {
+  const { search, state } = useLocation();
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent(OPEN_COMMAND_PALETTE_EVENT));
+  }, []);
+  return <Navigate to={{ pathname: '/app/projects', search }} state={state} replace />;
+}
 
 /**
  * 根路径分流：有登录态直达工作台，无登录态去登录。启动路径不再强制经过
@@ -257,7 +463,9 @@ export const router = createBrowserRouter([
     path: '/app',
     element: (
       <AuthGuard>
-        <ShellLayout />
+        <Suspense fallback={null}>
+          <ShellLayout />
+        </Suspense>
       </AuthGuard>
     ),
     errorElement: <ErrorPage />,
@@ -686,7 +894,9 @@ export const router = createBrowserRouter([
     path: '/app/settings',
     element: (
       <AuthGuard>
-        <SettingsPage />
+        <Suspense fallback={null}>
+          <SettingsPage />
+        </Suspense>
       </AuthGuard>
     ),
     errorElement: <ErrorPage />,

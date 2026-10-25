@@ -20,7 +20,10 @@ export function useSyncWarnings() {
       const res: unknown = await documentSyncApi.getWarnings();
       return unwrapList(res);
     },
-    refetchInterval: 5000,
+    // 条件轮询：有未处理警告（用户正处理冲突）保持 5s 响应；
+    // 平静期放慢到 30s——document 族无 WS 桥，轮询是唯一新鲜度通道
+    refetchInterval: (query) =>
+      (query.state.data?.length ?? 0) > 0 ? 5_000 : 30_000,
     refetchIntervalInBackground: false,
   });
 }

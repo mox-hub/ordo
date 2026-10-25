@@ -9,15 +9,19 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import i18n, { resources } from '@/i18n';
+import i18n, { ensureLocaleBundle } from '@/i18n';
 import { HOTKEY_DEFINITIONS } from '@/shared/hotkeys/hotkey-definitions';
 import { HelpPage } from './help-page';
 
 type LocaleNode = Record<string, unknown>;
 
 function helpNamespace(locale: string): LocaleNode {
-  const res = resources as unknown as Record<string, { translation: LocaleNode }>;
-  const help = res[locale]?.translation?.help;
+  // en 包改按需加载（启动提速批）：经 i18n store 读实时 bundle，别读静态对象
+  const bundle = i18n.getResourceBundle(locale, 'translation') as Record<
+    string,
+    LocaleNode
+  >;
+  const help = bundle?.help;
   if (!help || typeof help !== 'object') {
     throw new Error(`resources.${locale}.translation.help 缺失`);
   }
@@ -49,6 +53,7 @@ function renderHelp() {
 }
 
 beforeAll(async () => {
+  await ensureLocaleBundle('en'); // en 包按需加载：先补包再做 zh/en 成对断言
   await i18n.changeLanguage('zh-CN');
 });
 
