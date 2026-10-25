@@ -7,7 +7,6 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
   Res,
   HttpStatus,
 } from '@nestjs/common';
@@ -27,7 +26,6 @@ import { IssueService } from './issue.service';
 import { IssueIdManagementService } from './services/issue-id-management.service';
 import { CreateIssueDto } from './dto/create-issue.dto';
 import { UpdateIssueDto } from './dto/update-issue.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { CreateIssueDependencyDto } from './dto/create-issue-dependency.dto';
 import { ImportIssuesDto, ExportFormat } from './dto/import-export.dto';
@@ -52,7 +50,6 @@ import type { Response } from 'express';
 
 @ApiTags('Tasks')
 @Controller('issues')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class IssueController {
   constructor(

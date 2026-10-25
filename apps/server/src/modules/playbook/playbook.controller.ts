@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -6,7 +6,6 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 import { PlaybookService } from './playbook.service';
@@ -27,7 +26,6 @@ import {
  */
 @ApiTags('Playbook')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller()
 export class PlaybookController {
   constructor(private readonly playbookService: PlaybookService) {}

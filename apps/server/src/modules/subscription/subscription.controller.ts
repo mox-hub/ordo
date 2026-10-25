@@ -1,19 +1,10 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Put,
-  Query,
-  Request,
-  UseGuards,
-} from '@nestjs/common';
+import { Body, Controller, Get, Put, Query, Request } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 import {
   SubscriptionListQueryDto,
@@ -27,7 +18,6 @@ import { SubscriptionService } from './subscription.service';
 
 @ApiTags('Subscriptions')
 @Controller('subscriptions')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class SubscriptionController {
   constructor(private readonly subscriptionService: SubscriptionService) {}

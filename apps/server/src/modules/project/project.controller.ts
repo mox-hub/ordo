@@ -8,7 +8,6 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import {
@@ -44,13 +43,11 @@ import {
 import { IterationService } from '../iteration/iteration.service';
 import { CreateIterationDto } from '../iteration/dto/create-iteration.dto';
 import { MilestoneService } from './milestone.service';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 
 @ApiTags('Projects')
 @Controller('projects')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class ProjectController {
   constructor(

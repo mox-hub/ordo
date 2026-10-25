@@ -7,7 +7,6 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -27,13 +26,11 @@ import {
   UseIssueTemplateDto,
   UseIssueTemplateResponseDto,
 } from './dto/create-issue-template.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 
 @ApiTags('Task Templates')
 @Controller('issue-templates')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class IssueTemplateController {
   constructor(private readonly issueTemplateService: IssueTemplateService) {}

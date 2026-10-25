@@ -20,7 +20,6 @@ import {
   Param,
   Post,
   Put,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -30,7 +29,6 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { McpServersService, McpServerStatus } from './mcp-servers.service';
 import { SaveMcpServerDto } from './dto/save-mcp-server.dto';
 import {
@@ -43,7 +41,6 @@ import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 @ApiTags('MCP Servers')
 @ApiBearerAuth('JWT-auth')
 @Controller('mcp/servers')
-@UseGuards(JwtAuthGuard)
 export class McpServersController {
   constructor(private readonly service: McpServersService) {}
 

@@ -19,7 +19,6 @@ import {
   ApiOkResponse,
   ApiParam,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { TeamService } from './team.service';
@@ -49,7 +48,6 @@ import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 
 @ApiTags('Teams')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('teams')
 export class TeamController {
   constructor(

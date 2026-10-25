@@ -7,7 +7,6 @@ import {
   Param,
   Query,
   Body,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -52,12 +51,10 @@ import {
   EnsureWorkspaceDirectoryRequestDto,
 } from './dto/workspace-request.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 
 @ApiTags('Git')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('git')
 export class GitController {
   constructor(

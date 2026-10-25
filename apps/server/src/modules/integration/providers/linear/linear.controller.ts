@@ -5,7 +5,6 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
@@ -16,7 +15,6 @@ import {
   ApiOkResponse,
   ApiQuery,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { PrismaService } from '../../../../core/database/prisma.service';
 import { IntegrationService } from '../../integration.service';
@@ -36,7 +34,6 @@ import {
 
 @ApiTags('Integration / Linear')
 @Controller('integrations/linear')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class LinearController {
   constructor(

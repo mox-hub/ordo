@@ -211,11 +211,11 @@ export class ProjectService {
     await this.seedDefaultModules(project.id);
     await this.ensureOwnerMemberBinding(project.id, userId);
 
-    // Publish event
+    // Publish event（载荷已瘦身：不携带整条 project 模型，前端仅作失效信号）
     this.messageBus.publish('project.created', {
       projectId: project.id,
+      projectName: project.name,
       userId,
-      project,
     });
 
     await this.activityService.record({
@@ -536,11 +536,11 @@ export class ProjectService {
       },
     });
 
-    // Publish event
+    // Publish event（载荷已瘦身：不携带整条 project 模型，前端仅作失效信号）
     this.messageBus.publish('project.updated', {
       projectId: project.id,
+      projectName: project.name,
       userId,
-      project,
     });
 
     // 全字段 diff 落动态
@@ -658,8 +658,8 @@ export class ProjectService {
 
     this.messageBus.publish('project.updated', {
       projectId: updated.id,
+      projectName: updated.name,
       userId,
-      project: updated,
     });
 
     return updated;
@@ -697,8 +697,8 @@ export class ProjectService {
 
     this.messageBus.publish('project.updated', {
       projectId: project.id,
+      projectName: project.name,
       userId,
-      project,
     });
 
     this.messageBus.publish('project.archived', {
@@ -742,8 +742,8 @@ export class ProjectService {
 
     this.messageBus.publish('project.updated', {
       projectId: project.id,
+      projectName: project.name,
       userId,
-      project,
     });
 
     return project;

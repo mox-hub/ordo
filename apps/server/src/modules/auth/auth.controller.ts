@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
   Request,
 } from '@nestjs/common';
 import {
@@ -20,7 +19,6 @@ import {
   ApiBody,
 } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { Public } from '../../common/decorators/public.decorator';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ApiStandardErrors } from '../../common/decorators/api-response.decorator';
@@ -103,7 +101,6 @@ export class AuthController {
     });
   }
 
-  @UseGuards(JwtAuthGuard)
   @Post('logout')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'User logout' })
@@ -118,7 +115,6 @@ export class AuthController {
     );
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('me')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get current user information' })
@@ -132,7 +128,6 @@ export class AuthController {
     return this.authService.getCurrentUserWithRoles(user.id);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Patch('me')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: '更新个人资料（昵称/邮箱/头像/时区）' })
@@ -146,7 +141,6 @@ export class AuthController {
     return this.authService.updateProfile(user.id, dto);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Patch('me/password')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: '修改密码（校验当前密码，吊销其他会话）' })
@@ -163,7 +157,6 @@ export class AuthController {
     return this.authService.changePassword(user.id, dto, user.sessionId);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('sessions')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get current user sessions' })
@@ -178,7 +171,6 @@ export class AuthController {
     return this.authService.listSessions(user.id);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Delete('sessions/:sessionId')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Revoke one session of current user' })
@@ -191,7 +183,6 @@ export class AuthController {
     return this.authService.revokeSession(user.id, sessionId);
   }
 
-  @UseGuards(JwtAuthGuard)
   @Get('subject-claim')
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Get current subject claim' })

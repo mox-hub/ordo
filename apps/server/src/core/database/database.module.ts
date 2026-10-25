@@ -4,6 +4,7 @@ import {
   createWorkspaceAwarePrismaService,
 } from './prisma.service';
 import { LoggerService } from '../logger/logger.service';
+import { EventVisibilityService } from '../../gateways/event-visibility.service';
 
 @Global()
 @Module({
@@ -14,7 +15,8 @@ import { LoggerService } from '../logger/logger.service';
         createWorkspaceAwarePrismaService(logger),
       inject: [LoggerService],
     },
+    EventVisibilityService,
   ],
-  exports: [PrismaService],
+  exports: [PrismaService, EventVisibilityService],
 })
 export class DatabaseModule {}

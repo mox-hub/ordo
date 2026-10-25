@@ -7,7 +7,6 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -16,7 +15,6 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 import { ActivityService } from './activity.service';
@@ -33,7 +31,6 @@ import {
 
 @ApiTags('Activities')
 @Controller('activities')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class ActivityController {
   constructor(private readonly activityService: ActivityService) {}

@@ -7,7 +7,6 @@ import {
   Param,
   Query,
   Body,
-  UseGuards,
 } from '@nestjs/common';
 import { PluginService } from './plugin.service';
 import {
@@ -24,7 +23,6 @@ import {
   ApiParam,
   ApiQuery,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 import {
   PluginListResponseDto,
@@ -33,7 +31,6 @@ import {
 
 @ApiTags('Plugins')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('plugins')
 export class PluginController {
   constructor(private pluginService: PluginService) {}

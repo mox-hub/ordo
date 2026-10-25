@@ -49,6 +49,7 @@ describe('IssueService', () => {
     },
     issueTag: {
       create: vi.fn(),
+      createMany: vi.fn(),
       deleteMany: vi.fn(),
       findMany: vi.fn(),
     },
@@ -80,8 +81,12 @@ describe('IssueService', () => {
     projectMember: {
       findUnique: vi.fn(),
     },
-    $transaction: vi.fn(),
   };
+  // T5 事务化：交互事务以 mock 自身充当 tx（同客户端语义），断言照常打到各模型 mock 上；
+  // 保留 vi.fn 以便个别用例覆写实现（如 importTasks 的数组事务形态）
+  (mockPrismaService as Record<string, unknown>).$transaction = vi.fn(
+    (fn: (tx: unknown) => Promise<unknown>) => fn(mockPrismaService),
+  );
 
   const mockMessageBusService = {
     publish: vi.fn(),
@@ -792,7 +797,7 @@ describe('IssueService', () => {
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce({ id: 'tag-2' });
       mockPrismaService.tag.create.mockResolvedValue({ id: 'tag-1' });
-      mockPrismaService.issueTag.create.mockResolvedValue({});
+      mockPrismaService.issueTag.createMany.mockResolvedValue({ count: 2 });
 
       await service.create(
         {
@@ -806,7 +811,14 @@ describe('IssueService', () => {
       expect(mockPrismaService.tag.create).toHaveBeenCalledWith({
         data: expect.objectContaining({ name: 'frontend' }),
       });
-      expect(mockPrismaService.issueTag.create).toHaveBeenCalledTimes(2);
+      // T5 事务化后标签改走 createMany（仍在 $transaction 内）
+      expect(mockPrismaService.issueTag.createMany).toHaveBeenCalledTimes(1);
+      expect(mockPrismaService.issueTag.createMany).toHaveBeenCalledWith({
+        data: [
+          { issueId: mockTask.id, tagId: 'tag-1', projectId: 'project-1' },
+          { issueId: mockTask.id, tagId: 'tag-2', projectId: 'project-1' },
+        ],
+      });
     });
   });
 

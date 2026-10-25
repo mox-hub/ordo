@@ -1,11 +1,10 @@
-import { Controller, Get, Query, UseGuards } from '@nestjs/common';
+import { Controller, Get, Query } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiOkResponse,
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { SearchService } from './search.service';
@@ -17,7 +16,6 @@ import { SearchQueryDto, SearchResponseDto } from './dto/search.dto';
  */
 @ApiTags('Search')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('search')
 export class SearchController {
   constructor(private readonly searchService: SearchService) {}

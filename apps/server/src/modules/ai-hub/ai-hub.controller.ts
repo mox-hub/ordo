@@ -22,7 +22,6 @@ import {
   ApiBearerAuth,
   ApiParam,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 import { RolesGuard } from '@/common/guards/roles.guard';
@@ -71,7 +70,6 @@ import {
 
 @ApiTags('AI Hub')
 @Controller('ai')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class AiHubController {
   constructor(
@@ -337,7 +335,7 @@ export class AiHubController {
   }
 
   @Put('quick-judge/settings')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('admin')
   @ApiOperation({ summary: 'Update quick-judge channel settings (admin only)' })
   @ApiOkResponse({
@@ -354,7 +352,7 @@ export class AiHubController {
   }
 
   @Get('quick-judge/logs')
-  @UseGuards(JwtAuthGuard, RolesGuard)
+  @UseGuards(RolesGuard)
   @Roles('admin')
   @ApiOperation({ summary: 'List quick-judge decision logs (admin only)' })
   @ApiOkResponse({

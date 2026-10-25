@@ -13,7 +13,6 @@ import {
   NotFoundException,
   Param,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -22,7 +21,6 @@ import {
   ApiCreatedResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 import { EnvironmentService } from './environment.service';
 import { EnvironmentInstallService } from './environment-install.service';
@@ -35,7 +33,6 @@ import {
 @ApiTags('Environment')
 @ApiBearerAuth('JWT-auth')
 @Controller('environment')
-@UseGuards(JwtAuthGuard)
 export class EnvironmentController {
   constructor(
     private readonly service: EnvironmentService,

@@ -6,7 +6,6 @@ import {
   Delete,
   Body,
   Param,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,7 +16,6 @@ import {
   ApiCreatedResponse,
   ApiParam,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { ProjectRoleDefinitionService } from './project-role.service';
 import {
   CreateProjectRoleDto,
@@ -30,7 +28,6 @@ import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 
 @ApiTags('Project Roles')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('projects/:projectId/roles')
 export class ProjectRoleDefinitionController {
   constructor(private readonly service: ProjectRoleDefinitionService) {}

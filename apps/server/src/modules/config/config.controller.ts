@@ -5,7 +5,6 @@ import {
   Delete,
   Query,
   Body,
-  UseGuards,
   Request,
 } from '@nestjs/common';
 import {
@@ -21,11 +20,9 @@ import {
   SetConfigDto,
   DeleteConfigDto,
 } from './dto/config.dto';
-import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 
 @ApiTags('Config')
 @Controller('config')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class ConfigController {
   constructor(private readonly configService: ConfigService) {}

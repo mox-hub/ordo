@@ -6,7 +6,6 @@ import {
   Param,
   Patch,
   Post,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -16,13 +15,11 @@ import {
   ApiTags,
   ApiParam,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { ProjectModuleService } from '../services/project-module.service';
 import { ProjectModuleResponseDto } from '../dto/project-module-response.dto';
 
 @ApiTags('Project Modules')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('projects/:projectId/modules')
 export class ProjectModuleController {
   constructor(private readonly service: ProjectModuleService) {}

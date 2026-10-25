@@ -6,7 +6,6 @@ import {
   Param,
   Query,
   Body,
-  UseGuards,
   Request,
 } from '@nestjs/common';
 import {
@@ -19,11 +18,9 @@ import {
 } from '@nestjs/swagger';
 import { ExecutionService } from './execution.service';
 import { ApprovalService } from './approval.service';
-import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 
 @ApiTags('Execution')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('execution')
 export class ExecutionController {
   constructor(

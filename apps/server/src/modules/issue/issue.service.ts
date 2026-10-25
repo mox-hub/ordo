@@ -499,122 +499,126 @@ export class IssueService {
       'create',
     );
 
-    // Create task
-    const task = await this.prisma.issue.create({
-      data: {
-        projectId,
-        title: createIssueDto.title,
-        description: createIssueDto.description,
-        status,
-        priority: createIssueDto.priority || 'medium',
-        assigneeId: createIssueDto.assigneeId,
-        assigneeType:
-          createIssueDto.assigneeType ||
-          (createIssueDto.aiAgentId ? 'ai_agent' : 'user'),
-        aiAgentId: createIssueDto.aiAgentId,
-        reporterId: createIssueDto.reporterId || userId,
-        iterationId: createIssueDto.iterationId,
-        parentIssueId: createIssueDto.parentIssueId,
-        startDate: createIssueDto.startDate
-          ? new Date(createIssueDto.startDate)
-          : null,
-        dueDate: createIssueDto.dueDate
-          ? new Date(createIssueDto.dueDate)
-          : null,
-        estimate: createIssueDto.estimate,
-        // 工单类型：typeId 为事实源；旧 type 字符串按 IssueType.key 桥接（缺省回落内置 task）
-        type: createIssueDto.type || 'task',
-        typeId: effectiveTypeId,
-        // 短 ID
-        shortId,
-        // 自定义字段（内置 bug 六字段已迁入）
-        customFields: validatedCustomFields as
-          Prisma.InputJsonValue | undefined,
-        // 里程碑关联
-        milestoneId: createIssueDto.milestoneId,
-        // 待办事项
-        todoItems: createIssueDto.todoItems
-          ? (createIssueDto.todoItems as unknown as Prisma.InputJsonValue)
-          : undefined,
-      },
-      include: {
-        assignee: {
-          select: {
-            id: true,
-            username: true,
-            displayName: true,
-            avatarUrl: true,
-          },
-        },
-        reporter: {
-          select: {
-            id: true,
-            username: true,
-            displayName: true,
-            avatarUrl: true,
-          },
-        },
-        issueTags: {
-          include: {
-            tag: true,
-          },
-        },
-      },
-    });
-
-    // Add tags if provided（元素可为 tag id 或名字, 统一解析）
-    if (createIssueDto.tags && createIssueDto.tags.length > 0) {
-      const tagIds = await resolveTagIds(this.prisma, {
-        projectId,
-        entries: createIssueDto.tags,
-        userId,
-        resourceType: 'task',
-      });
-      await Promise.all(
-        tagIds.map((tagId) =>
-          this.prisma.issueTag.create({
-            data: {
-              issueId: task.id,
-              tagId,
-              projectId,
-            },
-          }),
-        ),
-      );
-    }
-
     // 兜底改造批 3：创建即落验收契约——acceptanceCriteria 直建契约+标准，
     // 创建面板的验收标准从此进门禁体系（todoItems 保持待办语义不再承载）
     // P0-9：缺 content 的项已在 create() 开头显式 400，此处不再静默过滤
     const draftCriteria = createIssueDto.acceptanceCriteria ?? [];
-    if (draftCriteria.length > 0 && projectId) {
-      const acceptance = await this.prisma.acceptance.create({
+
+    // T5 事务化：任务+标签+验收契约同生共死——此前三段写任一步失败会留下
+    // 「任务无标签/任务无验收契约」的半成品且无补偿
+    const task = await this.prisma.$transaction(async (tx) => {
+      const created = await tx.issue.create({
         data: {
-          issueId: task.id,
-          type: 'mixed',
+          projectId,
+          title: createIssueDto.title,
+          description: createIssueDto.description,
+          status,
           priority: createIssueDto.priority || 'medium',
-          title: `验收 - ${task.title}`,
-          completionType: 'artifact',
-          createdBy: userId,
-          status: 'draft',
+          assigneeId: createIssueDto.assigneeId,
+          assigneeType:
+            createIssueDto.assigneeType ||
+            (createIssueDto.aiAgentId ? 'ai_agent' : 'user'),
+          aiAgentId: createIssueDto.aiAgentId,
+          reporterId: createIssueDto.reporterId || userId,
+          iterationId: createIssueDto.iterationId,
+          parentIssueId: createIssueDto.parentIssueId,
+          startDate: createIssueDto.startDate
+            ? new Date(createIssueDto.startDate)
+            : null,
+          dueDate: createIssueDto.dueDate
+            ? new Date(createIssueDto.dueDate)
+            : null,
+          estimate: createIssueDto.estimate,
+          // 工单类型：typeId 为事实源；旧 type 字符串按 IssueType.key 桥接（缺省回落内置 task）
+          type: createIssueDto.type || 'task',
+          typeId: effectiveTypeId,
+          // 短 ID
+          shortId,
+          // 自定义字段（内置 bug 六字段已迁入）
+          customFields: validatedCustomFields as
+            Prisma.InputJsonValue | undefined,
+          // 里程碑关联
+          milestoneId: createIssueDto.milestoneId,
+          // 待办事项
+          todoItems: createIssueDto.todoItems
+            ? (createIssueDto.todoItems as unknown as Prisma.InputJsonValue)
+            : undefined,
+        },
+        include: {
+          assignee: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              avatarUrl: true,
+            },
+          },
+          reporter: {
+            select: {
+              id: true,
+              username: true,
+              displayName: true,
+              avatarUrl: true,
+            },
+          },
+          issueTags: {
+            include: {
+              tag: true,
+            },
+          },
         },
       });
-      await this.prisma.acceptanceCriteria.createMany({
-        data: draftCriteria.map((item, idx) => ({
-          acceptanceId: acceptance.id,
-          content: item.content.trim(),
-          criteriaType:
-            item.criteriaType === 'technical' ? 'technical' : 'functional',
-          severity: ['critical', 'high', 'medium', 'low'].includes(
-            item.severity ?? '',
-          )
-            ? (item.severity as string)
-            : 'medium',
-          source: item.source === 'ai-generated' ? 'ai-generated' : 'manual',
-          order: idx,
-        })),
-      });
-    }
+
+      // Add tags if provided（元素可为 tag id 或名字, 统一解析）
+      if (createIssueDto.tags && createIssueDto.tags.length > 0) {
+        const tagIds = await resolveTagIds(tx, {
+          projectId,
+          entries: createIssueDto.tags,
+          userId,
+          resourceType: 'task',
+        });
+        if (tagIds.length > 0) {
+          await tx.issueTag.createMany({
+            data: tagIds.map((tagId) => ({
+              issueId: created.id,
+              tagId,
+              projectId,
+            })),
+          });
+        }
+      }
+
+      if (draftCriteria.length > 0 && projectId) {
+        const acceptance = await tx.acceptance.create({
+          data: {
+            issueId: created.id,
+            type: 'mixed',
+            priority: createIssueDto.priority || 'medium',
+            title: `验收 - ${created.title}`,
+            completionType: 'artifact',
+            createdBy: userId,
+            status: 'draft',
+          },
+        });
+        await tx.acceptanceCriteria.createMany({
+          data: draftCriteria.map((item, idx) => ({
+            acceptanceId: acceptance.id,
+            content: item.content.trim(),
+            criteriaType:
+              item.criteriaType === 'technical' ? 'technical' : 'functional',
+            severity: ['critical', 'high', 'medium', 'low'].includes(
+              item.severity ?? '',
+            )
+              ? (item.severity as string)
+              : 'medium',
+            source: item.source === 'ai-generated' ? 'ai-generated' : 'manual',
+            order: idx,
+          })),
+        });
+      }
+
+      return created;
+    });
 
     // Create activity record (无项目时 projectId 为 null)
     await this.recordTaskActivity(task, {
@@ -625,12 +629,14 @@ export class IssueService {
       changes: [{ field: 'status', newValue: task.status }],
     });
 
-    // Publish event
+    // Publish event（载荷已瘦身：不再携带整条 task 模型——全广播链路上任何
+    // 已登录用户都收得到，整模型等于跨项目数据泄露；前端仅作失效信号，无字段消费）
     this.messageBus.publish('task.created', {
       issueId: task.id,
       projectId: task.projectId,
       userId,
-      task,
+      reporterId: task.reporterId,
+      assigneeId: task.assigneeId,
     });
 
     return this.findOne(task.id, userId);
@@ -1651,24 +1657,21 @@ export class IssueService {
           select: { tagId: true },
         })
       ).map((tt) => tt.tagId);
-      await this.prisma.issueTag.deleteMany({
-        where: { issueId: id },
+      // T5 事务化：删旧+建新同生共死——此前中途失败留下「标签被清空未重建」
+      await this.prisma.$transaction(async (tx) => {
+        await tx.issueTag.deleteMany({
+          where: { issueId: id },
+        });
+        if (resolvedTagIds!.length > 0) {
+          await tx.issueTag.createMany({
+            data: resolvedTagIds!.map((tagId) => ({
+              issueId: id,
+              tagId,
+              projectId: targetProjectId,
+            })),
+          });
+        }
       });
-
-      // Add new tags
-      if (resolvedTagIds.length > 0) {
-        await Promise.all(
-          resolvedTagIds.map((tagId) =>
-            this.prisma.issueTag.create({
-              data: {
-                issueId: id,
-                tagId,
-                projectId: targetProjectId,
-              },
-            }),
-          ),
-        );
-      }
     }
 
     // 全字段 diff 落动态：任何被实际修改的字段都会进入操作记录
@@ -1741,12 +1744,14 @@ export class IssueService {
       }
     }
 
-    // Publish event（statusChanged 供通知订阅者判断状态流转；changedFields 供订阅推送过滤优先级/截止日期）
+    // Publish event（statusChanged 供通知订阅者判断状态流转；changedFields 供订阅推送过滤优先级/截止日期；
+    // 载荷已瘦身不再携带整条 task 模型——广播链路上整模型等于跨项目数据泄露，前端仅作失效信号）
     this.messageBus.publish('task.updated', {
       issueId: id,
       projectId: task.projectId,
       userId,
-      task: updatedTask,
+      reporterId: updatedTask.reporterId,
+      assigneeId: updatedTask.assigneeId,
       statusChanged:
         updateData.status !== undefined && updateData.status !== oldStatus,
       oldStatus,

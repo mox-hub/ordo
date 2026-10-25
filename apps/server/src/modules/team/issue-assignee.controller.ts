@@ -6,7 +6,6 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
   Request,
 } from '@nestjs/common';
 import {
@@ -18,7 +17,6 @@ import {
   ApiOkResponse,
   ApiParam,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { IssueAssigneeService } from './issue-assignee.service';
 import {
   CreateIssueAssigneeDto,
@@ -37,7 +35,6 @@ import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 
 @ApiTags('Task Assignees')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('issue-assignees')
 export class IssueAssigneeController {
   constructor(private readonly service: IssueAssigneeService) {}

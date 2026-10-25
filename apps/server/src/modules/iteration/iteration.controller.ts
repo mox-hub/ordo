@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Param,
-  Patch,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -20,13 +12,11 @@ import { IterationService } from './iteration.service';
 import { CreateIterationDto } from './dto/create-iteration.dto';
 import { UpdateIterationDto } from './dto/update-iteration.dto';
 import { IterationResponseDto } from './dto/iteration-response.dto';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 
 @ApiTags('Iterations')
 @Controller('iterations')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class IterationController {
   constructor(private readonly iterationService: IterationService) {}

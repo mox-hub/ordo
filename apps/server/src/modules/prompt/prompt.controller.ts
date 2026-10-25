@@ -28,7 +28,6 @@ import {
   Post,
   Put,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -37,7 +36,6 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { PromptService } from './prompt.service';
 import {
   CreatePromptTemplateDto,
@@ -55,7 +53,6 @@ import {
 
 @ApiTags('Prompts')
 @Controller('prompts')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class PromptController {
   constructor(private readonly promptService: PromptService) {}

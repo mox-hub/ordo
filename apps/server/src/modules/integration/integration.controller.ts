@@ -7,7 +7,6 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -31,11 +30,9 @@ import {
   IntegrationSyncLogResponseDto,
 } from './dto/integration-response.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('Integration')
 @Controller('integrations')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class IntegrationController {
   constructor(

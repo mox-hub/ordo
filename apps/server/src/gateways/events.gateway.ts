@@ -11,6 +11,8 @@ import { LoggerService } from '../core/logger/logger.service';
 import { MessageBusService } from '../core/message-bus/message-bus.service';
 import { JwtService } from '@nestjs/jwt';
 import { ConfigService } from '../core/config/config.service';
+import { getCurrentWorkspaceId } from '../core/database/workspace-context';
+import { EventVisibilityService } from './event-visibility.service';
 import { isAllowedOrigin, parseAllowedOriginsFromEnv } from '../common';
 
 const allowedOrigins = parseAllowedOriginsFromEnv();
@@ -42,16 +44,90 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private messageBus: MessageBusService,
     private jwtService: JwtService,
     private configService: ConfigService,
+    private visibility: EventVisibilityService,
   ) {
     this.logger.setContext('EventsGateway');
     this.setupMessageBusSubscriptions();
   }
 
+  /**
+   * 定向投递（P0 安全修：此前这些事件一律 server.emit 全广播，任意已登录用户
+   * 可收到所有项目的动态）。裁决点在 EventVisibilityService：
+   * - payload.projectId 在 → 项目成员 / 非 private 项目的同库用户；
+   * - 无项目锚点 → 发布时 ALS 工作区的同库用户（message-bus 同步投递，上下文仍在）；
+   * - 连工作区上下文都没有（定时器等后台发布）→ 保持既有广播语义（已知限制）。
+   * 可见性解析失败按 fail-closed 丢弃该次投递并告警，绝不回退广播。
+   */
+  private emitScoped(event: string, payload: unknown): void {
+    void this.emitScopedInner(event, payload).catch((e) => {
+      this.logger.warn(`emitScoped(${event}) dropped: ${(e as Error).message}`);
+    });
+  }
+
+  private async emitScopedInner(event: string, payload: unknown) {
+    const candidates = [...this.userSockets.keys()];
+    if (candidates.length === 0) return;
+    const projectId = (payload as { projectId?: string } | null)?.projectId;
+    let targets: string[];
+    if (projectId) {
+      targets = await this.visibility.visibleUserIdsForProject(
+        projectId,
+        candidates,
+      );
+    } else {
+      const wsId = getCurrentWorkspaceId();
+      if (!wsId) {
+        this.server.emit(event, payload);
+        return;
+      }
+      targets = await this.visibility.visibleUserIdsForWorkspace(
+        wsId,
+        candidates,
+      );
+    }
+    this.emitToUsers(event, payload, targets);
+  }
+
+  /** 任务事件：有项目走项目可见性；独立任务（无项目）仅推 reporter/assignee/操作者 */
+  private emitTaskEvent(
+    event: string,
+    payload: {
+      projectId?: string | null;
+      reporterId?: string | null;
+      assigneeId?: string | null;
+      userId?: string;
+    } | null,
+  ): void {
+    if (payload?.projectId) {
+      this.emitScoped(event, payload);
+      return;
+    }
+    const targets = new Set<string>();
+    for (const id of [
+      payload?.reporterId,
+      payload?.assigneeId,
+      payload?.userId,
+    ]) {
+      if (id) targets.add(id);
+    }
+    this.emitToUsers(event, payload, [...targets]);
+  }
+
+  private emitToUsers(event: string, payload: unknown, userIds: string[]) {
+    for (const userId of userIds) {
+      const sockets = this.userSockets.get(userId);
+      if (!sockets) continue;
+      for (const socketId of sockets) {
+        this.server.to(socketId).emit(event, payload);
+      }
+    }
+  }
+
   async handleConnection(client: Socket) {
     try {
-      // 从 query 或 handshake auth 中获取 token
-      const token =
-        client.handshake.auth?.token || client.handshake.query?.token;
+      // 仅接受 handshake.auth：query 传 token 会进代理/壳层访问日志与浏览器
+      // 历史，泄露面不可控（daemon 与前端均已在 auth 载荷携带）
+      const token = client.handshake.auth?.token;
       if (!token) {
         client.disconnect();
         return;
@@ -109,20 +185,19 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // 订阅工作流更新事件
     this.messageBus.subscribe('ai.workflow.update', (payload: any) => {
-      this.server.emit('ai.workflow.update', payload);
+      this.emitScoped('ai.workflow.update', payload);
     });
 
     // 订阅任务更新事件
     this.messageBus.subscribe(DomainEventTypes.TaskUpdated, (payload: any) => {
-      // 可以只推送给相关项目的成员
-      this.server.emit(DomainEventTypes.TaskUpdated, payload);
+      this.emitTaskEvent(DomainEventTypes.TaskUpdated, payload);
     });
 
     // 订阅项目更新事件
     this.messageBus.subscribe(
       DomainEventTypes.ProjectUpdated,
       (payload: any) => {
-        this.server.emit(DomainEventTypes.ProjectUpdated, payload);
+        this.emitScoped(DomainEventTypes.ProjectUpdated, payload);
       },
     );
 
@@ -130,13 +205,13 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.messageBus.subscribe(
       DomainEventTypes.ProjectCreated,
       (payload: any) => {
-        this.server.emit(DomainEventTypes.ProjectCreated, payload);
+        this.emitScoped(DomainEventTypes.ProjectCreated, payload);
       },
     );
 
     // 订阅任务创建事件
     this.messageBus.subscribe(DomainEventTypes.TaskCreated, (payload: any) => {
-      this.server.emit(DomainEventTypes.TaskCreated, payload);
+      this.emitTaskEvent(DomainEventTypes.TaskCreated, payload);
     });
 
     // 订阅通知创建事件
@@ -213,7 +288,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ] as const;
     dispatchEvents.forEach((evt) => {
       this.messageBus.subscribe(evt, (payload: unknown) => {
-        this.server.emit('runtime.dispatch.changed', {
+        this.emitScoped('runtime.dispatch.changed', {
           source: evt,
           payload,
         });
@@ -250,7 +325,7 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     ] as const;
     governanceEvents.forEach((evt) => {
       this.messageBus.subscribe(evt, (payload: unknown) => {
-        this.server.emit(evt, payload);
+        this.emitScoped(evt, payload);
       });
     });
 
@@ -258,68 +333,35 @@ export class EventsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.messageBus.subscribe(
       'decision.proposal.created',
       (payload: unknown) => {
-        this.server.emit('decision.proposal.created', payload);
+        this.emitScoped('decision.proposal.created', payload);
       },
     );
 
     // ── Linear sync events ─────────────────────────────────
+    // 有 projectId 走项目可见性；缺失时不再回退全广播（emitScoped 内按
+    // 发布时工作区上下文过滤，再缺失才广播）。
     this.messageBus.subscribe('linear.sync.progress', (payload: any) => {
-      const { projectId } = payload ?? {};
-      if (projectId) {
-        this.server
-          .to(`project:${projectId}`)
-          .emit('linear.sync.progress', payload);
-        return;
-      }
-      this.server.emit('linear.sync.progress', payload);
+      this.emitScoped('linear.sync.progress', payload);
     });
 
     this.messageBus.subscribe('linear.sync.completed', (payload: any) => {
-      this.server.emit('linear.sync.completed', payload);
+      this.emitScoped('linear.sync.completed', payload);
     });
 
     this.messageBus.subscribe('linear.task.pulled', (payload: any) => {
-      const { projectId } = payload ?? {};
-      if (projectId) {
-        this.server
-          .to(`project:${projectId}`)
-          .emit('linear.task.pulled', payload);
-        return;
-      }
-      this.server.emit('linear.task.pulled', payload);
+      this.emitScoped('linear.task.pulled', payload);
     });
 
     this.messageBus.subscribe('linear.task.pushed', (payload: any) => {
-      const { projectId } = payload ?? {};
-      if (projectId) {
-        this.server
-          .to(`project:${projectId}`)
-          .emit('linear.task.pushed', payload);
-        return;
-      }
-      this.server.emit('linear.task.pushed', payload);
+      this.emitScoped('linear.task.pushed', payload);
     });
 
     this.messageBus.subscribe('linear.task.conflict', (payload: any) => {
-      const { projectId } = payload ?? {};
-      if (projectId) {
-        this.server
-          .to(`project:${projectId}`)
-          .emit('linear.task.conflict', payload);
-        return;
-      }
-      this.server.emit('linear.task.conflict', payload);
+      this.emitScoped('linear.task.conflict', payload);
     });
 
     this.messageBus.subscribe('linear.task.resolved', (payload: any) => {
-      const { projectId } = payload ?? {};
-      if (projectId) {
-        this.server
-          .to(`project:${projectId}`)
-          .emit('linear.task.resolved', payload);
-        return;
-      }
-      this.server.emit('linear.task.resolved', payload);
+      this.emitScoped('linear.task.resolved', payload);
     });
   }
 

@@ -20,7 +20,6 @@ import {
   Post,
   Query,
   Request,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -29,7 +28,6 @@ import {
   ApiParam,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 import { WorkflowService } from './workflow.service';
 import {
@@ -49,7 +47,6 @@ import {
 
 @ApiTags('workflows')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller()
 export class WorkflowController {
   constructor(private readonly workflowService: WorkflowService) {}

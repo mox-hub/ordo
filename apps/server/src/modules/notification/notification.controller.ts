@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Put,
-  Body,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Put, Body, Query } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -25,12 +17,10 @@ import {
   NotificationUnreadCountResponseDto,
 } from './dto/notification-response.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 
 @ApiTags('Notification')
 @Controller('notifications')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class NotificationController {
   constructor(private readonly notificationService: NotificationService) {}

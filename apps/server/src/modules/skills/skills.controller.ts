@@ -18,7 +18,6 @@ import {
   Param,
   Post,
   Put,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -28,7 +27,6 @@ import {
   ApiResponse,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import { SkillsService, SkillDetail } from './skills.service';
 import { UpdateSkillDto } from './dto/update-skill.dto';
 import { CreateSkillDto } from './dto/create-skill.dto';
@@ -44,7 +42,6 @@ import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 @ApiTags('Skills')
 @ApiBearerAuth('JWT-auth')
 @Controller('skills')
-@UseGuards(JwtAuthGuard)
 export class SkillsController {
   constructor(private readonly service: SkillsService) {}
 

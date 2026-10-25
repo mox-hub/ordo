@@ -14,6 +14,16 @@ import {
 } from '@/modules/auth/access-token.service';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
+/**
+ * 全局唯一认证守卫（APP_GUARD）。2026-10-25 双守卫收编：59 处控制器级
+ * @UseGuards(JwtAuthGuard)（modules/auth 版）全量摘除，认证单源于此。
+ *
+ * 工作区隔离的真实边界（勿在守卫层重复校验）：x-workspace-id 在中间件进 ALS
+ * 后，passport 策略 validateJwtPayload 与 PAT 校验都按 ALS 路由库查
+ * User/Session/AccessToken——跨库主体在策略层即 401；控制器级再查一次归属
+ * 只会徒增每请求一次 PK 查询。dev mock 用户 id 本不在任何库中，靠库内
+ * User 行不存在自然失效。
+ */
 @Injectable()
 export class JwtAuthGuard extends AuthGuard('jwt') {
   constructor(

@@ -5,7 +5,6 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
   Req,
   BadRequestException,
   UnauthorizedException,
@@ -24,7 +23,6 @@ import {
 import { Request } from 'express';
 import * as crypto from 'node:crypto';
 import { Allow } from 'class-validator';
-import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
 import { PrismaService } from '../../../../core/database/prisma.service';
 import { MessageBusService } from '../../../../core/message-bus/message-bus.service';
 import { EncryptionService } from '../../../../core/crypto/encryption.service';
@@ -82,7 +80,6 @@ export class GitHubController {
 
   // ========== 受保护端点：未保存凭据试连（Connect 流校验步骤） ==========
   @Post('test-inline')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Test github connection with raw token' })
   @ApiStandardErrors()
@@ -140,7 +137,6 @@ export class GitHubController {
 
   // ========== 鉴权端点 ==========
   @Get('test/:integrationId')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Test connection with stored config' })
   @ApiStandardErrors()
@@ -160,7 +156,6 @@ export class GitHubController {
   }
 
   @Get(':integrationId/sync-logs')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'List sync logs' })
   @ApiQuery({
@@ -189,7 +184,6 @@ export class GitHubController {
   }
 
   @Get(':integrationId/pulls')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'List PRs (latest 30 by default)' })
   @ApiStandardErrors()
@@ -220,7 +214,6 @@ export class GitHubController {
   }
 
   @Post(':integrationId/pulls')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({ summary: 'Create a PR (high-level dispatch helper)' })
   @ApiStandardErrors()
@@ -262,7 +255,6 @@ export class GitHubController {
   }
 
   @Post(':integrationId/sync/pull')
-  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth('JWT-auth')
   @ApiOperation({
     summary: 'Manually sync a single PR (fallback when webhook missed)',

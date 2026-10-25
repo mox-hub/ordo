@@ -17,7 +17,6 @@ import {
   Delete,
   Param,
   Body,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -27,7 +26,6 @@ import {
   ApiBearerAuth,
   ApiParam,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/modules/auth/guards/jwt-auth.guard';
 import {
   CliProviderService,
   CliProvidersResponse,
@@ -55,7 +53,6 @@ function isCliProviderId(id: string): id is CliProviderId {
 @ApiTags('CLI Providers')
 @ApiBearerAuth('JWT-auth')
 @Controller('cli-providers')
-@UseGuards(JwtAuthGuard)
 export class CliProviderController {
   constructor(
     private readonly service: CliProviderService,

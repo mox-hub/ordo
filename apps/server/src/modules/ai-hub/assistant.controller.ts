@@ -1,12 +1,4 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Query,
-  Request,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, Query, Request } from '@nestjs/common';
 import {
   ApiBearerAuth,
   ApiCreatedResponse,
@@ -14,7 +6,6 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 import {
   AssistantConversationQueryDto,
@@ -36,7 +27,6 @@ import { AssistantSilentService } from './services/assistant-silent.service';
 
 @ApiTags('AI Assistant')
 @Controller('ai/assistant')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class AssistantController {
   constructor(

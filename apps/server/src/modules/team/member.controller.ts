@@ -20,7 +20,6 @@ import {
   ApiOkResponse,
   ApiParam,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { RolesGuard } from '@/common/guards/roles.guard';
 import { Roles } from '@/common/decorators/roles.decorator';
 import { MemberService } from './member.service';
@@ -52,7 +51,6 @@ import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 
 @ApiTags('Members')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('members')
 export class MemberController {
   constructor(

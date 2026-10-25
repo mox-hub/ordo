@@ -19,7 +19,6 @@ import {
 } from '@nestjs/swagger';
 import { MetadataService } from './metadata.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
@@ -32,7 +31,6 @@ import {
 
 @ApiTags('Metadata')
 @Controller('metadata')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class MetadataController {
   constructor(private readonly metadataService: MetadataService) {}

@@ -5,7 +5,6 @@ import {
   Body,
   Param,
   Query,
-  UseGuards,
   Request,
 } from '@nestjs/common';
 import {
@@ -17,7 +16,6 @@ import {
   ApiOkResponse,
   ApiParam,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { MentionService } from './mention.service';
 import { CreateMentionDto, ParseMentionsDto } from './dto/mention.dto';
 import {
@@ -30,7 +28,6 @@ import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 
 @ApiTags('Mentions')
 @ApiBearerAuth('JWT-auth')
-@UseGuards(JwtAuthGuard)
 @Controller('mentions')
 export class MentionController {
   constructor(private readonly service: MentionService) {}

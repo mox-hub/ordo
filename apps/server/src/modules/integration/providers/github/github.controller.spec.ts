@@ -7,7 +7,6 @@ import { PrismaService } from '../../../../core/database/prisma.service';
 import { MessageBusService } from '../../../../core/message-bus/message-bus.service';
 import { EncryptionService } from '../../../../core/crypto/encryption.service';
 import { AccessTokenService } from '../../../auth/access-token.service';
-import { JwtAuthGuard } from '../../../auth/guards/jwt-auth.guard';
 import { IntegrationService } from '../../integration.service';
 import { GitHubController } from './github.controller';
 import { GitHubSyncService } from './github-sync.service';
@@ -91,13 +90,15 @@ describe('GitHubController - P0 security (R1/R2)', () => {
   const makeReq = (rawBody: Buffer) => ({ rawBody }) as unknown as never;
 
   describe('R1/B6: test-inline requires JWT auth', () => {
-    it('test-inline endpoint is guarded by JwtAuthGuard', () => {
+    it('test-inline endpoint carries no method-level guard (auth unified at global APP_GUARD)', () => {
+      // 2026-10-25 双守卫收编：控制器级 @UseGuards(JwtAuthGuard) 全量摘除，
+      // 认证统一由 app.module 的全局 JwtAuthGuard（common 版，含 PAT 分支）承担；
+      // 方法级元数据不再挂 guard，端点仍受全局认证保护。
       const guards = Reflect.getMetadata(
         '__guards__',
         GitHubController.prototype.testInline,
-      ) as Array<new (...args: never[]) => unknown>;
-      expect(guards).toBeDefined();
-      expect(guards).toContain(JwtAuthGuard);
+      ) as Array<new (...args: never[]) => unknown> | undefined;
+      expect(guards).toBeUndefined();
     });
   });
 

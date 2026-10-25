@@ -7,7 +7,6 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -18,7 +17,6 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { IsBoolean, IsOptional } from 'class-validator';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { IssueTypeService } from './issue-type.service';
 import {
   CreateIssueTypeDto,
@@ -36,7 +34,6 @@ class ListIssueTypesQueryDto {
 
 @ApiTags('IssueType')
 @Controller('issue-types')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class IssueTypeController {
   constructor(private readonly issueTypeService: IssueTypeService) {}

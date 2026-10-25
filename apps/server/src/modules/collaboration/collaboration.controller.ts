@@ -7,7 +7,6 @@ import {
   Patch,
   Post,
   Query,
-  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -17,7 +16,6 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { JwtAuthGuard } from '@/common/guards/jwt-auth.guard';
 import { ApiStandardErrors } from '@/common/decorators/api-response.decorator';
 import {
   CreateCollaborationDto,
@@ -35,7 +33,6 @@ import { CollaborationService } from './collaboration.service';
 @ApiTags('Collaboration')
 @ApiBearerAuth('JWT-auth')
 @ApiExtraModels(CollaborationCardWithNamesDto)
-@UseGuards(JwtAuthGuard)
 @Controller('collaboration')
 export class CollaborationController {
   constructor(private readonly collaborationService: CollaborationService) {}

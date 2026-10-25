@@ -2,15 +2,7 @@
  * CLI Dispatch Controller
  */
 
-import {
-  Controller,
-  Post,
-  Get,
-  Param,
-  Body,
-  Query,
-  UseGuards,
-} from '@nestjs/common';
+import { Controller, Post, Get, Param, Body, Query } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -27,7 +19,6 @@ import {
   IsString,
   Min,
 } from 'class-validator';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { CurrentUser } from '@/common/decorators/current-user.decorator';
 import { CliDispatchService } from './dispatch.service';
 import { CliProviderRegistry } from './cli-provider.registry';
@@ -71,7 +62,6 @@ class DispatchCliDto {
 
 @ApiTags('CLI Dispatch')
 @Controller('ai')
-@UseGuards(JwtAuthGuard)
 @ApiBearerAuth('JWT-auth')
 export class CliDispatchController {
   constructor(
