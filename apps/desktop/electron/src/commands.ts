@@ -39,7 +39,20 @@ import {
 } from './runtime-daemon';
 import { initializeDirs, resolveNodeExe, restoreDefaultDbIfNeeded } from './setup';
 import { state, setInitError, type BackendInfo, type FrontendInfo } from './state';
+import {
+  addQueueItem,
+  listQueueItems,
+  removeQueueItem,
+  saveBugReport,
+} from './bug-report';
 import { resolveTrayIconPath } from './tray';
+import {
+  captureTestMode,
+  consumeLastSnapshot,
+  getTestModeStatus,
+  startTestMode,
+  stopTestMode,
+} from './test-mode';
 import { checkForUpdates, getUpdateStatus, type UpdateStatus } from './updater';
 import { switchAuthSurface } from './windows';
 
@@ -564,5 +577,79 @@ export const commandHandlers = {
     });
     notification.show();
     return { ok: true };
+  },
+
+  // ---------- 实机测试模式（CAP-A-31 批 1）：采集默认全关，test_mode_start 才开 ----------
+
+  async test_mode_start(): Promise<ReturnType<typeof getTestModeStatus>> {
+    return startTestMode();
+  },
+
+  async test_mode_stop(): Promise<ReturnType<typeof getTestModeStatus>> {
+    return stopTestMode();
+  },
+
+  async test_mode_status(): Promise<ReturnType<typeof getTestModeStatus>> {
+    return getTestModeStatus();
+  },
+
+  /** 抓取现场：截图 + 三缓冲快照固化（不清缓冲，支持连续抓取） */
+  async test_mode_capture() {
+    const { screenshotDataUrl, summary } = await captureTestMode();
+    return { screenshotDataUrl, report: summary };
+  },
+
+  /** 落盘 bundle（本地优先：先落盘后建单），消费最近一次 test_mode_capture 快照 */
+  async bug_report_save(args?: {
+    title?: string;
+    description?: string;
+    severity?: string;
+    expectedResult?: string;
+    actualResult?: string;
+    stepsToReproduce?: string;
+    screenshotDataUrl?: string;
+  }) {
+    const snapshot = consumeLastSnapshot();
+    if (!snapshot) {
+      throw new Error('没有可用的现场快照（请先「抓取现场」）');
+    }
+    if (!args?.screenshotDataUrl) {
+      throw new Error('缺少截图数据');
+    }
+    return saveBugReport({
+      form: {
+        title: args.title ?? '',
+        description: args.description,
+        severity: args.severity ?? 'medium',
+        expectedResult: args.expectedResult,
+        actualResult: args.actualResult,
+        stepsToReproduce: args.stepsToReproduce,
+      },
+      screenshotDataUrl: args.screenshotDataUrl,
+      snapshot,
+    });
+  },
+
+  /** 建单失败入补交队列（bundle 已落盘，恢复后重试） */
+  async bug_report_queue_add(args?: {
+    bundlePath?: string;
+    payload?: Record<string, unknown>;
+    error?: string;
+  }) {
+    if (!args?.bundlePath || !args.payload) {
+      throw new Error('缺少 bundle 路径或建单请求体');
+    }
+    return addQueueItem({ bundlePath: args.bundlePath, payload: args.payload, error: args.error });
+  },
+
+  async bug_report_queue_list() {
+    return { items: listQueueItems() };
+  },
+
+  async bug_report_queue_remove(args?: { id?: string }) {
+    if (!args?.id) {
+      throw new Error('缺少队列条目 id');
+    }
+    return { ok: removeQueueItem(args.id) };
   },
 };
