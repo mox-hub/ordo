@@ -174,9 +174,8 @@ async function harvestOperations(): Promise<void> {
 }
 
 function findTargetWindow(): BrowserWindow | null {
-  if (state.authWindow && !state.authWindow.isDestroyed()) {
-    return null; // 认证面不可用（未登录建不了单）
-  }
+  // 单窗架构（全大窗恢复批）：认证面是主窗内路由且浮动球只挂登录后的 shell 布局，
+  // 旧「认证窗存在即拒绝」守卫已无对应物；未登录时 startTestMode 走 !win 报错兜底
   return (
     BrowserWindow.getAllWindows().find(
       (w) => !w.isDestroyed() && w.webContents.getType() === 'window',
