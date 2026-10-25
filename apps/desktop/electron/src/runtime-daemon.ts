@@ -134,6 +134,12 @@ function pipeLog(source: NodeJS.ReadableStream | null, tag: string, onFirstOutpu
 const MAX_DAEMON_CONSECUTIVE_CRASHES = 5;
 const DAEMON_RESTART_MAX_DELAY_MS = 30_000;
 let daemonCrashCount = 0;
+let daemonStartedAt = 0;
+/**
+ * 连续崩溃计数只在「上一轮存活满 5 分钟」时清零。此前「fork 即清零」会被
+ * 「活过 1.5s 宽限观察几秒再崩」的循环击穿——每轮归零，退避恒 1s，熔断永不触发。
+ */
+const DAEMON_CRASH_COUNT_RESET_ALIVE_MS = 5 * 60_000;
 
 /**
  * 守护进程意外退出自动重拉（ADR-015 自愈）：指数退避 + 熔断防 crash loop；
@@ -141,6 +147,13 @@ let daemonCrashCount = 0;
  * 重新走全量启动。
  */
 function scheduleDaemonRestart(reason: string): void {
+  // 上一轮稳定存活满阈值才清零计数（见 DAEMON_CRASH_COUNT_RESET_ALIVE_MS 注释）
+  if (
+    daemonStartedAt &&
+    Date.now() - daemonStartedAt >= DAEMON_CRASH_COUNT_RESET_ALIVE_MS
+  ) {
+    daemonCrashCount = 0;
+  }
   daemonCrashCount += 1;
   if (daemonCrashCount > MAX_DAEMON_CONSECUTIVE_CRASHES) {
     logger.error(
@@ -235,7 +248,7 @@ export async function startRuntimeDaemon(backendPort: number): Promise<{ pid: nu
   });
 
   state.daemon = handle;
-  daemonCrashCount = 0; // 手动启动或自动重拉成功都视为恢复
+  daemonStartedAt = Date.now(); // 计数清零改为按存活时长判定（fork 成功≠恢复）
 
   // 宽限观察：fork 后短暂窗口内即退（单实例锁冲突/入口损坏）则直接报错，不给前端假成功
   await new Promise((resolve) => setTimeout(resolve, 1500));

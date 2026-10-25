@@ -98,6 +98,12 @@ function assertServerEntryExists(): void {
 const MAX_SERVER_CONSECUTIVE_CRASHES = 5;
 const SERVER_RESTART_MAX_DELAY_MS = 30_000;
 let serverCrashCount = 0;
+let serverStartedAt = 0;
+/**
+ * 连续崩溃计数只在「上一轮存活满 5 分钟」时清零。此前「启动成功即清零」会被
+ * 「活过健康检查几秒再崩」的循环击穿——每轮归零，退避恒 1s，熔断永不触发。
+ */
+const CRASH_COUNT_RESET_ALIVE_MS = 5 * 60_000;
 
 /**
  * server 升级迁移失败专用退出码（CAP-A-14，与 server 侧
@@ -194,6 +200,13 @@ function handleServerUnexpectedExit(exitCode: number | null): void {
     void showMigrationFailureDialog();
     return;
   }
+  // 上一轮稳定存活满阈值才清零计数（见 CRASH_COUNT_RESET_ALIVE_MS 注释）
+  if (
+    serverStartedAt &&
+    Date.now() - serverStartedAt >= CRASH_COUNT_RESET_ALIVE_MS
+  ) {
+    serverCrashCount = 0;
+  }
   serverCrashCount += 1;
   if (serverCrashCount > MAX_SERVER_CONSECUTIVE_CRASHES) {
     logger.error(
@@ -224,8 +237,8 @@ async function startBackendInternal(): Promise<BackendInfo> {
     const apiBaseUrl = `http://127.0.0.1:${port}`;
     const info: BackendInfo = { port, apiBaseUrl, pid: handle.pid };
     state.backend = { handle, info };
-    // 自愈链路：崩溃计数清零（人工启动或重启成功都视为恢复）+ 订阅意外退出
-    serverCrashCount = 0;
+    // 自愈链路：记录存活起点（计数清零改为按存活时长判定）+ 订阅意外退出
+    serverStartedAt = Date.now();
     handle.onUnexpectedExit((exitCode) => handleServerUnexpectedExit(exitCode));
     logger.info(`后端启动成功: ${apiBaseUrl}`);
     return info;

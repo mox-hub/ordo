@@ -167,6 +167,9 @@ export async function runRuntimeDaemon(): Promise<void> {
       .catch(() => {});
   }, POLL_INTERVAL_MS);
 
+  // 启动恢复：重放上次运行「已认领未回报」的派发（结果上报幂等，不会双计）
+  void worker.recoverDispatched();
+
   console.log(
     `[ordo-runtime] 已启动：runtime=${runtimeId} session=${sessionId} ws=${WS_NAMESPACE} backend=${backend}`,
   );

@@ -7,6 +7,7 @@ import {
   ApprovalRequestPayload,
   ApprovalResolvedPayload,
   CliAdapter,
+  CliUsage,
   ClaudeCodeAdapter,
   CodeBuddyAdapter,
   CodexAdapter,
@@ -24,6 +25,7 @@ import {
   runCliProcess,
   RuntimeDispatch,
   RUNTIME_ENDPOINTS,
+  RunnerCallbacks,
   ZCodeAdapter,
 } from '@ordo/shared';
 
@@ -47,7 +49,8 @@ function truncate(text: string, max: number): string {
 }
 
 interface RunningJob {
-  proc: ChildProcess;
+  /** runCliProcess 声明为可选返回，取消/审批路径均以 job?.proc 判空使用 */
+  proc?: ChildProcess;
 }
 
 export interface Worker {
@@ -56,6 +59,8 @@ export interface Worker {
   cancel: (executionRunId: string) => boolean;
   /** 处理控制面审批决议：驳回则终止进程，通过则上报事件继续等待 */
   resolveApproval: (payload: ApprovalResolvedPayload) => boolean;
+  /** 重启恢复：重取本 runtime 已认领未回报的派发并重放（结果上报幂等） */
+  recoverDispatched: () => Promise<void>;
   running: () => number;
 }
 
@@ -74,6 +79,8 @@ export function startWorker(
     }
   }
 
+  const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
   async function reportResult(
     executionRunId: string,
     status: string,
@@ -83,16 +90,50 @@ export function startWorker(
     usage?: ExecutionResultPayload['usage'],
     output?: ExecutionResultPayload['output'],
   ): Promise<void> {
-    await api
-      .post(RUNTIME_ENDPOINTS.executionResult(executionRunId), {
-        status,
-        summary,
-        artifacts: artifacts ?? [],
-        error: error ?? null,
-        usage: usage ?? null,
-        output: output ?? null,
-      } as ExecutionResultPayload)
-      .catch((e) => console.error('[result]', e.message));
+    const payload = {
+      status,
+      summary,
+      artifacts: artifacts ?? [],
+      error: error ?? null,
+      usage: usage ?? null,
+      output: output ?? null,
+    } as ExecutionResultPayload;
+    // 结果上报三连退避重试。此前单次失败只 console.error 照常删 job，
+    // 派发滞留 pending 被 15s 轮询无限重跑（烧 token 根源，server 侧已改
+    // 认领语义）；三连仍失败时由两条恢复路径兜底：① daemon 重启按
+    // status=dispatched 重放（recoverDispatched）；② server reconcile 对
+    // 悬挂 run 收敛 failed。server 侧上报幂等，重试/重放不会双计费用。
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await api.post(RUNTIME_ENDPOINTS.executionResult(executionRunId), payload);
+        return;
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        if (attempt === 3) {
+          console.error(
+            `[result] 上报失败（已重试 3 次，待重启重放或对账收敛）: ${executionRunId} ${message}`,
+          );
+          return;
+        }
+        await sleep(1500 * attempt);
+      }
+    }
+  }
+
+  /** daemon 重启恢复：重取已认领未回报的派发重放（server 幂等，安全） */
+  async function recoverDispatched(): Promise<void> {
+    try {
+      const dispatched = await api.get<RuntimeDispatch[]>(
+        RUNTIME_ENDPOINTS.dispatches(runtimeId),
+        { status: 'dispatched', limit: 20 },
+      );
+      for (const d of dispatched ?? []) {
+        console.log(`[worker] 重放未回报派发: ${d.executionRunId}`);
+        void handleDispatch(d);
+      }
+    } catch {
+      // 首连尚未就绪等场景：静默跳过，下一轮 pending 轮询不受影响
+    }
   }
 
   /** 标准化步骤事件：工具调用/文件变更/工具结果/思考/错误 → EXECUTION_EVENT_TYPES */
@@ -272,16 +313,16 @@ export function startWorker(
             ORDO_EXECUTION_ID: executionRunId,
             ORDO_PROJECT_ID: dispatch.projectId ?? '',
           },
-          onToken: (t) => {
+          onToken: (t: string) => {
             tokenBuffer += t;
             if (!tokenFlushTimer) {
               tokenFlushTimer = setTimeout(flushTokens, 2000);
             }
           },
-          onStep: (step) => {
+          onStep: (step: ExecutionStepUpdate) => {
             void reportStepEvent(executionRunId, step);
           },
-          onUsage: (usage) => {
+          onUsage: (usage: CliUsage) => {
             api
               .post(RUNTIME_ENDPOINTS.executionEvents(executionRunId), {
                 eventType: EXECUTION_EVENT_TYPES.USAGE,
@@ -291,14 +332,18 @@ export function startWorker(
               } as ExecutionEventPayload)
               .catch(() => {});
           },
-          onApprovalNeeded: (req) => {
+          onApprovalNeeded: (
+            req: Parameters<
+              NonNullable<RunnerCallbacks['onApprovalNeeded']>
+            >[0],
+          ) => {
             api
               .post(RUNTIME_ENDPOINTS.approvalRequest(executionRunId), {
                 requestedAction: req.requestedAction,
                 riskLevel: req.riskLevel,
                 reason: req.reason ?? '',
               } as ApprovalRequestPayload)
-              .then((res) => {
+              .then((res: unknown) => {
                 const approvalId = (
                   res as { approvalRequestId?: string }
                 )?.approvalRequestId;
@@ -335,10 +380,12 @@ export function startWorker(
         res.parse.status,
         res.parse.status === 'completed' ? '任务执行完成' : res.parse.error ?? '任务执行失败',
         res.parse.error ? { message: res.parse.error } : null,
-        res.parse.artifacts.map((a) => ({
-          type: a.type,
-          ref: a.storageRef ?? a.name,
-        })),
+        res.parse.artifacts.map(
+          (a: { type: string; storageRef?: string; name?: string }) => ({
+            type: a.type,
+            ref: a.storageRef ?? a.name ?? '',
+          }),
+        ),
         res.parse.usage,
         res.parse.output,
       );
@@ -396,5 +443,11 @@ export function startWorker(
     return true;
   }
 
-  return { handleDispatch, cancel, resolveApproval, running: () => runningJobs.size };
+  return {
+    handleDispatch,
+    cancel,
+    resolveApproval,
+    recoverDispatched,
+    running: () => runningJobs.size,
+  };
 }
