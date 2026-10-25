@@ -1,0 +1,43 @@
+{
+  "name": "mobile",
+  "version": "0.1.0",
+  "private": true,
+  "main": "expo-router/entry",
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "type-check": "tsc --noEmit",
+    "lint": "eslint app src",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@expo/vector-icons": "^15.1.1",
+    "@ordo/shared": "workspace:*",
+    "@tanstack/react-query": "^5.102.8",
+    "expo": "~58.0.14",
+    "expo-constants": "~58.0.12",
+    "expo-linking": "~58.0.13",
+    "expo-router": "~58.0.23",
+    "expo-secure-store": "~58.0.2",
+    "expo-status-bar": "~58.0.3",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "react-native": "0.88.0",
+    "react-native-safe-area-context": "~5.10.1",
+    "react-native-screens": "~4.30.0",
+    "react-native-web": "^0.21.4",
+    "socket.io-client": "^4.8.3",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "@types/react": "^19.2.18",
+    "eslint": "catalog:",
+    "eslint-plugin-react-hooks": "7.0.1",
+    "globals": "catalog:",
+    "typescript": "catalog:",
+    "typescript-eslint": "catalog:",
+    "vitest": "catalog:"
+  }
+}

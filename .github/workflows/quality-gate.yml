@@ -29,6 +29,7 @@ jobs:
       frontend: ${{ steps.classify.outputs.frontend }}
       server: ${{ steps.classify.outputs.server }}
       workspace: ${{ steps.classify.outputs.workspace }}
+      mobile: ${{ steps.classify.outputs.mobile }}
       contract: ${{ steps.classify.outputs.contract }}
       docs: ${{ steps.classify.outputs.docs }}
     steps:
@@ -56,6 +57,7 @@ jobs:
           SERVER=$(yes_no has '^apps/server/')
           CLI=$(yes_no has '^apps/cli/')
           SHARED=$(yes_no has '^packages/ordo-shared/')
+          MOBILE=$(yes_no has '^apps/mobile/')
           GLOBAL=$(yes_no has '^(package\.json|pnpm-workspace\.yaml|pnpm-lock\.yaml|turbo\.json|scripts/|\.github/)')
           CONTRACT=$(yes_no has '^(openapi\.json|apps/server/src/|packages/ordo-shared/src/)')
           DOCS=$(yes_no has '^(docs/|AGENTS\.md|README\.md|CHANGELOG\.md)')
@@ -63,16 +65,16 @@ jobs:
           if [ "$BASE" = "pre-prod" ] || [ "$BASE" = "main" ]; then FULL=true; else FULL=false; fi
 
           SOURCES=false
-          if [ "$FRONTEND" = true ] || [ "$SERVER" = true ] || [ "$CLI" = true ] || [ "$SHARED" = true ] || [ "$GLOBAL" = true ]; then SOURCES=true; fi
+          if [ "$FRONTEND" = true ] || [ "$SERVER" = true ] || [ "$CLI" = true ] || [ "$SHARED" = true ] || [ "$MOBILE" = true ] || [ "$GLOBAL" = true ]; then SOURCES=true; fi
           if [ "$CLI" = true ] || [ "$SHARED" = true ] || [ "$GLOBAL" = true ]; then WORKSPACE=true; else WORKSPACE=false; fi
 
           # 全量分支：所有范围都置真
           if [ "$FULL" = true ]; then
-            FRONTEND=true; SERVER=true; WORKSPACE=true; CONTRACT=true; DOCS=true; SOURCES=true
+            FRONTEND=true; SERVER=true; WORKSPACE=true; MOBILE=true; CONTRACT=true; DOCS=true; SOURCES=true
           fi
           # 工具链改动：任何测试都可能被影响，按全量跑
           if [ "$GLOBAL" = true ]; then
-            FRONTEND=true; SERVER=true; WORKSPACE=true; CONTRACT=true; DOCS=true
+            FRONTEND=true; SERVER=true; WORKSPACE=true; MOBILE=true; CONTRACT=true; DOCS=true
           fi
 
           {
@@ -81,6 +83,7 @@ jobs:
             echo "frontend=$FRONTEND"
             echo "server=$SERVER"
             echo "workspace=$WORKSPACE"
+            echo "mobile=$MOBILE"
             echo "contract=$CONTRACT"
             echo "docs=$DOCS"
           } >> "$GITHUB_OUTPUT"
@@ -190,6 +193,36 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm --filter "./packages/ordo-shared" run test
       - run: pnpm --filter "./apps/cli" run test
+
+  # 移动端门禁（工程接入方案 §4.1）：type-check / lint / 单测。
+  # 不上 EAS/模拟器——真机与 e2e 走 M2 起的人工/nightly 通道（测试策略）。
+  # shared 需先构建：mobile type-check 经 exports 子路径消费 dist 类型。
+  test-mobile:
+    needs: changes
+    if: needs.changes.outputs.mobile == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm --filter "./packages/ordo-shared" run build
+      - run: pnpm --filter "./apps/mobile" run type-check
+      - run: pnpm --filter "./apps/mobile" run lint
+      - name: 移动端单测（受影响文件）
+        if: needs.changes.outputs.full != 'true'
+        run: |
+          BASE="origin/${{ github.base_ref }}"
+          git fetch --no-tags origin "${{ github.base_ref }}" >/dev/null 2>&1 || true
+          pnpm --filter "./apps/mobile" exec vitest run --changed "$BASE"
+      - name: 移动端单测（全量）
+        if: needs.changes.outputs.full == 'true'
+        run: pnpm --filter "./apps/mobile" run test
 
   contract:
     needs: changes

@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Ordo",
+    "slug": "ordo",
+    "version": "0.1.0",
+    "scheme": "ordo",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "bundleIdentifier": "com.moxhub.ordo",
+      "supportsTablet": false
+    },
+    "android": {
+      "package": "com.moxhub.ordo"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-secure-store"
+    ]
+  }
+}
