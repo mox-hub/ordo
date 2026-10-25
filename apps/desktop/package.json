@@ -9,6 +9,7 @@
     "lint": "eslint electron/src/**/*.ts",
     "build:electron": "tsup",
     "desktop:dev": "tsup && electron .",
+    "spike:test-mode": "pnpm build:electron && node scripts/test-mode-spike.mjs",
     "pack:resources": "node scripts/pack.mjs",
     "desktop:pack": "pnpm pack:resources && pnpm build:electron && electron-builder --win nsis",
     "e2e:shell": "node scripts/e2e-shell.mjs"

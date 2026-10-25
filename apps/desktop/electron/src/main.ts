@@ -26,6 +26,7 @@ import { createTray, hasTray } from './tray';
 import { checkForUpdates, initAutoUpdater, setUpdateStatusBroadcaster } from './updater';
 import { setInitError, state, stopAllProcesses } from './state';
 import { loadDesktopState, saveDesktopState } from './desktop-state';
+import { runTestModeSpike, shouldRunTestModeSpike } from './test-mode-spike';
 import {
   createAuthWindow,
   hardenWebContents,
@@ -381,6 +382,11 @@ function bootstrap(): void {
   });
   registerIpc();
   registerGlobalErrorHandlers();
+  // CAP-A-31 批 0 spike：ORDO_TEST_MODE_SPIKE=1 走五验证点流程，替代常规启动（不拉后端）
+  if (shouldRunTestModeSpike()) {
+    void runTestModeSpike();
+    return;
+  }
   // 切窗路径可能需要现建主窗（认证窗启动进程登录成功切回，见 windows.ts）
   registerMainWindowFactory(createMainWindow);
   createWindow();
