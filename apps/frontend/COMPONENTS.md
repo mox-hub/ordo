@@ -316,8 +316,8 @@
 | cell-select | `src/shared/components/cell-select.tsx` | ✅ canonical | — | — |
 | connection-banner | `src/shared/components/connection-banner.tsx` | ✅ canonical | — | — |
 | acceptance-criteria-field | `src/shared/components/create-dialog/acceptance-criteria-field.tsx` | ✅ canonical | — | — |
-| agent-presence-banner | `src/shared/components/create-dialog/agent-presence-banner.tsx` | ✅ canonical | — | — |
 | project-source-tabs | `src/shared/components/create-dialog/entity-templates/project-source-tabs.tsx` | ✅ canonical | — | — |
+| ai-readiness-card | `src/shared/components/create-dialog/ai-readiness-card.tsx` | ✅ canonical | — | — |
 | create-dialog/index | `src/shared/components/create-dialog/index.tsx` | ✅ canonical | — | — |
 | mode-shuttle-button | `src/shared/components/create-dialog/mode-shuttle-button.tsx` | ✅ canonical | — | — |
 | property-pills-bar | `src/shared/components/create-dialog/property-pills-bar.tsx` | ✅ canonical | — | — |

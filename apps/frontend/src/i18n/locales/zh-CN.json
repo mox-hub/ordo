@@ -4387,7 +4387,8 @@
       "editManually": "回手动编辑",
       "fallback": "转小助理",
       "fallbackTitle": "AI 代理解析失败时的兜底：转小助理对话创建",
-      "forwardedToast": "已转给小周，在右下角对话里发送即可"
+      "forwardedToast": "已转给小周，在右下角对话里发送即可",
+      "typeSwitchHint": "确认后将切换到{{type}}并直接创建"
     },
     "agentPresence": {
       "immediate": "创建后 {{agent}} 会立即开始工作。",
@@ -4404,7 +4405,8 @@
     },
     "shuttle": {
       "toAi": "切换到智能体",
-      "toManual": "返回手动编辑"
+      "toManual": "返回手动编辑",
+      "draftApplied": "AI 草稿已回填表单，可继续精修"
     },
     "bug": {
       "injectTemplate": "填入标准缺陷排查模板"
@@ -4486,6 +4488,21 @@
         "moduleCodeMissing": "该项目尚未配置模块代码,请先在项目设置中添加模块",
         "createFailed": "创建失败"
       }
+    },
+    "draftApply": {
+      "title": "回填 AI 草稿",
+      "desc": "表单已有内容，回填将覆盖已填字段。",
+      "confirm": "回填并覆盖"
+    },
+    "readiness": {
+      "unavailableTitle": "AI 暂不可用",
+      "unavailableDesc": "当前没有可用的 AI 提供商，自然语言创建不可用。配置后即可用一句话创建任务、缺陷、文档等项目。",
+      "unconfiguredTitle": "AI 尚未配置默认模型",
+      "unconfiguredDesc": "已有可用 AI 提供商，但还没有设置默认模型。设置后即可用一句话创建。",
+      "unverifiedTitle": "AI 默认模型最近实测失败",
+      "unverifiedDesc": "默认模型指向的提供商最近一次连通性实测未通过，生成可能失败。",
+      "goConfig": "去配置",
+      "goManual": "转手动创建"
     }
   },
   "form": {

@@ -95,6 +95,8 @@ import {
 } from 'lucide-react';
 import { Spinner } from '@/components/ui/spinner';
 import { SuggestionsCard } from './suggestions-card';
+import { AiReadinessCard } from './ai-readiness-card';
+import { useAiReadiness } from '@/modules/ai-hub/hooks/use-ai-readiness';
 import { ModeShuttleButton } from './mode-shuttle-button';
 import { PropertyPillsBar } from './property-pills-bar';
 import { ProjectSourceTabs } from './entity-templates/project-source-tabs';
@@ -155,6 +157,14 @@ export function UnifiedCreateDialog({
   const [draft, setDraft] = useState<CreateDraft | null>(null);
   // Esc/关闭时的脏表单保护
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  // 批三·草稿保护：AI→人工切换时若表单已有内容，回填前先确认覆盖
+  const [confirmDraftApply, setConfirmDraftApply] = useState(false);
+  // 批三·就绪度前置：AI 不可用三态在进入 AI 界面时即呈现就绪卡（不白写一句话）
+  const aiReadiness = useAiReadiness();
+  const aiUsable =
+    aiReadiness.state === 'ready'
+    || aiReadiness.state === 'unknown'
+    || aiReadiness.state === 'loading';
   const openAssistantWithDraft = useAppStore((s) => s.openAssistantWithDraft);
   // 连续创建：重置后焦点回归标题输入框
   const mainColRef = useRef<HTMLDivElement>(null);
@@ -343,9 +353,16 @@ export function UnifiedCreateDialog({
     if (!text) { setError(t('unifiedCreate.error.prompt')); return; }
     setError(null);
     setDraft(null);
+    // 批三·上下文携带：人工→AI 生成时附上表单已填字段，AI 在现状基础上补全/改写而非无视
+    const fieldsCtx = adapter.serializeContext?.(activeForm, ctx);
+    const promptWithContext = fieldsCtx
+      ? `${text}
+
+（表单已填：${fieldsCtx}。请在此基础上补全或改写，保持已填信息不丢失。）`
+      : text;
     try {
       const res = await silentCreateDraft.mutateAsync({
-        prompt: text,
+        prompt: promptWithContext,
         typeHint: activeType,
         projectId: activeProjectId || undefined,
       });
@@ -373,6 +390,16 @@ export function UnifiedCreateDialog({
     setActiveType(draft.type);
     setDraft(null);
     setMode('manual');
+  };
+
+  /** 批三·草稿保护：AI→人工切换时自动回填草稿（不再静默丢弃）；表单已脏时经确认后覆盖 */
+  const applyDraftAndGoManual = () => {
+    if (!draft) { setMode('manual'); return; }
+    ADAPTER_BY_TYPE[draft.type].applyDraft(forms[draft.type], draft);
+    setActiveType(draft.type);
+    setDraft(null);
+    setMode('manual');
+    toast.success(t('unifiedCreate.shuttle.draftApplied'));
   };
 
   // ── 静默 AI 建议卡（创建面板场景 create-suggestions）──
@@ -531,8 +558,15 @@ export function UnifiedCreateDialog({
                 </Alert>
               )}
 
-              {/* AI 代理界面：自然语言 → 草稿确认卡（CAP-A-18 顶级双界面） */}
-              {mode === 'ai' ? (
+              {/* AI 代理界面：自然语言 → 草稿确认卡（CAP-A-18 顶级双界面）；
+                  批三·就绪度前置：不可用三态先见就绪卡（诚实降级+双 CTA） */}
+              {mode === 'ai' && !aiUsable ? (
+                <AiReadinessCard
+                  state={aiReadiness.state as 'unavailable' | 'unconfigured' | 'unverified'}
+                  detail={aiReadiness.detail}
+                  onGoManual={applyDraftAndGoManual}
+                />
+              ) : mode === 'ai' ? (
                 <AiPromptPanel
                   aiPrompt={aiPrompt}
                   onPromptChange={setAiPrompt}
@@ -542,6 +576,7 @@ export function UnifiedCreateDialog({
                   onConfirm={confirmCreateDraft}
                   onEditManually={editDraftManually}
                   submitting={isSubmitting}
+                  activeType={activeType}
                 />
               ) : takeoverActive ? (
                 /* CAP-P-01：AI 代理模式——grill 连续追问澄清需求后确认创建 */
@@ -646,9 +681,13 @@ export function UnifiedCreateDialog({
             <ModeShuttleButton
               mode={mode}
               onToggle={() => {
-                const next = mode === 'manual' ? 'ai' : 'manual';
-                setMode(next);
-                if (next === 'manual') setDraft(null);
+                if (mode === 'manual') { setMode('ai'); return; }
+                // AI→人工：草稿自动回填不丢弃；表单已有内容时先确认覆盖（§20.1）
+                if (draft && adapter.hasInput(activeForm)) {
+                  setConfirmDraftApply(true);
+                  return;
+                }
+                applyDraftAndGoManual();
               }}
               disabled={isSubmitting}
             />
@@ -663,6 +702,8 @@ export function UnifiedCreateDialog({
               </span>
             ) : mode === 'ai' ? (
               <>
+                {/* 转小助理兜底仅 AI 可用态露出：都不可用时无处可转发，就绪卡的「去配置/转手动」才是出口 */}
+                {aiUsable && (
                 <Button
                   variant="ghost"
                   size="sm"
@@ -679,10 +720,12 @@ export function UnifiedCreateDialog({
                 >
                   {t('unifiedCreate.aiPanel.fallback')}
                 </Button>
+                )}
                 <Button
                   size="sm"
                   onClick={handleSubmit}
-                  disabled={isSubmitting || silentCreateDraft.isPending || !aiPrompt.trim()}
+                  disabled={!aiUsable || isSubmitting || silentCreateDraft.isPending || !aiPrompt.trim()}
+                  title={aiUsable ? undefined : t(`unifiedCreate.readiness.${aiReadiness.state}Title`)}
                   data-ai-action="generate-draft"
                 >
                   {silentCreateDraft.isPending ? (
@@ -735,6 +778,27 @@ export function UnifiedCreateDialog({
         </div>
       </DialogContent>
 
+      {/* 批三·草稿回填覆盖确认：表单已有内容时 AI→人工切换先问一次（§20.1 同层叠加） */}
+      <AlertDialog open={confirmDraftApply} onOpenChange={setConfirmDraftApply}>
+        <AlertDialogContent>
+          <AlertDialogTitle>{t('unifiedCreate.draftApply.title')}</AlertDialogTitle>
+          <AlertDialogDescription>
+            {t('unifiedCreate.draftApply.desc')}
+          </AlertDialogDescription>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('unifiedCreate.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmDraftApply(false);
+                applyDraftAndGoManual();
+              }}
+            >
+              {t('unifiedCreate.draftApply.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* 脏表单退出确认（批4：防 Esc/遮罩误触丢草稿；§20.1 浮层串行——AlertDialog 同层叠加） */}
       <AlertDialog open={confirmDiscard} onOpenChange={setConfirmDiscard}>
         <AlertDialogContent>
@@ -765,7 +829,7 @@ export function UnifiedCreateDialog({
 
 /** AI 界面：提示条 + 自然语言输入 + 草稿确认卡 */
 function AiPromptPanel({
-  aiPrompt, onPromptChange, draft, generating, onGenerate, onConfirm, onEditManually, submitting,
+  aiPrompt, onPromptChange, draft, generating, onGenerate, onConfirm, onEditManually, submitting, activeType,
 }: {
   aiPrompt: string;
   onPromptChange: (v: string) => void;
@@ -775,6 +839,7 @@ function AiPromptPanel({
   onConfirm: () => void;
   onEditManually: () => void;
   submitting: boolean;
+  activeType: CreateType;
 }) {
   const { t } = useTranslation();
   return (
@@ -800,6 +865,11 @@ function AiPromptPanel({
             <span className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
               <EntityIcon entity={DRAFT_ENTITY_KIND[draft.type]} size="sm" />
               {t('unifiedCreate.aiPanel.draftBadge', { type: t(`unifiedCreate.labels.${draft.type}`) })}
+              {draft.type !== activeType && (
+                <span className="text-2xs text-muted-foreground/70">
+                  · {t('unifiedCreate.aiPanel.typeSwitchHint', { type: t(`unifiedCreate.labels.${draft.type}`) })}
+                </span>
+              )}
             </span>
             <button
               type="button"

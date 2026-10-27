@@ -27,6 +27,7 @@ const {
   createDocumentMutate,
   createMilestoneMutate,
   milestoneCtor,
+  readinessState,
 } = vi.hoisted(() => ({
   mockNavigate: vi.fn(),
   openAssistantWithDraft: vi.fn(),
@@ -36,6 +37,12 @@ const {
   createDocumentMutate: vi.fn(),
   createMilestoneMutate: vi.fn(),
   milestoneCtor: vi.fn(),
+  readinessState: { state: 'ready' as string, detail: null as string | null },
+}));
+
+// 就绪度 hook mock（批三·就绪度前置）：默认 ready，个别用例切 unavailable
+vi.mock('@/modules/ai-hub/hooks/use-ai-readiness', () => ({
+  useAiReadiness: () => ({ state: readinessState.state, detail: readinessState.detail }),
 }));
 
 vi.mock('react-router-dom', () => ({ useNavigate: () => mockNavigate }));
@@ -139,6 +146,8 @@ function setup(props?: Partial<Parameters<typeof UnifiedCreateDialog>[0]>) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  readinessState.state = 'ready';
+  readinessState.detail = null;
   createTaskMutate.mockResolvedValue({ id: 't1' });
   createProjectMutate.mockResolvedValue({ id: 'pr1' });
   createDocumentMutate.mockResolvedValue({ id: 'd1' });
@@ -240,6 +249,41 @@ describe('UnifiedCreateDialog 双界面（CAP-A-18）', () => {
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
     fireEvent.click(screen.getByText('unifiedCreate.discard.discard'));
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('AI 不可用态就绪卡前置：进 AI 界面即见琥珀降级卡，输入区与生成钮不出现', () => {
+    readinessState.state = 'unavailable';
+    setup();
+    fireEvent.click(screen.getByTestId('mode-shuttle-button'));
+    expect(screen.getByTestId('ai-readiness-card')).toBeInTheDocument();
+    expect(screen.getByText('unifiedCreate.readiness.unavailableTitle')).toBeInTheDocument();
+    // 不再白写：自然语言输入区不渲染
+    expect(screen.queryByPlaceholderText('unifiedCreate.aiPanel.inputPlaceholder')).not.toBeInTheDocument();
+    // footer 生成钮禁用 + 转小助理兜底不露出（无处可转发）
+    expect(screen.getByRole('button', { name: 'unifiedCreate.aiPanel.generate' })).toBeDisabled();
+    expect(screen.queryByText('unifiedCreate.aiPanel.fallback')).not.toBeInTheDocument();
+    // 双 CTA：去配置 / 转手动创建
+    expect(screen.getByText('unifiedCreate.readiness.goConfig')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('unifiedCreate.readiness.goManual'));
+    expect(screen.getByPlaceholderText('unifiedCreate.placeholder.task')).toBeInTheDocument();
+  });
+
+  it('AI→人工草稿保护：切回手动自动回填草稿（不再静默丢弃）', () => {
+    draftMutate.mockResolvedValue(DRAFT_RESPONSE);
+    setup();
+    fireEvent.click(screen.getByTestId('mode-shuttle-button'));
+    fireEvent.change(screen.getByPlaceholderText('unifiedCreate.aiPanel.inputPlaceholder'), {
+      target: { value: '建一个任务「登录页改版」' },
+    });
+    fireEvent.click(screen.getByText('unifiedCreate.aiPanel.generate'));
+    void screen.findByTestId('create-draft-card');
+    // 等草稿卡出现后切回手动
+    return screen.findByTestId('create-draft-card').then(() => {
+      fireEvent.click(screen.getByTestId('mode-shuttle-button'));
+      // 草稿标题已回填任务表单
+      const titleInput = screen.getByPlaceholderText('unifiedCreate.placeholder.task') as HTMLTextAreaElement;
+      expect(titleInput.value).toBe('登录页改版');
+    });
   });
 
   it('Esc 无输入时直接关闭，不弹确认', () => {

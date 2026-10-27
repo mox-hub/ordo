@@ -280,6 +280,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
   { name: 'connection-banner', file: 'shared/components/connection-banner.tsx', section: 'App Components', status: 'canonical' },
   { name: 'acceptance-criteria-field', file: 'shared/components/create-dialog/acceptance-criteria-field.tsx', section: 'App Components', status: 'canonical' },
   { name: 'project-source-tabs', file: 'shared/components/create-dialog/entity-templates/project-source-tabs.tsx', section: 'App Components', status: 'canonical' },
+  { name: 'ai-readiness-card', file: 'shared/components/create-dialog/ai-readiness-card.tsx', section: 'App Components', status: 'canonical' },
   { name: 'create-dialog/index', file: 'shared/components/create-dialog/index.tsx', section: 'App Components', status: 'canonical' },
   { name: 'mode-shuttle-button', file: 'shared/components/create-dialog/mode-shuttle-button.tsx', section: 'App Components', status: 'canonical' },
   { name: 'property-pills-bar', file: 'shared/components/create-dialog/property-pills-bar.tsx', section: 'App Components', status: 'canonical' },

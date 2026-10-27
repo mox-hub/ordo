@@ -4387,7 +4387,8 @@
       "editManually": "Edit manually",
       "fallback": "Ask assistant",
       "fallbackTitle": "Fallback when the AI agent fails: forward to the assistant chat",
-      "forwardedToast": "Forwarded to Xiao Zhou — send it in the chat at the bottom right"
+      "forwardedToast": "Forwarded to Xiao Zhou — send it in the chat at the bottom right",
+      "typeSwitchHint": "Confirming will switch to {{type}} and create it"
     },
     "agentPresence": {
       "immediate": "After creation, {{agent}} starts working immediately.",
@@ -4404,7 +4405,8 @@
     },
     "shuttle": {
       "toAi": "Switch to AI agent",
-      "toManual": "Back to manual editing"
+      "toManual": "Back to manual editing",
+      "draftApplied": "AI draft applied to the form for further editing"
     },
     "bug": {
       "injectTemplate": "Fill in the standard bug triage template"
@@ -4486,6 +4488,21 @@
         "moduleCodeMissing": "No module code configured for this project. Add one in project settings first.",
         "createFailed": "Failed to create"
       }
+    },
+    "draftApply": {
+      "title": "Apply AI Draft",
+      "desc": "The form already has content; applying will overwrite filled fields.",
+      "confirm": "Apply & Overwrite"
+    },
+    "readiness": {
+      "unavailableTitle": "AI is unavailable",
+      "unavailableDesc": "No usable AI provider is configured, so natural-language creation is off. Configure one to create tasks, bugs, docs and projects in one sentence.",
+      "unconfiguredTitle": "No default AI model set",
+      "unconfiguredDesc": "A usable provider exists, but no default model is set. Set one to create with a single sentence.",
+      "unverifiedTitle": "Default model failed its last health check",
+      "unverifiedDesc": "The provider behind the default model last failed a connectivity check; generation may fail.",
+      "goConfig": "Configure",
+      "goManual": "Switch to Manual"
     }
   },
   "form": {
