@@ -331,21 +331,29 @@ for (const { entry, relaxed } of luAdded) {
 
 // ---------------------------------------------------------------------------
 // §四 4.2 ④ 门禁计算（H 类批 H3）：必须在 exit 之前 —— missing 计入 errors 阻断。
+// 2026-10-27 展示层路由化批起：demo 本体自 design-system-page.tsx 巨型单页机械拆至
+// sections/ 目录（gallery-sections.gen.tsx 一锚一块 + component-review-board 等），
+// 扫描范围同步改为该目录全部非测试源文件 + gallery-kit.tsx（demo helper 宿主：
+// 间接引用型 demo 的组件 import 落在 kit，如 date-picker 经 DatePickerDemo）。
+// 索引/单页壳不计入——防止壳层自用 ui 组件伪装成画廊覆盖。
 // ---------------------------------------------------------------------------
-const GALLERY_PAGE = join(
-  PKG_ROOT,
-  "src",
-  "modules",
-  "design-system",
-  "pages",
-  "design-system-page.tsx"
-);
+const GALLERY_MODULE_DIR = join(PKG_ROOT, "src", "modules", "design-system");
+const GALLERY_SOURCES = [
+  ...walkFiles(join(GALLERY_MODULE_DIR, "sections")),
+  join(GALLERY_MODULE_DIR, "gallery-kit.tsx"),
+];
 let galleryCoverage = null;
 try {
-  const pageSource = readFileSync(GALLERY_PAGE, "utf8");
-  const importedStems = new Set(
-    [...pageSource.matchAll(/from\s+['"]@\/components\/(?:ui|semantic)\/([a-z0-9-]+)['"]/g)].map((m) => m[1])
-  );
+  const importedStems = new Set();
+  for (const f of GALLERY_SOURCES) {
+    if (!/\.(tsx|ts)$/.test(f) || /\.(test|spec)\./.test(f)) continue;
+    const source = readFileSync(f, "utf8");
+    for (const m of source.matchAll(
+      /from\s+['"]@\/components\/(?:ui|semantic)\/([a-z0-9-]+)['"]/g
+    )) {
+      importedStems.add(m[1]);
+    }
+  }
   // 分母：ui/ + semantic/ 双层；internal（裁决 G6）与 galleryExempt（H1 显式豁免）排除
   const mustShow = registryEntries.filter(
     (e) => /^(ui|semantic)\//.test(e.file) && e.status !== "internal" && !e.galleryExempt
@@ -409,7 +417,8 @@ for (const entry of registryEntries) {
 // - 分母 = registry 中 file 为 `ui/` 或 `semantic/` 前缀、status ≠ internal、且无
 //   `galleryExempt` 的条目（raw 原语按裁决 G6 internal 不出画廊；semantic 首次纳入机查；
 //   galleryExempt 槽位本身即缓冲，不再设 LU_BASELINE 式过渡账）。
-// - 分子 = 画廊页 import 命中（`@/components/ui/<stem>` 或 `@/components/semantic/<stem>`）。
+// - 分子 = 画廊 demo 宿主（design-system 模块 sections/ 目录，非测试）的 import 命中
+//   （`@/components/ui/<stem>` 或 `@/components/semantic/<stem>`）。
 // - 任何缺失条目 → 退出码 1。galleryExempt 为显式槽位（fail-closed）：豁免必须带理由
 //   登记，且对账区可见；「改判 keep 则豁免失效」（H 类方案 §四 裁决 2）。
 //
@@ -448,11 +457,11 @@ for (const { entry, due, late } of overdue) {
 if (galleryCoverage) {
   const pct = ((galleryCoverage.covered / galleryCoverage.total) * 100).toFixed(1);
   console.log(
-    `\n[§4.2 ④ 画廊覆盖率门禁 · H 类批 H3 起 error] 设计系统页覆盖 ` +
+    `\n[§4.2 ④ 画廊覆盖率门禁 · H 类批 H3 起 error] 画廊 demo（sections/ 目录）覆盖 ` +
       `${galleryCoverage.covered}/${galleryCoverage.total} = ${pct}%（已排除 internal 与 galleryExempt）；` +
       `未收录 ${galleryCoverage.missing.length} 个。`
   );
   for (const e of galleryCoverage.missing) console.log(`  ○ ${e.name}（${e.status}，${e.file}）`);
 } else {
-  console.log("\n[§4.2 ④ 画廊覆盖率] 跳过：未找到设计系统页源文件。");
+  console.log("\n[§4.2 ④ 画廊覆盖率] 跳过：未找到画廊 demo 目录（sections/）。");
 }

@@ -1,71 +1,97 @@
 import React from 'react';
 import { render, screen } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
-import { BrowserRouter } from 'react-router-dom';
+import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { DesignSystemPage } from './design-system-page';
+import { DesignSystemSectionPage } from './design-system-section-page';
 import { COMPONENT_REGISTRY } from '../registry';
 
 // Mock ResizeObserver for Recharts
 global.ResizeObserver = class ResizeObserver {
   observe() {}
   unobserve() {}
-  disconnect() {}
+  disconnect() {};
 };
 
 // jsdom 未实现 scrollIntoView，cmdk 渲染选中项时会调用（Command Palette 演示段为真实原语）
 Element.prototype.scrollIntoView = vi.fn();
 
 // jsdom 未实现 matchMedia，Logo（auth-surface 演示段的 MemberCard 内）按主题取色时会调用；
-// framer-motion useReducedMotion（ChapterScrubber 高密度卡段）还需要 MediaQueryList 事件 API
+// framer-motion useReducedMotion（高密度卡段）还需要 MediaQueryList 事件 API
 window.matchMedia = vi.fn().mockReturnValue({
   matches: false,
   addEventListener: () => {},
   removeEventListener: () => {},
 });
 
-describe('DesignSystemPage', () => {
-  // 整页渲染全部设计系统组件（含 Command Palette 真实原语与高密度卡片演示段），
-  // 本地实测 ~27s，CI runner 更慢会越过 30s 阈值——显式放宽到 180s
-  it('renders all sections including AI High-Density Cards without errors', () => {
-    const queryClient = new QueryClient({
-      defaultOptions: { queries: { retry: false } },
-    });
+function renderWithRoutes(initialPath: string) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <MemoryRouter initialEntries={[initialPath]}>
+        <Routes>
+          <Route path="/app/design-system" element={<DesignSystemPage />} />
+          <Route path="/app/design-system/section/:sectionId" element={<DesignSystemSectionPage />} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+}
 
+// 2026-10-27 展示层路由化批：7505 行巨型单页拆为「索引卡片页 + 每分区单页路由」。
+// 旧「整页渲染全部 demo」的 27s 大用例退役，改为索引快测 + 按分区单页渲染
+// （高密度与治理分区单独渲染，保住原有两个关键断言面）。
+describe('DesignSystemPage（索引）', () => {
+  it('renders group nav and gallery cards without errors', () => {
     const consoleError = vi.spyOn(console, 'error');
+    renderWithRoutes('/app/design-system');
 
-    render(
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <DesignSystemPage />
-        </BrowserRouter>
-      </QueryClientProvider>,
-    );
+    // 侧栏与主区按 SECTION_GROUPS 分组渲染（同文双命中：侧栏组标题 + 主区组标题）
+    expect(screen.getAllByText('AI Execution').length).toBe(2);
 
-    // 验证无任何嵌套 button 等 DOM 错误
+    // 裁决面置顶卡（侧栏项与置顶卡双命中；人类原话：组件仍然不删除，但要在 design-system 页面标记，看过后再删）
+    expect(screen.getAllByText('组件裁决面').length).toBeGreaterThan(0);
+
+    // 卡片网格：分区标签渲染（如高密度卡分区卡）
+    expect(screen.getAllByText('AI High-Density Cards [AI]').length).toBeGreaterThan(0);
+
     const nestedButtonErrors = consoleError.mock.calls.filter((args) =>
       String(args[0]).includes('cannot contain a nested <button>'),
     );
     expect(nestedButtonErrors).toHaveLength(0);
+    consoleError.mockRestore();
+    // 首个用例承担 kit+gen 巨型模块的首次 transform，放宽超时
+  }, 60_000);
+});
 
-    // 验证侧栏存在 AI Execution 分组与对应页面标题
-    expect(screen.getByText('AI Execution')).toBeInTheDocument();
-    expect(screen.getAllByText('AI High-Density Cards [AI]')).toHaveLength(2);
+describe('DesignSystemSectionPage（单页）', () => {
+  // 高密度 AI 卡分区：整页最复杂的 demo 簇，原整页测试的核心断言面平移到单页
+  it('renders AI High-Density Cards section with the four AI card groups', () => {
+    const consoleError = vi.spyOn(console, 'error');
+    renderWithRoutes('/app/design-system/section/ai-density-cards');
 
+    expect(screen.getAllByText('AI High-Density Cards [AI]').length).toBeGreaterThan(0);
     // 验证 4 类 AI 专属卡片渲染挂载（① 思考折叠核 ThinkingStream 已随批 9 清退，2026-09-30）
     expect(screen.getByText(/工具与命令执行胶囊 \(AssistantToolCard\)/)).toBeInTheDocument();
     expect(screen.getByText(/多 Agent 协作交接卡 \(AgentHandoffCard\)/)).toBeInTheDocument();
     expect(screen.getByText(/决策证据抽屉卡 \(DecisionCardShell\)/)).toBeInTheDocument();
     expect(screen.getByText(/双轨成本与执行微徽章 \(DualTrackMetricPill\)/)).toBeInTheDocument();
 
-    // 批 4（2026-09-27）：「组件裁决面」必须真的在这张页面上。
-    // 背景（人类原话）：「组件仍然不删除，但是要在 design-system 页面标记，我看过后再删。」
-    // 改造前本页不 import registry.ts，18 条 review 在页面上完全看不到 ⇒ 第②步「人看」卡死。
-    // 断言口径：逐条比对 registry 里每条 review 的「文件路径 · 登记分区」元数据行——
-    // 该行在整页内唯一，且与 registry 逐字对齐 ⇒ 能证伪「页面上看不到」。
-    // 2026-09-29 裁决收口：review 态清零是合法终态（36 条已全部裁决入账
-    // component-review-decisions.json），故只断言「页面与 registry 同源一致」，
-    // 不再断言 review 非空；若未来新增 review 条目此断言自动恢复约束力。
+    const nestedButtonErrors = consoleError.mock.calls.filter((args) =>
+      String(args[0]).includes('cannot contain a nested <button>'),
+    );
+    expect(nestedButtonErrors).toHaveLength(0);
+    consoleError.mockRestore();
+    // 高密度分区含图表与动效，放宽超时
+  }, 60_000);
+
+  // 批 4（2026-09-27）「组件裁决面必须真的在 design-system 页面上」断言面平移到单页
+  it('renders component review board aligned with registry review entries', () => {
+    renderWithRoutes('/app/design-system/section/component-review');
+
     expect(screen.getByText('组件裁决面 (Component Review Board)')).toBeInTheDocument();
     const reviewEntries = COMPONENT_REGISTRY.filter((e) => e.status === 'review');
     for (const entry of reviewEntries) {
@@ -73,8 +99,10 @@ describe('DesignSystemPage', () => {
         screen.getByText(`${entry.file} · 登记分区 ${entry.section}`),
       ).toBeInTheDocument();
     }
+  });
 
-    consoleError.mockRestore();
-    // 全量并行时机器慢，设计系统页渲染整套组件库，5s 默认超时不够
-  }, 180_000);
+  it('redirects unknown section ids back to the index', () => {
+    renderWithRoutes('/app/design-system/section/__nonexistent__');
+    expect(screen.getByText('组件画廊')).toBeInTheDocument();
+  });
 });

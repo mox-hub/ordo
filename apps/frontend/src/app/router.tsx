@@ -274,6 +274,12 @@ const DesignSystemPage = lazy(() =>
   })),
 );
 
+const DesignSystemSectionPage = lazy(() =>
+  import('@/modules/design-system/pages/design-system-section-page').then((m) => ({
+    default: m.DesignSystemSectionPage,
+  })),
+);
+
 const DeliveryPage = lazy(() =>
   import('@/modules/delivery/pages/delivery-page').then((m) => ({
     default: m.DeliveryPage,
@@ -896,6 +902,17 @@ export const router = createBrowserRouter([
               element: (
                 <Suspense fallback={null}>
                   <DesignSystemPage />
+                </Suspense>
+              ),
+              handle: { selfScroll: true },
+              errorElement: <ErrorPage />,
+            },
+            {
+              // 组件单页（2026-10-27 展示层路由化批）：每分区一页，索引卡片点入
+              path: 'design-system/section/:sectionId',
+              element: (
+                <Suspense fallback={null}>
+                  <DesignSystemSectionPage />
                 </Suspense>
               ),
               handle: { selfScroll: true },

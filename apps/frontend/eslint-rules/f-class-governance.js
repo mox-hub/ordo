@@ -159,6 +159,8 @@ const HANDWRITTEN_CENTERING_LEGACY = new Set([
   'modules/ai-surface/pages/ai-surface-replay-page.tsx',
   'modules/analytics/pages/analytics-page.tsx',
   'modules/design-system/pages/design-system-page.tsx',
+  'modules/design-system/pages/design-system-section-page.tsx', // 画廊单页（2026-10-27 展示层路由化批）：demo 展示台内容级限宽（组件预览区），与索引页同性质
+
   'modules/document/pages/document-edit-page.tsx',
   'modules/document/pages/document-new-page.tsx', // F3.6-⑥ 退役后自动消失，白名单行随之删
   'modules/document/pages/document-view-page.tsx',

@@ -35,6 +35,8 @@ const ALLOWED_TOKENS = new Set([
   "grid-cols-[1fr_320px]",
   "grid-cols-[minmax(0,1fr)_190px_auto_auto]",
   "grid-cols-[minmax(0,1fr)_380px]",
+  // 响应式 auto-fill 卡片网格（2026-10-27 设计系统索引页）：列数随容器宽自适应，无法用固定档 token 表达
+  "grid-cols-[repeat(auto-fill,minmax(230px,1fr))]",
   "grid-cols-[auto_100px_1fr_140px_100px_120px_100px_40px]",
   "grid-cols-[4px_auto_100px_1fr_140px_100px_120px_40px]",
   "grid-rows-[auto_auto]",
@@ -42,6 +44,9 @@ const ALLOWED_TOKENS = new Set([
   "grid-rows-[1fr]",
   // 运行时注入变量（组件内部定位/动画）
   "origin-[var(--transform-origin)]",
+  // decision-card 确认覆盖层与卡片本体同形——卡片圆角 1.25rem 是 decision-card.css L76 自有体系
+  // （仓内仅有的两份 CSS 文件之一），非宪法 §4.5 五档新档，覆盖层须与之逐位贴合否则露角
+  "rounded-[1.25rem]",
   "max-h-[var(--available-height)]",
   "w-[var(--anchor-width)]",
   "h-[var(--collapsible-panel-height)]",

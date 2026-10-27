@@ -38,3 +38,6 @@ coverage
 
 # Mastra workflow engine runtime storage
 data/
+
+# Runtime repair marker (dev.db JSON 修复探针产物)
+dev.db.json-repair-ok
