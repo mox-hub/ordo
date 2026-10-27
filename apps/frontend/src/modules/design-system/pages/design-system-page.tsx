@@ -12,6 +12,7 @@ import { ArrowUpRight, Search, ShieldCheck, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { COMPONENT_REGISTRY } from '../registry'
 import { SECTIONS, SECTION_GROUPS } from '../gallery-kit'
+import { GALLERY_SECTIONS } from '../sections/gallery-sections.gen'
 
 /** 五态徽标点（色值沿用本模块既有 accent-* token，禁自配色） */
 const STATUS_DOT: Record<string, string> = {
@@ -20,6 +21,73 @@ const STATUS_DOT: Record<string, string> = {
   review: 'bg-accent-blue',
   internal: 'bg-muted-foreground',
   deprecated: 'bg-accent-red',
+}
+
+/**
+ * 活体缩略预览（2026-10-27 卡片活体批）：索引卡片内真实渲染该分区 demo 并整体缩放，
+ * 非截图非静态图——run-timeline 计时、cost-figure 滚动等活性在卡片上即所见。
+ * 懒挂载：进入视口（含 120px 预载边）才挂 demo，滚过后保留避免回滚闪烁；
+ * 交互封死（pointer-events-none）+ 辅助技术屏蔽（aria-hidden），demo 崩溃由边界兜底不炸索引页。
+ */
+function SectionThumb({ sectionId }: { sectionId: string }) {
+  const Demo = GALLERY_SECTIONS[sectionId]
+  const [host, setHost] = React.useState<HTMLDivElement | null>(null)
+  const [inView, setInView] = React.useState(false)
+
+  React.useEffect(() => {
+    if (!host || inView) return
+    const ob = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setInView(true)
+          ob.disconnect()
+        }
+      },
+      { rootMargin: '120px' },
+    )
+    ob.observe(host)
+    return () => ob.disconnect()
+  }, [host, inView])
+
+  return (
+    <div
+      ref={setHost}
+      className="relative h-36 shrink-0 overflow-hidden rounded-md border border-border/60 bg-background"
+      aria-hidden="true"
+    >
+      {Demo && inView && (
+        <SectionThumbBoundary>
+          <div
+            data-gallery-thumb={sectionId}
+            className="pointer-events-none absolute left-0 top-0 origin-top-left scale-40 w-[250%] select-none"
+          >
+            <Demo />
+          </div>
+        </SectionThumbBoundary>
+      )}
+    </div>
+  )
+}
+
+/** 缩略预览崩溃兜底：个别 demo 异常只降级本卡，不影响索引页与其余卡片 */
+class SectionThumbBoundary extends React.Component<
+  { children: React.ReactNode },
+  { failed: boolean }
+> {
+  state = { failed: false }
+  static getDerivedStateFromError() {
+    return { failed: true }
+  }
+  render() {
+    if (this.state.failed) {
+      return (
+        <div className="flex h-full items-center justify-center text-3xs text-muted-foreground">
+          预览渲染失败 · 进单页查看
+        </div>
+      )
+    }
+    return this.props.children
+  }
 }
 
 export function DesignSystemPage() {
@@ -159,30 +227,33 @@ export function DesignSystemPage() {
                 {g.label}
                 <span className="ml-2 text-3xs text-muted-foreground/50 font-normal">{g.items.length}</span>
               </h2>
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(230px,1fr))] gap-3">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-3">
                 {g.items.map((s) => {
                   const entry = registryByName.get(s.id)
                   return (
                     <Link
                       key={s.id}
                       to={`/app/design-system/section/${s.id}`}
-                      className="group rounded-lg border border-border bg-card p-3.5 flex flex-col gap-1.5 hover:border-accent-blue/50 hover:shadow-sm transition-all"
+                      className="group rounded-lg border border-border bg-card p-2 flex flex-col gap-2 hover:border-accent-blue/50 hover:shadow-sm transition-all"
                     >
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="text-sm font-medium text-foreground leading-snug">{s.label}</span>
-                        <ArrowUpRight className="size-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5" />
-                      </div>
-                      <div className="flex items-center gap-1.5 text-3xs text-muted-foreground min-w-0">
-                        {entry ? (
-                          <>
-                            <span className={cn('size-1.5 rounded-full shrink-0', STATUS_DOT[entry.status] ?? 'bg-muted-foreground')} />
-                            <span className="uppercase tracking-wide shrink-0">{entry.status}</span>
-                            <span className="text-muted-foreground/40">·</span>
-                            <span className="font-mono truncate" title={entry.file}>{entry.file}</span>
-                          </>
-                        ) : (
-                          <span className="px-1 py-px rounded bg-muted/60 text-muted-foreground">聚合展示区</span>
-                        )}
+                      <SectionThumb sectionId={s.id} />
+                      <div className="px-1 pb-1 space-y-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="text-sm font-medium text-foreground leading-snug">{s.label}</span>
+                          <ArrowUpRight className="size-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5" />
+                        </div>
+                        <div className="flex items-center gap-1.5 text-3xs text-muted-foreground min-w-0">
+                          {entry ? (
+                            <>
+                              <span className={cn('size-1.5 rounded-full shrink-0', STATUS_DOT[entry.status] ?? 'bg-muted-foreground')} />
+                              <span className="uppercase tracking-wide shrink-0">{entry.status}</span>
+                              <span className="text-muted-foreground/40">·</span>
+                              <span className="font-mono truncate" title={entry.file}>{entry.file}</span>
+                            </>
+                          ) : (
+                            <span className="px-1 py-px rounded bg-muted/60 text-muted-foreground">聚合展示区</span>
+                          )}
+                        </div>
                       </div>
                     </Link>
                   )

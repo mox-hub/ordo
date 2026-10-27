@@ -61,12 +61,20 @@ import { RoutePreviewTrigger } from '@/shared/route-preview/route-preview-trigge
 export const SECTIONS = [
   // 组件裁决面置首：人类原话「组件仍然不删除，但是要在 design-system 页面标记，我看过后再删」
   // ——② 人看必须在第一屏可达；本区只读，不改任何组件、不做裁决。
-  // 分区体系（2026-09-29）：由「层」维度（Governance/Tokens/Primitives/App Components/AI
-  // Execution/语义组件）重组为「组件类型」维度（11 组，见 SECTION_GROUPS）。本批为数据重标：
-  // 仅改 group 字段与本数组排序，下方正文 JSX 锚块物理序未动（数组顺序 ≠ 正文物理序，
-  // 滚动判定与物理序的再对齐随物理搬移批一并处理）；物理重排登记为后续独立批。
+  // 分区体系（2026-10-27 二轮重组）：在一轮「组件类型」11 组基础上按「使用者查找心智」
+// 重新归组为 12 组——图表族/统计卡自 Data Display 立组 Data Visualization；设置壳族
+// （settings-header/scrubber/section-card/save-bar/field-row/path-input/patterns）立组 Settings；
+// AI 治理八件（verdict/confidence/cost/approval/autonomy/context/exec-tree/inline-diff）与
+// workflow-run-timeline 归位 AI Execution；编辑器三件归 Controls；sortable/chip/nav-status-dot
+// 归 Data Display；状态定义族与语义总展台归 Governance；subtask-badge/detail-section 归 App Patterns。
+// 仅改 group 字段与本数组排序（数组顺序=索引页组内呈现序），正文 JSX 锚块物理序未动
+// （数组顺序 ≠ 正文物理序的既定口径不受影响）；分区 id 一律不改，registry section 字段与路由兼容。
   { id: 'component-review', label: '组件裁决面', group: 'Governance' },
   { id: 'registry-audit', label: 'Registry 对账区', group: 'Governance' },
+  // G 类批 G0：语义组件分区框架（首批收录随批 G1 Chip 示范组件落地。raw 原语按裁决 G6 不出画廊。）
+  { id: 'semantic-components', label: '语义组件', group: 'Governance' },
+  { id: 'definition-row', label: 'Definition Row', group: 'Governance' },
+  { id: 'status-definition-list', label: 'Status Definition List', group: 'Governance' },
   { id: 'colors', label: 'Color Tokens', group: 'Foundations' },
   { id: 'typography', label: 'Typography', group: 'Foundations' },
   { id: 'spacing', label: 'Spacing', group: 'Foundations' },
@@ -84,6 +92,12 @@ export const SECTIONS = [
   { id: 'input-otp', label: 'Input OTP', group: 'Controls' },
   { id: 'input-group', label: 'Input Group', group: 'Controls' },
   { id: 'select-field', label: 'Select Field', group: 'Controls' },
+  { id: 'markdown-editor', label: 'Markdown Editor', group: 'Controls' },
+  { id: 'markdown-live-editor', label: 'Markdown Live Editor', group: 'Controls' },
+  // 存量补注册（2026-09-29）：正文 prompt-editor 锚块早已存在（PromptEditor 演示段），
+  // SECTIONS 漏登导致导航不可达，此处补齐（位于正文 markdown-live-editor 与 entity-ref 之间）。
+  { id: 'prompt-editor', label: 'Prompt Editor', group: 'Controls' },
+  { id: 'theme-mode-card', label: 'Theme Mode Card', group: 'Controls' },
   { id: 'badges', label: 'Badges', group: 'Data Display' },
   { id: 'tags', label: 'Tags / Chips', group: 'Data Display' },
   { id: 'avatars', label: 'Avatars', group: 'Data Display' },
@@ -97,14 +111,24 @@ export const SECTIONS = [
   { id: 'status-pill', label: 'Status Pill', group: 'Data Display' },
   { id: 'status-icon-frame', label: 'Status Icon Frame', group: 'Data Display' },
   { id: 'markdown', label: 'Markdown View', group: 'Data Display' },
-  { id: 'markdown-editor', label: 'Markdown Editor', group: 'Data Display' },
-  { id: 'markdown-live-editor', label: 'Markdown Live Editor', group: 'Data Display' },
-  // 存量补注册（2026-09-29）：正文 prompt-editor 锚块早已存在（PromptEditor 演示段），
-  // SECTIONS 漏登导致导航不可达，此处补齐（位于正文 markdown-live-editor 与 entity-ref 之间）。
-  { id: 'prompt-editor', label: 'Prompt Editor', group: 'Data Display' },
   { id: 'entity-ref', label: 'Entity Ref System', group: 'Data Display' },
-  { id: 'stat-tiles', label: 'Stat Tiles', group: 'Data Display' },
-  { id: 'charts', label: 'Charts', group: 'Data Display' },
+  { id: 'sortable', label: 'Sortable', group: 'Data Display' },
+  // 语义组件逐件注册（2026-10-03）：正文各 demo 子段原位嵌套 SectionAnchor（无副作用
+  // <section> 包裹，零 JSX 搬移），与 registry section:'Semantic' 逐件对齐；
+  // status-definition-dialog 走 galleryExempt 不设条目（由 status-definition-list demo 间接覆盖）。
+  { id: 'chip', label: 'Chip', group: 'Data Display' },
+  { id: 'nav-status-dot', label: 'Nav Status Dot', group: 'Data Display' },
+  { id: 'stat-tiles', label: 'Stat Tiles', group: 'Data Visualization' },
+  { id: 'charts', label: 'Charts', group: 'Data Visualization' },
+  { id: 'chart-card', label: 'Chart Card', group: 'Data Visualization' },
+  { id: 'stat-tile', label: 'Stat Tile', group: 'Data Visualization' },
+  { id: 'metric-row', label: 'Metric Row', group: 'Data Visualization' },
+  { id: 'chart-legend-grid', label: 'Chart Legend Grid', group: 'Data Visualization' },
+  { id: 'donut-chart', label: 'Donut Chart', group: 'Data Visualization' },
+  { id: 'proportion-bar', label: 'Proportion Bar', group: 'Data Visualization' },
+  // registry 口径本就是 section:'Semantic' 的两件：侧边栏组从层组归位（锚块物理位不动，
+  // 数组顺序 ≠ 正文物理序的既定口径不受影响）
+  { id: 'stat-cards', label: 'Stat Cards', group: 'Data Visualization' },
   { id: 'alerts', label: 'Alerts', group: 'Feedback' },
   { id: 'toast', label: 'Toast', group: 'Feedback' },
   { id: 'spinner', label: 'Spinner', group: 'Feedback' },
@@ -112,7 +136,6 @@ export const SECTIONS = [
   { id: 'empty', label: 'Empty States', group: 'Feedback' },
   { id: 'loading-states', label: 'Loading & Empty', group: 'Feedback' },
   { id: 'stepper', label: 'Stepper', group: 'Navigation' },
-  { id: 'sortable', label: 'Sortable', group: 'Navigation' },
   { id: 'tabs', label: 'Tabs', group: 'Navigation' },
   { id: 'tab-bar', label: 'Tab Bar', group: 'Navigation' },
   { id: 'accordion', label: 'Accordion', group: 'Navigation' },
@@ -136,7 +159,13 @@ export const SECTIONS = [
   { id: 'page-layout', label: 'Page Layout', group: 'Layout & Shells' },
   { id: 'sidebar-panel', label: 'Sidebar Panel', group: 'Layout & Shells' },
   { id: 'detail-page-frame', label: 'Detail Page Frame', group: 'Layout & Shells' },
-  { id: 'ai-density-cards', label: 'AI High-Density Cards [AI]', group: 'AI Execution' },
+  { id: 'settings-header', label: 'Settings Header', group: 'Settings' },
+  { id: 'section-scrubber', label: 'Section Scrubber', group: 'Settings' },
+  { id: 'settings-section-card', label: 'Settings Section Card', group: 'Settings' },
+  { id: 'sticky-save-bar', label: 'Sticky Save Bar', group: 'Settings' },
+  { id: 'settings-field-row', label: 'Settings Field Row', group: 'Settings' },
+  { id: 'path-input', label: 'Path Input', group: 'Settings' },
+  { id: 'settings-patterns', label: 'Settings Patterns', group: 'Settings' },
   { id: 'page-header', label: 'Page Header', group: 'App Patterns' },
   { id: 'toolbar', label: 'Toolbar Row', group: 'App Patterns' },
   { id: 'filter-chips', label: 'Filter Chips', group: 'App Patterns' },
@@ -147,44 +176,19 @@ export const SECTIONS = [
   { id: 'delivery-row', label: 'Delivery Row', group: 'App Patterns' },
   { id: 'doc-cards', label: 'Document Cards', group: 'App Patterns' },
   { id: 'assembly-primitives', label: 'Assembly Primitives', group: 'App Patterns' },
-  { id: 'workflow-run-timeline', label: 'Workflow Run Timeline', group: 'App Patterns' },
-  // G 类批 G0：语义组件分区框架（首批收录随批 G1 Chip 示范组件落地。raw 原语按裁决 G6 不出画廊。）
-  { id: 'semantic-components', label: '语义组件', group: 'Semantic' },
-  // 语义组件逐件注册（2026-10-03）：正文各 demo 子段原位嵌套 SectionAnchor（无副作用
-  // <section> 包裹，零 JSX 搬移），与 registry section:'Semantic' 逐件对齐；
-  // status-definition-dialog 走 galleryExempt 不设条目（由 status-definition-list demo 间接覆盖）。
-  { id: 'chip', label: 'Chip', group: 'Semantic' },
-  { id: 'nav-status-dot', label: 'Nav Status Dot', group: 'Semantic' },
-  { id: 'theme-mode-card', label: 'Theme Mode Card', group: 'Semantic' },
-  { id: 'chart-card', label: 'Chart Card', group: 'Semantic' },
-  { id: 'stat-tile', label: 'Stat Tile', group: 'Semantic' },
-  { id: 'metric-row', label: 'Metric Row', group: 'Semantic' },
-  { id: 'chart-legend-grid', label: 'Chart Legend Grid', group: 'Semantic' },
-  { id: 'donut-chart', label: 'Donut Chart', group: 'Semantic' },
-  { id: 'proportion-bar', label: 'Proportion Bar', group: 'Semantic' },
-  { id: 'subtask-badge', label: 'Subtask Badge', group: 'Semantic' },
-  { id: 'ai-verdict-pill', label: 'AI Verdict Pill', group: 'Semantic' },
-  { id: 'confidence-bar', label: 'Confidence Bar', group: 'Semantic' },
+  { id: 'subtask-badge', label: 'Subtask Badge', group: 'App Patterns' },
+  { id: 'detail-section', label: 'Detail Section', group: 'App Patterns' },
+  { id: 'ai-density-cards', label: 'AI High-Density Cards [AI]', group: 'AI Execution' },
+  { id: 'workflow-run-timeline', label: 'Workflow Run Timeline', group: 'AI Execution' },
+  { id: 'ai-verdict-pill', label: 'AI Verdict Pill', group: 'AI Execution' },
+  { id: 'confidence-bar', label: 'Confidence Bar', group: 'AI Execution' },
   // 组件规划账本 B1-B6 + A3 登记批（2026-10-27 重建：原条目随未提交改动丢失，按 registry 登记补回）
-  { id: 'cost-figure', label: 'Cost Figure', group: 'Semantic' },
-  { id: 'approval-card', label: 'Approval Card', group: 'Semantic' },
-  { id: 'autonomy-dial', label: 'Autonomy Dial', group: 'Semantic' },
-  { id: 'context-usage', label: 'Context Usage', group: 'Semantic' },
-  { id: 'exec-tree', label: 'Exec Tree', group: 'Semantic' },
-  { id: 'inline-diff', label: 'Inline Diff', group: 'Semantic' },
-  { id: 'settings-header', label: 'Settings Header', group: 'Semantic' },
-  { id: 'section-scrubber', label: 'Section Scrubber', group: 'Semantic' },
-  { id: 'settings-section-card', label: 'Settings Section Card', group: 'Semantic' },
-  { id: 'sticky-save-bar', label: 'Sticky Save Bar', group: 'Semantic' },
-  { id: 'settings-field-row', label: 'Settings Field Row', group: 'Semantic' },
-  { id: 'path-input', label: 'Path Input', group: 'Semantic' },
-  { id: 'definition-row', label: 'Definition Row', group: 'Semantic' },
-  { id: 'status-definition-list', label: 'Status Definition List', group: 'Semantic' },
-  // registry 口径本就是 section:'Semantic' 的两件：侧边栏组从层组归位（锚块物理位不动，
-  // 数组顺序 ≠ 正文物理序的既定口径不受影响）
-  { id: 'stat-cards', label: 'Stat Cards', group: 'Semantic' },
-  { id: 'detail-section', label: 'Detail Section', group: 'Semantic' },
-  { id: 'settings-patterns', label: 'Settings Patterns', group: 'App Patterns' },
+  { id: 'cost-figure', label: 'Cost Figure', group: 'AI Execution' },
+  { id: 'approval-card', label: 'Approval Card', group: 'AI Execution' },
+  { id: 'autonomy-dial', label: 'Autonomy Dial', group: 'AI Execution' },
+  { id: 'context-usage', label: 'Context Usage', group: 'AI Execution' },
+  { id: 'exec-tree', label: 'Exec Tree', group: 'AI Execution' },
+  { id: 'inline-diff', label: 'Inline Diff', group: 'AI Execution' },
 ]
 
 /** Settings Patterns demo：ChapterScrubber 栏目清单（模块级常量，避免 observer 重建） */
@@ -295,7 +299,7 @@ export function SortableGridDemo() {
 }
 
 // 画廊分区体系（2026-09-29 重组）：按组件类型的 11 组，顺序即导航组序与 SECTIONS 数组组间序
-export const SECTION_GROUPS = ['Governance', 'Foundations', 'Controls', 'Data Display', 'Feedback', 'Navigation', 'Overlays', 'Layout & Shells', 'AI Execution', 'App Patterns', 'Semantic']
+export const SECTION_GROUPS = ['Governance', 'Foundations', 'Controls', 'Data Display', 'Data Visualization', 'Feedback', 'Navigation', 'Overlays', 'Layout & Shells', 'Settings', 'App Patterns', 'AI Execution']
 
 /** SubPageToolbar 演示：返回 + 面包屑 + 居中页签 + 翻页器/按钮组/侧栏开关 */
 export function SubPageToolbarDemo({ withPager, withSidebar }: { withPager?: boolean; withSidebar?: boolean }) {

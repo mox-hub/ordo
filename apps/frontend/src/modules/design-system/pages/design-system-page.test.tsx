@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -13,6 +13,26 @@ global.ResizeObserver = class ResizeObserver {
   unobserve() {}
   disconnect() {};
 };
+
+// jsdom 未实现 IntersectionObserver（活体缩略懒挂载依赖）。默认实例化但不触发回调——
+// 索引快测只断言壳层，不挂 111 个 demo；「活体挂载」用例用 flushAll 手动触发验证真实渲染。
+type IOCallback = IntersectionObserverCallback;
+const ioCallbacks: IOCallback[] = [];
+class IOStub {
+  constructor(cb: IOCallback) {
+    ioCallbacks.push(cb);
+  }
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+  static flushAll() {
+    const cbs = ioCallbacks.splice(0);
+    for (const cb of cbs) {
+      cb([{ isIntersecting: true } as IntersectionObserverEntry], {} as IntersectionObserver);
+    }
+  }
+}
+global.IntersectionObserver = IOStub as unknown as typeof IntersectionObserver;
 
 // jsdom 未实现 scrollIntoView，cmdk 渲染选中项时会调用（Command Palette 演示段为真实原语）
 Element.prototype.scrollIntoView = vi.fn();
@@ -52,6 +72,10 @@ describe('DesignSystemPage（索引）', () => {
     // 侧栏与主区按 SECTION_GROUPS 分组渲染（同文双命中：侧栏组标题 + 主区组标题）
     expect(screen.getAllByText('AI Execution').length).toBe(2);
 
+    // 分区重组批（2026-10-27）：新组 Data Visualization / Settings 双命中存在
+    expect(screen.getAllByText('Data Visualization').length).toBe(2);
+    expect(screen.getAllByText('Settings').length).toBe(2);
+
     // 裁决面置顶卡（侧栏项与置顶卡双命中；人类原话：组件仍然不删除，但要在 design-system 页面标记，看过后再删）
     expect(screen.getAllByText('组件裁决面').length).toBeGreaterThan(0);
 
@@ -64,6 +88,26 @@ describe('DesignSystemPage（索引）', () => {
     expect(nestedButtonErrors).toHaveLength(0);
     consoleError.mockRestore();
     // 首个用例承担 kit+gen 巨型模块的首次 transform，放宽超时
+  }, 60_000);
+
+  // 活体缩略批（2026-10-27）：IntersectionObserver 触发后 demo 真实挂载进缩略区。
+  // 用搜索过滤把栅格缩到 2 张卡再触发，避免全量 111 demo 挂载拖垮用例时长。
+  it('mounts live demo thumbnails into cards once scrolled into view', async () => {
+    renderWithRoutes('/app/design-system');
+
+    fireEvent.change(screen.getByPlaceholderText('搜索组件或 Token…'), {
+      target: { value: 'chip' },
+    });
+    IOStub.flushAll();
+
+    // 缩略区内真实渲染了 demo（非截图非空壳）；交互封死由 pointer-events-none 保证（类断言）。
+    // flushAll 的 setState 在 act 外调度，用 waitFor 等挂载完成。
+    await waitFor(() =>
+      expect(document.querySelectorAll('[data-gallery-thumb]').length).toBeGreaterThan(0),
+    );
+    for (const t of document.querySelectorAll('[data-gallery-thumb]')) {
+      expect(t.className).toContain('pointer-events-none');
+    }
   }, 60_000);
 });
 
