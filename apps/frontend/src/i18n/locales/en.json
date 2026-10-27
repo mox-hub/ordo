@@ -120,7 +120,14 @@
     "grid": "Grid",
     "cards": "Cards",
     "prevPage": "Previous page",
-    "nextPage": "Next page"
+    "nextPage": "Next page",
+    "saving": "Saving…",
+    "formDialog": {
+      "unsavedTitle": "Unsaved changes",
+      "unsavedDesc": "Closing now will lose what you have filled in.",
+      "keepEditing": "Keep editing",
+      "discard": "Discard changes"
+    }
   },
   "workspace": {
     "backups": {

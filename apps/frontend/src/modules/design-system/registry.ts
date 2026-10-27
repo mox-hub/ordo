@@ -259,6 +259,10 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
   // 保存落点并存——页头 Save 钮/控件旁/卡底钮，GitHub/Vercel 惯例 sticky bottom 毛玻璃条）；
   // settings-field-row 左说明右控件字段行（收编 settings 域 10+ 处同构散写）。
   { name: 'sticky-save-bar', file: 'semantic/sticky-save-bar.tsx', section: 'Semantic', status: 'canonical' },
+  // 统一创建面板优化批四（2026-10-27）：form-dialog 标准化实体创建/编辑对话框——
+  // Dialog 骨架+RHF+Zod（§13.1）+提交态（§10.6）+脏确认（§20.1）+§10.8 尺寸档一次封死，
+  // 面板外独立创建对话框收敛承载件；字段段 render prop 注入，props 封闭（G8）
+  { name: 'form-dialog', file: 'semantic/form-dialog.tsx', section: 'Semantic', status: 'canonical' },
   { name: 'settings-field-row', file: 'semantic/settings-field-row.tsx', section: 'Semantic', status: 'canonical' },
   // path-input 路径输入统一件（CAP-A-28，2026-10-03）：手输+桌面壳系统选择器
   // （choose_directory/choose_file）+后端实测验证+失效一键创建+保底报错，

@@ -99,6 +99,7 @@ vi.mock('@/shared/components/board-view/board-view', () => ({
 
 vi.mock('@/shared/components/create-dialog', () => ({
   UnifiedCreateDialog: () => null,
+  useCreateDialogDeepLink: () => {},
 }));
 
 const taskItem = {

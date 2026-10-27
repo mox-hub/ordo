@@ -296,6 +296,7 @@
 | status-definition-list | `src/components/semantic/status-definition-list.tsx` | ✅ canonical | — | — |
 | status-definition-dialog | `src/components/semantic/status-definition-dialog.tsx` | ✅ canonical | — | —（**画廊豁免**：受控表单弹窗（候选/回调由消费方注入），画廊以 status-definition-list demo 间接覆盖） |
 | sticky-save-bar | `src/components/semantic/sticky-save-bar.tsx` | ✅ canonical | — | — |
+| form-dialog | `src/components/semantic/form-dialog.tsx` | ✅ canonical | — | — |
 | settings-field-row | `src/components/semantic/settings-field-row.tsx` | ✅ canonical | — | — |
 | path-input | `src/components/semantic/path-input.tsx` | ✅ canonical | — | — |
 | cost-figure | `src/components/semantic/cost-figure.tsx` | ✅ canonical | — | —（**aiNotes**：数据契约：amount/tokens 双轨且单边可缺席（null 或非有限数=无数据），本件只渲染调用方传入的自身值，组/分支级汇总必须由父级从成员值现算后传单值。状态语义：running=爬升中动效态（数字滚动 240ms+微光扫过，reduced-motion 直出终值），终态不传 running 即静默；双轨均缺席渲染「—」占位诚实降级。禁区：禁传预汇总值、禁传 0 冒充无数据、禁绕过本件手写成本展示（宪法 §22.2 成本一等公民律）） |

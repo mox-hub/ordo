@@ -120,7 +120,14 @@
     "grid": "卡片",
     "cards": "卡片",
     "prevPage": "上一页",
-    "nextPage": "下一页"
+    "nextPage": "下一页",
+    "saving": "保存中…",
+    "formDialog": {
+      "unsavedTitle": "有未保存的更改",
+      "unsavedDesc": "关闭后已填内容将丢失。",
+      "keepEditing": "继续编辑",
+      "discard": "放弃更改"
+    }
   },
   "workspace": {
     "backups": {

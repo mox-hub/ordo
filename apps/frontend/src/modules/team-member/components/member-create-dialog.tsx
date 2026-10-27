@@ -1,27 +1,56 @@
+/**
+ * MemberCreateDialog - 新建/编辑成员弹窗（批四·FormDialog 标准化迁移件 8/8）
+ *
+ * 裸 useState 17 字段 → semantic/form-dialog（RHF+Zod §13.1）；AI 成员的
+ * aiModelConfigId 条件必填与 server member.service 硬校验对齐（superRefine）。
+ * 类型分叉字段组（human: 关联 User/电话/时区/日费率；ai_agent: 模型/提示词/
+ * 思考强度/CLI/执行角色）保持原分组视觉；内联中文文案为存量债务，i18n 全量化另批。
+ */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
+import { useQuery } from '@tanstack/react-query';
+import { z } from 'zod';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { AvatarPickerField } from '@/components/ui/avatar-picker-field';
+import { FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { FormDialog } from '@/components/semantic/form-dialog';
 import { toast } from '@/components/ui/toast';
 import { useCreateMember, useUpdateMember } from '../hooks';
 import { MEMBER_THINKING_LEVELS, MEMBER_TRUST_TIERS, type Member, type ThinkingLevel } from '../types';
-import { useQuery } from '@tanstack/react-query';
 import { api } from '@/infrastructure/api-client';
 import { aiHubApi } from '@/modules/ai-hub/api/ai-hub-api';
 import { useProjectRoles } from '@/modules/project-role';
-import {
-  mcpServersApi,
-} from '@/modules/mcp-server/api/mcp-servers-api';
+import { mcpServersApi } from '@/modules/mcp-server/api/mcp-servers-api';
+
+const memberSchema = z.object({
+  type: z.enum(['human', 'ai_agent']),
+  displayName: z.string().min(1, '请输入显示名'),
+  handle: z.string().min(1, '请输入 @handle'),
+  email: z.string().optional(),
+  avatarUrl: z.string().nullable(),
+  title: z.string().optional(),
+  description: z.string().optional(),
+  trustLevel: z.string().optional(),
+  userId: z.string().optional(),
+  phone: z.string().optional(),
+  timezone: z.string().optional(),
+  costRatePerDay: z.string().optional(),
+  aiModelConfigId: z.string().optional(),
+  personalPrompt: z.string().optional(),
+  thinkingLevel: z.string().optional(),
+  tagsInput: z.string().optional(),
+  defaultCliProviderId: z.string().optional(),
+  defaultExecutionRole: z.string().optional(),
+}).superRefine((values, ctx) => {
+  // 与 server member.service 硬校验对齐：AI 成员必须绑定模型
+  if (values.type === 'ai_agent' && !values.aiModelConfigId) {
+    ctx.addIssue({ code: 'custom', path: ['aiModelConfigId'], message: '请选择 AI 模型' });
+  }
+});
+
+type MemberFormValues = z.infer<typeof memberSchema>;
 
 export interface MemberCreateDialogProps {
   open: boolean;
@@ -45,66 +74,18 @@ export function MemberCreateDialog({
 }: MemberCreateDialogProps) {
   const { t } = useTranslation();
   const isEdit = Boolean(member);
-  const [type, setType] = useState<'human' | 'ai_agent'>(defaultType);
-  const [displayName, setDisplayName] = useState('');
-  const [handle, setHandle] = useState('');
-  const [email, setEmail] = useState('');
-  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
-  const [title, setTitle] = useState('');
-  const [description, setDescription] = useState('');
-  const [trustLevel, setTrustLevel] = useState('');
-  const [userId, setUserId] = useState('');
-  const [phone, setPhone] = useState('');
-  const [timezone, setTimezone] = useState('Asia/Shanghai');
-  const [costRatePerDay, setCostRatePerDay] = useState('');
-  const [aiModelConfigId, setAiModelConfigId] = useState('');
-  const [personalPrompt, setPersonalPrompt] = useState('');
-  const [thinkingLevel, setThinkingLevel] = useState<ThinkingLevel | ''>('');
-  const [tagsInput, setTagsInput] = useState('');
-  const [defaultCliProviderId, setDefaultCliProviderId] =
-    useState<string>('');
-  const [defaultExecutionRole, setDefaultExecutionRole] =
-    useState<string>('');
-
   const createMember = useCreateMember();
   const updateMember = useUpdateMember();
 
-  // 编辑模式：打开时预填既有字段（渲染期比较，等价原 effect，避免级联渲染）
-  const [lastPrefillKey, setLastPrefillKey] = useState('');
-  const prefillKey = open && member ? `edit:${member.id}` : 'closed';
-  if (prefillKey !== lastPrefillKey) {
-    setLastPrefillKey(prefillKey);
-    if (open && member) {
-      setType(member.type === 'ai_agent' ? 'ai_agent' : 'human');
-      setDisplayName(member.displayName ?? '');
-      setHandle(member.handle ?? '');
-      setEmail(member.email ?? '');
-      setAvatarUrl(member.avatarUrl ?? null);
-      setTitle(member.title ?? '');
-      setDescription(member.description ?? '');
-      setTrustLevel(member.trustLevel === null || member.trustLevel === undefined ? '' : String(member.trustLevel));
-      setUserId(member.userId ?? '');
-      setPhone(member.phone ?? '');
-      setTimezone(member.timezone ?? 'Asia/Shanghai');
-      setCostRatePerDay(
-        member.costRatePerDay ? String(member.costRatePerDay / 100) : '',
-      );
-      setAiModelConfigId(member.aiModelConfigId ?? '');
-      setPersonalPrompt(member.personalPrompt ?? '');
-      setThinkingLevel(member.thinkingLevel ?? '');
-      setTagsInput(Array.isArray(member.tags) ? member.tags.join(', ') : '');
-      setDefaultCliProviderId(member.defaultCliProviderId ?? '');
-      setDefaultExecutionRole(member.defaultExecutionRole ?? '');
-    }
-  }
+  // type 分叉：Tabs 驱动（编辑态锁定）；提交前经 form.setValue 同步进表单值
+  const [type, setType] = useState<'human' | 'ai_agent'>(member?.type === 'ai_agent' ? 'ai_agent' : defaultType);
 
-  const { data: aiModelsRes } = useQuery({
+  const { data: aiModels } = useQuery({
     queryKey: ['ai-models-list'],
     queryFn: () => aiHubApi.getModels(),
     enabled: open && type === 'ai_agent',
     staleTime: 60 * 1000,
   });
-  const aiModels = aiModelsRes;
 
   const { data: users } = useQuery({
     queryKey: ['users-list-for-member'],
@@ -133,90 +114,90 @@ export function MemberCreateDialog({
     ...(projectRolesData?.projectRoles ?? []),
   ];
 
-  const reset = () => {
-    setType(defaultType);
-    setDisplayName('');
-    setHandle('');
-    setEmail('');
-    setAvatarUrl(null);
-    setTitle('');
-    setDescription('');
-    setTrustLevel('');
-    setUserId('');
-    setPhone('');
-    setTimezone('Asia/Shanghai');
-    setCostRatePerDay('');
-    setAiModelConfigId('');
-    setPersonalPrompt('');
-    setThinkingLevel('');
-    setTagsInput('');
-    setDefaultCliProviderId('');
-    setDefaultExecutionRole('');
-  };
-
-  const handleClose = (next: boolean) => {
-    if (!next) reset();
-    onOpenChange(next);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!displayName || !handle) return;
-
-    const payload: Partial<Member> = {
-      type,
-      displayName,
-      handle,
-      email: email || undefined,
-      avatarUrl: avatarUrl || undefined,
-      title: title || undefined,
-      description: description || undefined,
-      trustLevel: trustLevel === '' ? undefined : Number(trustLevel),
-      tags: tagsInput
-        ? tagsInput.split(',').map((t) => t.trim()).filter(Boolean)
-        : undefined,
-    };
-    if (type === 'human') {
-      payload.userId = userId || undefined;
-      payload.costRatePerDay = costRatePerDay === '' ? undefined : Math.round(Number(costRatePerDay) * 100);
-      // Member 模型没有 phone/timezone 列；member-card.service 从 metadata 读取这两个字段
-      const meta: Record<string, string> = {};
-      if (phone) meta.phone = phone;
-      if (timezone) meta.timezone = timezone;
-      payload.metadata = Object.keys(meta).length ? meta : undefined;
-    } else {
-      payload.aiModelConfigId = aiModelConfigId || undefined;
-      payload.personalPrompt = personalPrompt || undefined;
-      payload.thinkingLevel = thinkingLevel || undefined;
-      payload.defaultCliProviderId = defaultCliProviderId || undefined;
-      payload.defaultExecutionRole = defaultExecutionRole || undefined;
-    }
-
-    try {
-      const saved = isEdit && member
-        ? await updateMember.mutateAsync({ id: member.id, data: payload })
-        : await createMember.mutateAsync(payload);
-      onSuccess?.(saved);
-      handleClose(false);
-    } catch (err) {
-      console.error('Save member failed', err);
-      toast.error(isEdit ? '更新成员失败' : '创建成员失败');
-    }
-  };
-
   return (
-    <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <DialogTitle>{isEdit ? '编辑成员' : '新建成员'}</DialogTitle>
-          <DialogDescription>
-            {isEdit
-              ? '更新成员资料，类型与账号关联不可修改。'
-              : '创建团队成员，支持人类与 AI 成员。'}
-          </DialogDescription>
-        </DialogHeader>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Tabs value={type} onValueChange={(v) => setType(v as 'human' | 'ai_agent')}>
+    <FormDialog<MemberFormValues>
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) setType(member?.type === 'ai_agent' ? 'ai_agent' : defaultType);
+        onOpenChange(next);
+      }}
+      title={isEdit ? '编辑成员' : '新建成员'}
+      description={isEdit ? '更新成员资料，类型与账号关联不可修改。' : '创建团队成员，支持人类与 AI 成员。'}
+      schema={memberSchema}
+      defaultValues={{
+        type: member?.type === 'ai_agent' ? 'ai_agent' : defaultType,
+        displayName: member?.displayName ?? '',
+        handle: member?.handle ?? '',
+        email: member?.email ?? '',
+        avatarUrl: member?.avatarUrl ?? null,
+        title: member?.title ?? '',
+        description: member?.description ?? '',
+        trustLevel:
+          member?.trustLevel === null || member?.trustLevel === undefined ? '' : String(member.trustLevel),
+        userId: member?.userId ?? '',
+        phone: member?.phone ?? '',
+        timezone: member?.timezone ?? 'Asia/Shanghai',
+        costRatePerDay: member?.costRatePerDay ? String(member.costRatePerDay / 100) : '',
+        aiModelConfigId: member?.aiModelConfigId ?? '',
+        personalPrompt: member?.personalPrompt ?? '',
+        thinkingLevel: member?.thinkingLevel ?? '',
+        tagsInput: Array.isArray(member?.tags) ? member.tags.join(', ') : '',
+        defaultCliProviderId: member?.defaultCliProviderId ?? '',
+        defaultExecutionRole: member?.defaultExecutionRole ?? '',
+      }}
+      submitLabel={isEdit ? '保存修改' : '创建成员'}
+      submitting={createMember.isPending || updateMember.isPending}
+      onSubmit={async (values) => {
+        const payload: Partial<Member> = {
+          type: values.type,
+          displayName: values.displayName,
+          handle: values.handle,
+          email: values.email || undefined,
+          avatarUrl: values.avatarUrl || undefined,
+          title: values.title || undefined,
+          description: values.description || undefined,
+          trustLevel: values.trustLevel === '' ? undefined : Number(values.trustLevel),
+          tags: values.tagsInput
+            ? values.tagsInput.split(',').map((tg) => tg.trim()).filter(Boolean)
+            : undefined,
+        };
+        if (values.type === 'human') {
+          payload.userId = values.userId || undefined;
+          payload.costRatePerDay =
+            values.costRatePerDay === '' ? undefined : Math.round(Number(values.costRatePerDay) * 100);
+          // Member 模型没有 phone/timezone 列；member-card.service 从 metadata 读取这两个字段
+          const meta: Record<string, string> = {};
+          if (values.phone) meta.phone = values.phone;
+          if (values.timezone) meta.timezone = values.timezone;
+          payload.metadata = Object.keys(meta).length ? meta : undefined;
+        } else {
+          payload.aiModelConfigId = values.aiModelConfigId || undefined;
+          payload.personalPrompt = values.personalPrompt || undefined;
+          payload.thinkingLevel = (values.thinkingLevel || undefined) as ThinkingLevel | undefined;
+          payload.defaultCliProviderId = values.defaultCliProviderId || undefined;
+          payload.defaultExecutionRole = values.defaultExecutionRole || undefined;
+        }
+        try {
+          const saved = isEdit && member
+            ? await updateMember.mutateAsync({ id: member.id, data: payload })
+            : await createMember.mutateAsync(payload);
+          onSuccess?.(saved);
+        } catch (err) {
+          console.error('Save member failed', err);
+          toast.error(isEdit ? '更新成员失败' : '创建成员失败');
+          throw err; // 失败不关窗
+        }
+      }}
+      fields={(form) => (
+        <>
+          <Tabs
+            value={type}
+            onValueChange={(v) => {
+              const next = v as 'human' | 'ai_agent';
+              setType(next);
+              form.setValue('type', next);
+            }}
+          >
             <TabsList className="grid w-full grid-cols-2">
               <TabsTrigger value="human" disabled={isEdit}>人类成员</TabsTrigger>
               <TabsTrigger value="ai_agent" disabled={isEdit}>AI 成员</TabsTrigger>
@@ -224,251 +205,339 @@ export function MemberCreateDialog({
           </Tabs>
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium">显示名 *</label>
-              <Input
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="如: 张开发"
-                required
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium">@handle *</label>
-              <Input
-                value={handle}
-                onChange={(e) => setHandle(e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ''))}
-                placeholder="如: zhang-dev"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium">头像</label>
-            <AvatarPickerField
-              value={avatarUrl}
-              onValueChange={setAvatarUrl}
-              memberType={type === 'ai_agent' ? 'ai' : 'human'}
+            <FormField
+              control={form.control}
+              name="displayName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>显示名 *</FormLabel>
+                  <FormControl>
+                    <Input placeholder="如: 张开发" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="handle"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>@handle *</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="如: zhang-dev"
+                      {...field}
+                      onChange={(e) =>
+                        field.onChange(e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ''))
+                      }
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
+
+          <FormField
+            control={form.control}
+            name="avatarUrl"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>头像</FormLabel>
+                <FormControl>
+                  <AvatarPickerField
+                    value={field.value}
+                    onValueChange={(v) => field.onChange(v ?? null)}
+                    memberType={type === 'ai_agent' ? 'ai' : 'human'}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium">职务</label>
-              <Input
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                placeholder="如: 前端工程师"
-              />
-            </div>
-            <div className="space-y-1.5">
-              <label className="text-xs font-medium">信任等级</label>
-              <select
-                className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm"
-                value={trustLevel}
-                onChange={(e) => setTrustLevel(e.target.value)}
-              >
-                <option value="">{t('trust.unrated', '未评估')}</option>
-                {MEMBER_TRUST_TIERS.map((tier) => (
-                  <option key={tier.level} value={tier.level}>
-                    {t(tier.labelKey)}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium">邮箱</label>
-            <Input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="name@example.com"
+            <FormField
+              control={form.control}
+              name="title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>职务</FormLabel>
+                  <FormControl>
+                    <Input placeholder="如: 前端工程师" {...field} value={field.value ?? ''} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="trustLevel"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>信任等级</FormLabel>
+                  <FormControl>
+                    <select
+                      className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm"
+                      value={field.value ?? ''}
+                      onChange={field.onChange}
+                    >
+                      <option value="">{t('trust.unrated', '未评估')}</option>
+                      {MEMBER_TRUST_TIERS.map((tier) => (
+                        <option key={tier.level} value={tier.level}>
+                          {t(tier.labelKey)}
+                        </option>
+                      ))}
+                    </select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
             />
           </div>
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium">标签（逗号分隔）</label>
-            <Input
-              value={tagsInput}
-              onChange={(e) => setTagsInput(e.target.value)}
-              placeholder="如: frontend, expert"
-            />
-          </div>
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>邮箱</FormLabel>
+                <FormControl>
+                  <Input type="email" placeholder="name@example.com" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-          <div className="space-y-1.5">
-            <label className="text-xs font-medium">描述</label>
-            <Input
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              placeholder="简短描述成员背景或职责"
-            />
-          </div>
+          <FormField
+            control={form.control}
+            name="tagsInput"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>标签（逗号分隔）</FormLabel>
+                <FormControl>
+                  <Input placeholder="如: frontend, expert" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>描述</FormLabel>
+                <FormControl>
+                  <Input placeholder="简短描述成员背景或职责" {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           {type === 'human' ? (
             <div className="space-y-3 rounded-md border border-border p-3 bg-muted/30">
               <div className="text-xs font-semibold text-muted-foreground">人类成员</div>
-              <div className="space-y-1.5">
-                <label className="text-xs">关联 User</label>
-                <select
-                  className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm disabled:opacity-50"
-                  value={userId}
-                  onChange={(e) => setUserId(e.target.value)}
-                  disabled={isEdit}
-                >
-                  <option value="">不关联（独立人类）</option>
-                  {users?.map((u) => (
-                    <option key={u.id} value={u.id}>
-                      {u.displayName} (@{u.username})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              <FormField
+                control={form.control}
+                name="userId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>关联 User</FormLabel>
+                    <FormControl>
+                      <select
+                        className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm disabled:opacity-50"
+                        value={field.value ?? ''}
+                        onChange={field.onChange}
+                        disabled={isEdit}
+                      >
+                        <option value="">不关联（独立人类）</option>
+                        {users?.map((u) => (
+                          <option key={u.id} value={u.id}>
+                            {u.displayName} (@{u.username})
+                          </option>
+                        ))}
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs">电话</label>
-                  <Input
-                    value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    placeholder="+86-..."
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs">时区</label>
-                  <Input
-                    value={timezone}
-                    onChange={(e) => setTimezone(e.target.value)}
-                  />
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs">日费率（元/天，用于团队人天成本统计）</label>
-                <Input
-                  type="number"
-                  min="0"
-                  step="50"
-                  value={costRatePerDay}
-                  onChange={(e) => setCostRatePerDay(e.target.value)}
-                  placeholder="如: 1500"
+                <FormField
+                  control={form.control}
+                  name="phone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>电话</FormLabel>
+                      <FormControl>
+                        <Input placeholder="+86-..." {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="timezone"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>时区</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value ?? ''} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
+              <FormField
+                control={form.control}
+                name="costRatePerDay"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>日费率（元/天，用于团队人天成本统计）</FormLabel>
+                    <FormControl>
+                      <Input type="number" min="0" step="50" placeholder="如: 1500" {...field} value={field.value ?? ''} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
           ) : (
             <div className="space-y-3 rounded-md border border-border p-3 bg-accent-purple/5">
               <div className="text-xs font-semibold text-accent-purple">AI 成员</div>
-              <div className="space-y-1.5">
-                <label className="text-xs">AI 模型 *</label>
-                <select
-                  className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm"
-                  value={aiModelConfigId}
-                  onChange={(e) => setAiModelConfigId(e.target.value)}
-                  required
-                >
-                  <option value="">选择 AI 模型</option>
-                  {aiModels?.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name} ({m.provider})
-                    </option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs">个人提示词（与所属角色的共享约定合并注入派发 prompt）</label>
-                <textarea
-                  value={personalPrompt}
-                  onChange={(e) => setPersonalPrompt(e.target.value)}
-                  placeholder="该成员 AI 执行者的私有偏好与补充约定，如: 偏好简洁实现与充分测试..."
-                  className="w-full h-20 px-2 py-1.5 rounded-md border border-input bg-background text-sm resize-none"
+              <FormField
+                control={form.control}
+                name="aiModelConfigId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>AI 模型 *</FormLabel>
+                    <FormControl>
+                      <select
+                        className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm"
+                        value={field.value ?? ''}
+                        onChange={field.onChange}
+                      >
+                        <option value="">选择 AI 模型</option>
+                        {aiModels?.map((m) => (
+                          <option key={m.id} value={m.id}>
+                            {m.name} ({m.provider})
+                          </option>
+                        ))}
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="personalPrompt"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>个人提示词（与所属角色的共享约定合并注入派发 prompt）</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="该成员 AI 执行者的私有偏好与补充约定，如: 偏好简洁实现与充分测试..."
+                        className="h-20 resize-none"
+                        {...field}
+                        value={field.value ?? ''}
+                      />
+                    </FormControl>
+                    <FormDescription />
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={form.control}
+                  name="thinkingLevel"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>思考强度</FormLabel>
+                      <FormControl>
+                        <select
+                          className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm"
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
+                        >
+                          <option value="">默认</option>
+                          {MEMBER_THINKING_LEVELS.map((l) => (
+                            <option key={l.value} value={l.value}>
+                              {l.label}
+                            </option>
+                          ))}
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="defaultExecutionRole"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>默认执行角色</FormLabel>
+                      <FormControl>
+                        <select
+                          className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm"
+                          value={field.value ?? ''}
+                          onChange={field.onChange}
+                        >
+                          <option value="">不指定（按任务解析）</option>
+                          {executionRoleOptions.map((r) => (
+                            <option key={r.id} value={r.executionRole}>
+                              {r.name} ({r.executionRole})
+                            </option>
+                          ))}
+                        </select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
                 />
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <label className="text-xs">思考强度</label>
-                  <select
-                    className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm"
-                    value={thinkingLevel}
-                    onChange={(e) => setThinkingLevel(e.target.value as ThinkingLevel | '')}
-                  >
-                    <option value="">默认</option>
-                    {MEMBER_THINKING_LEVELS.map((l) => (
-                      <option key={l.value} value={l.value}>
-                        {l.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs">默认执行角色</label>
-                  <select
-                    className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm"
-                    value={defaultExecutionRole}
-                    onChange={(e) => setDefaultExecutionRole(e.target.value)}
-                  >
-                    <option value="">不指定（按任务解析）</option>
-                    {executionRoleOptions.map((r) => (
-                      <option key={r.id} value={r.executionRole}>
-                        {r.name} ({r.executionRole})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-                <div className="space-y-1.5">
-                  <label className="text-xs">默认 CLI Provider</label>
-                  <select
-                    className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm"
-                    value={defaultCliProviderId}
-                    onChange={(e) => setDefaultCliProviderId(e.target.value)}
-                  >
-                    <option value="">不指定（按角色解析）</option>
-                    {cliProviders.map((p) => (
-                      <option
-                        key={p.providerId}
-                        value={p.providerId}
-                        disabled={!p.enabled}
+              <FormField
+                control={form.control}
+                name="defaultCliProviderId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>默认 CLI Provider</FormLabel>
+                    <FormControl>
+                      <select
+                        className="w-full h-9 px-2 rounded-md border border-input bg-background text-sm"
+                        value={field.value ?? ''}
+                        onChange={field.onChange}
                       >
-                        {p.providerId}
-                        {p.enabled ? ' · 可用' : ' · 已禁用'}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                        <option value="">不指定（按角色解析）</option>
+                        {cliProviders.map((p) => (
+                          <option
+                            key={p.providerId}
+                            value={p.providerId}
+                            disabled={!p.enabled}
+                          >
+                            {p.providerId}
+                            {p.enabled ? ' · 可用' : ' · 已禁用'}
+                          </option>
+                        ))}
+                      </select>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             </div>
           )}
-
-          <DialogFooter>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => handleClose(false)}
-            >
-              取消
-            </Button>
-            <Button
-              type="submit"
-              size="sm"
-              disabled={
-                createMember.isPending ||
-                updateMember.isPending ||
-                !displayName ||
-                !handle ||
-                (type === 'ai_agent' && !aiModelConfigId)
-              }
-            >
-              {createMember.isPending || updateMember.isPending
-                ? isEdit
-                  ? '保存中…'
-                  : '创建中…'
-                : isEdit
-                  ? '保存修改'
-                  : '创建成员'}
-            </Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+        </>
+      )}
+    />
   );
 }

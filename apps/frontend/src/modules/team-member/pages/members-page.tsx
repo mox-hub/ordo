@@ -36,20 +36,23 @@ export default function MembersPage() {
   const [showCreate, setShowCreate] = useState(false);
   const stats = usePersistentToggle('members-page.stats');
 
-  // query 深链：?create=ai 直达 AI 员工创建对话框（引导完成步出口，CAP-A-18
-  // AI 员工引导闭环切片；location.state.openCreate 是另一条既有深链）。
+  // query 深链：?create=member&memberType=ai_agent 直达 AI 员工创建对话框
+  //（引导完成步出口，CAP-A-18 AI 员工引导闭环切片；location.state.openCreate 是另一条
+  // 既有深链）。批四改名：原 ?create=ai 语义歧义（ai 指成员类型而非创建 AI），现
+  // create=实体 + memberType=类型 两段正交；内部深链直接切换不留兼容。
   // 打开即清参数——对话框关闭后刷新不会再次自动弹。
   const [searchParams, setSearchParams] = useSearchParams();
-  const createAiFromQuery = searchParams.get('create') === 'ai';
+  const createMemberFromQuery =
+    searchParams.get('create') === 'member' && searchParams.get('memberType') === 'ai_agent';
   const [createDefaultType, setCreateDefaultType] = useState<'human' | 'ai_agent' | undefined>(
-    createAiFromQuery ? 'ai_agent' : undefined,
+    createMemberFromQuery ? 'ai_agent' : undefined,
   );
   useEffect(() => {
-    if (createAiFromQuery) {
+    if (createMemberFromQuery) {
       setShowCreate(true);
       setSearchParams({}, { replace: true });
     }
-  }, [createAiFromQuery, setSearchParams]);
+  }, [createMemberFromQuery, setSearchParams]);
 
   // 深链入口：location.state 携带 openCreate 时自动打开创建弹窗（刷新不重复打开）。
   // 渲染期间检测 state 变化调整 showCreate，replaceState 副作用留在独立 effect。

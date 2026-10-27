@@ -213,7 +213,7 @@ export function AiMemberCreatePage() {
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => navigate('/app/members?create=ai')}
+                    onClick={() => navigate('/app/members?create=member&memberType=ai_agent')}
                   >
                     {t('aiMemberCreate.openManual')}
                   </Button>
@@ -415,7 +415,7 @@ export function AiMemberCreatePage() {
                   </Button>
                 </div>
                 <div className="flex justify-end gap-2">
-                  <Button variant="ghost" onClick={() => navigate('/app/members?create=ai')}>
+                  <Button variant="ghost" onClick={() => navigate('/app/members?create=member&memberType=ai_agent')}>
                     {t('aiMemberCreate.openManual')}
                   </Button>
                   <Button

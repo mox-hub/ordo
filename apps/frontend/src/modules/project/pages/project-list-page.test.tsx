@@ -76,6 +76,7 @@ vi.mock('../components/project-gantt', () => ({
 
 vi.mock('@/shared/components/create-dialog', () => ({
   UnifiedCreateDialog: () => null,
+  useCreateDialogDeepLink: () => {},
 }));
 
 const createQueryClient = () =>

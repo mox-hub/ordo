@@ -78,6 +78,9 @@ import { SettingsSectionCard } from '@/components/semantic/settings-section-card
 import { SettingsFieldRow } from '@/components/semantic/settings-field-row'
 import { PathInput } from '@/components/semantic/path-input'
 import { StickySaveBar } from '@/components/semantic/sticky-save-bar'
+import { z } from 'zod'
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form'
+import { FormDialog } from '@/components/semantic/form-dialog'
 import { DefinitionRow } from '@/components/semantic/definition-row'
 import { StatusDefinitionList } from '@/components/semantic/status-definition-list'
 import { ChartCard } from '@/components/semantic/chart-card'
@@ -5246,6 +5249,60 @@ function GallerySec_ai_density_cards() {
   )
 }
 
+function GallerySec_form_dialog() {
+  const [open, setOpen] = React.useState(false)
+  return (
+    <>
+              <div>
+                <SubLabel>FormDialog — 标准化实体创建/编辑对话框（RHF+Zod+提交态+脏确认一次封死；§10.8 default 档）</SubLabel>
+                <div className="rounded-xl border border-border p-4">
+                  <p className="mb-3 text-xs text-content-text-muted">
+                    消费方只声明 schema / defaultValues / onSubmit / fields(render prop)，不再手写骨架。
+                    点按钮打开体验：Zod 校验（onBlur + 提交）、提交中内联 Spinner、脏表单关闭确认。
+                  </p>
+                  <Button size="sm" onClick={() => setOpen(true)}>打开示例表单</Button>
+                  <FormDialog
+                    open={open}
+                    onOpenChange={setOpen}
+                    title="创建示例实体"
+                    description="标准化骨架演示：名称必填、备注选填"
+                    schema={z.object({ name: z.string().min(1, '请输入名称'), note: z.string().optional() })}
+                    defaultValues={{ name: '', note: '' }}
+                    onSubmit={async () => { await new Promise((r) => setTimeout(r, 600)) }}
+                    submitLabel="创建"
+                    fields={(form) => (
+                      <>
+                        <FormField
+                          control={form.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>名称</FormLabel>
+                              <FormControl><Input placeholder="实体名称" {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="note"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>备注</FormLabel>
+                              <FormControl><Input placeholder="选填" {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </>
+                    )}
+                  />
+                </div>
+              </div>
+    </>
+  )
+}
+
 function GallerySec_semantic_components() {
   return (
     <>
@@ -5269,6 +5326,7 @@ function GallerySec_semantic_components() {
             <SectionAnchor id="chart-legend-grid"><GallerySec_chart_legend_grid /></SectionAnchor>
             <SectionAnchor id="donut-chart"><GallerySec_donut_chart /></SectionAnchor>
             <SectionAnchor id="proportion-bar"><GallerySec_proportion_bar /></SectionAnchor>
+            <SectionAnchor id="form-dialog"><GallerySec_form_dialog /></SectionAnchor>
           
     </>
   )
@@ -5886,6 +5944,7 @@ export const GALLERY_SECTIONS: Record<string, React.ComponentType> = {
   'chart-legend-grid': GallerySec_chart_legend_grid,
   'donut-chart': GallerySec_donut_chart,
   'proportion-bar': GallerySec_proportion_bar,
+  'form-dialog': GallerySec_form_dialog,
   'registry-audit': GallerySec_registry_audit,
   'cost-figure': GallerySec_cost_figure,
   'exec-tree': GallerySec_exec_tree,

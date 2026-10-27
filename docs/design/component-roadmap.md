@@ -88,6 +88,13 @@ governance: "设计规则本体以 docs/design/PRINCIPLES.md（宪法）为准�
 - **对位**：宪法 §22.6；A-18 样板推广。**P2**。
 - **落地注记**：组件 + 20 例测试落地，registry 登记 **standby**（chip 先例）；纯函数 `tokenize`/`diffTextSegments`/`synthesizeAppliedText` 已导出；消费接线（document-enhance / PromptEditor / member-profile-draft）留后续批，接线同批升 canonical。
 
+#### ✅ B7 `form-dialog` —— 标准化实体创建/编辑对话框
+- **开发理由**：面板之外 13+ 处独立创建对话框中 11 处裸 useState 手写表单（违 §13.1）；统一创建面板优化批四（docs/roadmap/统一创建面板优化方案-2026-10-27.md §六）立为第 0 步承载件。
+- **使用场景**：一切「模态弹窗内的实体创建/编辑表单」（§20.5 容器律的标准化实现）。
+- **形态与数据契约**：Dialog 骨架 + RHF+Zod（zodResolver，错误文案 schema 提供）+ FormProvider 包裹的字段段 render prop + 提交态（disabled+内联 Spinner §10.6）+ 脏表单关闭 AlertDialog（§20.1）+ §10.8 size 轴（default/wide）；props 面封闭（G8）。
+- **对位**：宪法 §13/§10.8/§20.1/§20.5。**P1**。
+- **落地注记**：组件 + registry 登记 canonical（Semantic 分区）+ 画廊 demo（交互式）落地于统一创建面板批四；A 级 8 件已迁移（team/user/invite/acceptance/iteration/workflow/release/member——由小到大，member 474 行重灾区收尾）；frontend 新增 zod@4 + @hookform/resolvers@6 依赖。
+
 ### 待开发
 
 #### B3 `trace-waterfall` —— 执行时间轴瀑布（run-timeline 的第二形态）

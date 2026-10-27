@@ -39,6 +39,7 @@ export function GithubPanel({
   integrationId: string;
   repoFullName?: string; // owner/repo
 }) {
+  const { t } = useTranslation();
   const [repo, setRepo] = useState(repoFullName || '');
   const [showCreate, setShowCreate] = useState(false);
   const [createInput, setCreateInput] = useState({
@@ -111,7 +112,7 @@ export function GithubPanel({
               ) : (
                 <RefreshCcw className="h-3 w-3" />
               )}
-              <span className="ml-1">刷新</span>
+              <span className="ml-1">{t('github.panel.refresh')}</span>
             </Button>
             <Button
               size="sm"
@@ -121,7 +122,7 @@ export function GithubPanel({
               className="h-8"
             >
               <GitPullRequest className="h-3 w-3" />
-              <span className="ml-1">新建 PR</span>
+              <span className="ml-1">{t('github.panel.newPr')}</span>
             </Button>
           </div>
         </div>

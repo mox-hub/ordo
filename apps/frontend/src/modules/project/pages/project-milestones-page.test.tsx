@@ -85,6 +85,7 @@ vi.mock('../components/dashboard/project-detail-frame', () => ({
 
 vi.mock('@/shared/components/create-dialog', () => ({
   UnifiedCreateDialog: () => <div data-testid="unified-create-dialog" />,
+  useCreateDialogDeepLink: () => {},
 }));
 
 // P1-19：迭代详情/表单对话框以可观察 stub 代替，验证页面接线（打开/携带迭代）；

@@ -1,20 +1,15 @@
 /**
- * AcceptanceFormDialog — 新建验收契约弹窗
- * 选择任务 + 完成契约类型（可自动推断）+ 描述；提交 POST /acceptance
+ * AcceptanceFormDialog — 新建验收契约弹窗（批四·FormDialog 标准化迁移件 4/8）
+ * 选择任务 + 完成契约类型（可自动推断）+ 描述；提交 POST /acceptance。
+ * 裸 useState 手写校验 → semantic/form-dialog（RHF+Zod §13.1）。
  */
-import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
+import { z } from 'zod';
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '@/components/ui/form';
 import { SelectField } from '@/components/ui/select-field';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { FormDialog } from '@/components/semantic/form-dialog';
 import { toast } from '@/components/ui/toast';
 import { useAllTasks } from '@/modules/issue/hooks/use-project-tasks';
 import { useCreateAcceptance } from '../hooks/use-acceptance';
@@ -36,6 +31,15 @@ const COMPLETION_TYPES: Array<CompletionType | 'auto'> = [
   'document',
 ];
 
+const acceptanceSchema = z.object({
+  issueId: z.string().min(1, '请选择任务'),
+  completionType: z.string(),
+  title: z.string(),
+  description: z.string(),
+});
+
+type AcceptanceValues = z.infer<typeof acceptanceSchema>;
+
 export function AcceptanceFormDialog({
   open,
   onOpenChange,
@@ -45,117 +49,109 @@ export function AcceptanceFormDialog({
   const { t } = useTranslation();
   const { data: tasksData } = useAllTasks({ pageSize: 1000 });
   const createAcceptance = useCreateAcceptance();
-
-  const [issueId, setTaskId] = useState(defaultTaskId ?? '');
-  const [title, setTitle] = useState('');
-  const [completionType, setCompletionType] = useState<CompletionType | 'auto'>('auto');
-  const [description, setDescription] = useState('');
-
-  // 打开时重置表单：渲染期间检测 open 变化调整本地 state（模板同款模式，避免 effect 级联渲染）
-  const [prevOpen, setPrevOpen] = useState(false);
-  if (prevOpen !== open) {
-    setPrevOpen(open);
-    if (open) {
-      setTaskId(defaultTaskId ?? '');
-      setTitle('');
-      setCompletionType('auto');
-      setDescription('');
-    }
-  }
-
-  const submit = async () => {
-    if (!issueId) return;
-    try {
-      const created = await createAcceptance.mutateAsync({
-        issueId,
-        title: title.trim() || undefined,
-        description: description.trim() || undefined,
-        completionType: completionType === 'auto' ? undefined : completionType,
-      });
-      toast.success(t('common.success'));
-      onOpenChange(false);
-      onSuccess?.(created.id);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : String(err));
-    }
-  };
-
   const availableTasks = (tasksData?.data ?? []).filter((task) => !!task.projectId);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>{t('acceptance.form.title')}</DialogTitle>
-          <DialogDescription>{t('acceptance.emptyHint')}</DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-3">
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t('acceptance.form.task')}
-            </span>
-            <SelectField
-              value={issueId}
-              onChange={(e) => setTaskId(e.target.value)}
-              className="w-full"
-            >
-              <option value="">{t('acceptance.form.taskPlaceholder')}</option>
-              {availableTasks.map((task) => (
-                <option key={task.id} value={task.id}>
-                  {task.title}
-                </option>
-              ))}
-            </SelectField>
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t('acceptance.form.completionType')}
-            </span>
-            <SelectField
-              value={completionType}
-              onChange={(e) => setCompletionType(e.target.value as CompletionType | 'auto')}
-              className="w-full"
-            >
-              {COMPLETION_TYPES.map((ty) => (
-                <option key={ty} value={ty}>
-                  {ty === 'auto'
-                    ? t('acceptance.form.completionTypeHint')
-                    : t(`acceptance.completionType.${ty}`)}
-                </option>
-              ))}
-            </SelectField>
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t('acceptance.form.name')}
-            </span>
-            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
-          </label>
-
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium text-muted-foreground">
-              {t('acceptance.form.description')}
-            </span>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              className="min-h-20 w-full rounded-md border border-border bg-background p-2 text-sm outline-hidden focus:ring-1 focus:ring-primary"
-            />
-          </label>
-        </div>
-
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            {t('common.cancel')}
-          </Button>
-          <Button onClick={submit} disabled={!issueId || createAcceptance.isPending}>
-            {t('common.create')}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <FormDialog<AcceptanceValues>
+      open={open}
+      onOpenChange={onOpenChange}
+      title={t('acceptance.form.title')}
+      description={t('acceptance.emptyHint')}
+      // key：defaultTaskId 变化时重挂载换预置（FormDialog 打开即 reset defaultValues 同效）
+      schema={acceptanceSchema}
+      defaultValues={{ issueId: defaultTaskId ?? '', completionType: 'auto', title: '', description: '' }}
+      submitLabel={t('common.create')}
+      submitting={createAcceptance.isPending}
+      onSubmit={async (values) => {
+        try {
+          const created = await createAcceptance.mutateAsync({
+            issueId: values.issueId,
+            title: values.title.trim() || undefined,
+            description: values.description.trim() || undefined,
+            completionType: values.completionType === 'auto' ? undefined : (values.completionType as CompletionType),
+          });
+          toast.success(t('common.success'));
+          onSuccess?.(created.id);
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : String(err));
+          throw err; // 失败不关窗
+        }
+      }}
+      fields={(form) => (
+        <>
+          <FormField
+            control={form.control}
+            name="issueId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('acceptance.form.task')}</FormLabel>
+                <FormControl>
+                  <SelectField value={field.value} onChange={field.onChange} className="w-full">
+                    <option value="">{t('acceptance.form.taskPlaceholder')}</option>
+                    {availableTasks.map((task) => (
+                      <option key={task.id} value={task.id}>
+                        {task.title}
+                      </option>
+                    ))}
+                  </SelectField>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="completionType"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('acceptance.form.completionType')}</FormLabel>
+                <FormControl>
+                  <SelectField value={field.value} onChange={field.onChange} className="w-full">
+                    {COMPLETION_TYPES.map((ty) => (
+                      <option key={ty} value={ty}>
+                        {ty === 'auto'
+                          ? t('acceptance.form.completionTypeHint')
+                          : t(`acceptance.completionType.${ty}`)}
+                      </option>
+                    ))}
+                  </SelectField>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="title"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('acceptance.form.name')}</FormLabel>
+                <FormControl>
+                  <Input {...field} value={field.value ?? ''} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>{t('acceptance.form.description')}</FormLabel>
+                <FormControl>
+                  <Textarea
+                    {...field}
+                    value={field.value ?? ''}
+                    className="min-h-20"
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </>
+      )}
+    />
   );
 }
