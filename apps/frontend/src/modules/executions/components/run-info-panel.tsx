@@ -4,9 +4,10 @@
  */
 import { useTranslation } from 'react-i18next';
 import { Hourglass, X } from 'lucide-react';
+import { CostFigure } from '@/components/semantic/cost-figure';
 import { cn } from '@/lib/utils';
+import { isTerminalRunStatus } from '../api/execution-api';
 import type { RunDetailsData } from './run-details-format';
-import { formatCost, formatTokens } from './run-details-format';
 import {
   isWorktreeRetained,
   parseIsolationMeta,
@@ -26,7 +27,7 @@ function InfoRow({
   hl,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   mono?: boolean;
   wrap?: boolean;
   hl?: boolean;
@@ -65,6 +66,8 @@ export function RunInfoPanel({
   const modelRows = Object.entries(byModel);
   // G5-b：worktree 隔离信息（路径/分支/基线，失败态附 TTL 提示）
   const isolation = parseIsolationMeta(data.metadata);
+  // 运行中成本是「活的」：非终态 run 的成本位带滚动/微光（§22.2，终态静默）
+  const runActive = !isTerminalRunStatus(data.status);
 
   return (
     <div className="flex w-64 shrink-0 flex-col overflow-y-auto border-l border-border bg-card">
@@ -146,12 +149,12 @@ export function RunInfoPanel({
       <Section>
         <InfoRow
           label={t('runDetails.details.totalTokens')}
-          value={formatTokens(data.totalTokens) ?? '—'}
+          value={<CostFigure size="xs" tokens={data.totalTokens} running={runActive} />}
           mono
         />
         <InfoRow
           label={t('runDetails.details.cost')}
-          value={formatCost(data.totalCost) ?? '—'}
+          value={<CostFigure size="xs" amount={data.totalCost} running={runActive} />}
           mono
           hl
         />
@@ -165,9 +168,13 @@ export function RunInfoPanel({
           {modelRows.map(([model, stat]) => (
             <div key={model} className="flex items-center justify-between gap-2 text-2xs">
               <span className="min-w-0 truncate font-mono text-content-text-secondary">{model}</span>
-              <span className="shrink-0 font-mono text-content-text-muted">
-                {formatTokens(stat.tokens) ?? '0'} · {formatCost(stat.cost) ?? '$0.00'}
-              </span>
+              <CostFigure
+                size="xs"
+                tokens={stat.tokens}
+                amount={stat.cost}
+                running={runActive}
+                className="shrink-0 text-content-text-muted"
+              />
             </div>
           ))}
         </Section>

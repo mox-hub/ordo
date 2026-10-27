@@ -5,6 +5,7 @@
  * CLI 桥 running 占位渲染工作指示；流式增量由 useChat 实时聚合进 parts。
  */
 import { useTranslation } from 'react-i18next';
+import type { ReactNode } from 'react';
 import { Bot } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Spinner } from '@/components/ui/spinner';
@@ -16,6 +17,8 @@ import {
 } from '../hooks/use-assistant-chat';
 import {
   AssistantToolCard,
+  AssistantToolGroup,
+  isDecisionToolPart,
   type AssistantToolPart,
 } from './assistant-tool-card';
 
@@ -44,33 +47,58 @@ function AssistantBubble({ message }: { message: AssistantChatMessage }) {
     );
   }
 
+  // 连续工具卡折叠为组汇总（≥2 张才成组）；决策建议卡是「等人」一等状态（§22.1），始终独立渲染
+  const nodes: ReactNode[] = [];
+  let toolRun: { part: AssistantToolPart; index: number }[] = [];
+  const flushToolRun = () => {
+    if (toolRun.length === 0) return;
+    if (toolRun.length >= 2) {
+      nodes.push(
+        <AssistantToolGroup key={`tool-group-${toolRun[0].index}`}>
+          {toolRun.map(({ part, index }) => (
+            <AssistantToolCard key={index} part={part} />
+          ))}
+        </AssistantToolGroup>,
+      );
+    } else {
+      for (const { part, index } of toolRun) {
+        nodes.push(<AssistantToolCard key={index} part={part} />);
+      }
+    }
+    toolRun = [];
+  };
+  message.parts.forEach((part, index) => {
+    if (part.type.startsWith('tool-')) {
+      const toolPart = part as unknown as AssistantToolPart;
+      if (isDecisionToolPart(toolPart)) {
+        flushToolRun();
+        nodes.push(<AssistantToolCard key={index} part={toolPart} />);
+        return;
+      }
+      toolRun.push({ part: toolPart, index });
+      return;
+    }
+    flushToolRun();
+    if (isTextUIPart(part)) {
+      if (!part.text) return;
+      nodes.push(
+        <div
+          className="w-full break-words rounded-lg bg-content-bg-secondary px-3 py-2 text-sm text-content-text"
+          key={index}
+        >
+          <MarkdownView content={part.text} />
+        </div>,
+      );
+    }
+  });
+  flushToolRun();
+
   return (
     <div
       className="flex min-w-0 max-w-4/5 flex-col items-start gap-1.5"
       data-ai-component="assistant.message-assistant"
     >
-      {message.parts.map((part, index) => {
-        if (isTextUIPart(part)) {
-          if (!part.text) return null;
-          return (
-            <div
-              className="w-full break-words rounded-lg bg-content-bg-secondary px-3 py-2 text-sm text-content-text"
-              key={index}
-            >
-              <MarkdownView content={part.text} />
-            </div>
-          );
-        }
-        if (part.type.startsWith('tool-')) {
-          return (
-            <AssistantToolCard
-              key={index}
-              part={part as unknown as AssistantToolPart}
-            />
-          );
-        }
-        return null;
-      })}
+      {nodes}
     </div>
   );
 }

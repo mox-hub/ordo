@@ -35,7 +35,7 @@ const DOC = join(PKG_ROOT, "COMPONENTS.md");
 // ① 解析 registry.ts 的字面量条目（严格单行格式，见 registry.ts 文件头）
 // ---------------------------------------------------------------------------
 const ENTRY_RE =
-  /^\s*\{ name: '([^']+)', file: '([^']+)', section: '([^']+)', status: '([^']+)'(?:, galleryExempt: '([^']+)')?(?:, reviewBy: '([^']+)')?(?:, expiresAt: '([^']+)')?(?:, review: \{ pending: true, reason: '([^']+)', proposal: '([^']+)'(?:, target: '([^']+)')? \})? \},?$/;
+  /^\s*\{ name: '([^']+)', file: '([^']+)', section: '([^']+)', status: '([^']+)'(?:, aiNotes: '([^']+)')?(?:, galleryExempt: '([^']+)')?(?:, reviewBy: '([^']+)')?(?:, expiresAt: '([^']+)')?(?:, review: \{ pending: true, reason: '([^']+)', proposal: '([^']+)'(?:, target: '([^']+)')? \})? \},?$/;
 
 const src = readFileSync(REGISTRY, "utf8");
 const entries = [];
@@ -47,12 +47,13 @@ for (const line of src.split(/\r?\n/)) {
     file: m[2],
     section: m[3],
     status: m[4],
-    galleryExempt: m[5],
-    reviewBy: m[6],
-    expiresAt: m[7],
-    reason: m[8],
-    proposal: m[9],
-    target: m[10],
+    aiNotes: m[5],
+    galleryExempt: m[6],
+    reviewBy: m[7],
+    expiresAt: m[8],
+    reason: m[9],
+    proposal: m[10],
+    target: m[11],
   });
 }
 if (entries.length === 0) {
@@ -128,6 +129,10 @@ function expNote(e) {
 /** `galleryExempt`（H 类画廊豁免槽位）渲染后缀：两处表格的说明列共用，保证豁免**可见**。 */
 function gallNote(e) {
   return e.galleryExempt ? `（**画廊豁免**：${esc(e.galleryExempt)}）` : "";
+}
+/** `aiNotes`（§22.7 AI 编码代理契约摘要）渲染后缀：两处表格的说明列共用，保证契约**可见**。 */
+function aiNote(e) {
+  return e.aiNotes ? `（**aiNotes**：${esc(e.aiNotes)}）` : "";
 }
 
 const lines = [];
@@ -220,7 +225,7 @@ for (const e of reviewList) {
   push(
     `| ${esc(e.name)} | ${renderPath(e.file)} | ${STATUS_MARK[e.status]} | ${e.proposal || "—"}${
       e.target ? ` → ${e.target}` : ""
-    } | ${esc(e.reason)}${expNote(e)}${gallNote(e)} | ${e.reviewBy || "—"} |`
+    } | ${esc(e.reason)}${expNote(e)}${gallNote(e)}${aiNote(e)} | ${e.reviewBy || "—"} |`
   );
 }
 push();
@@ -249,7 +254,7 @@ for (const section of sectionsToRender) {
       push(
         `| ${esc(e.name)} | ${renderPath(e.file)} | ${STATUS_MARK[e.status]} | — | ${esc(
           e.reason || "—"
-        )}${expNote(e)}${gallNote(e)} |`
+        )}${expNote(e)}${gallNote(e)}${aiNote(e)} |`
       );
     }
     push();

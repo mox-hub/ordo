@@ -2,11 +2,31 @@
  * 步骤详情面板 —— 事件条目选中后右侧展示输入/产出代码块（对照运行详情设计稿右栏）。
  * 与弹窗主体共用一套设计 token（bg-muted 代码块 + border-border），支持复制与展开收起；
  * 无结构化详情时回退展示条目文本。
+ *
+ * 失败叙事（设计宪法 §22.3）：失败条目（kind=error）展开态含错误信息 + 耗时 + 重试入口；
+ * 重试回调 onRetry 可选传入，无回调不显示按钮（重试产生新记录由数据层负责，UI 只给入口）。
  */
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Check, Copy, X } from 'lucide-react';
-import type { RunEventEntry } from './run-details-format';
+import { Check, Copy, RotateCcw, TriangleAlert, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { formatDurationMs, type RunEventEntry } from './run-details-format';
+
+/** 失败叙事文案覆写（新增文案走组件内中文常量 + props 覆写，§16） */
+export interface StepDetailPanelLabels {
+  /** 错误信息区块标题（默认「错误信息」） */
+  errorTitle?: string;
+  /** 重试按钮文案（默认「重试」，§16.3 动词开头） */
+  retry?: string;
+  /** 耗时标签（默认「耗时」） */
+  duration?: string;
+}
+
+const DEFAULT_LABELS = {
+  errorTitle: '错误信息',
+  retry: '重试',
+  duration: '耗时',
+} as const;
 
 function CopyButton({ text }: { text: string }) {
   const { t } = useTranslation();
@@ -75,15 +95,26 @@ export function StepDetailPanel({
   entry,
   offsetLabel,
   onClose,
+  onRetry,
+  labels,
 }: {
   entry: RunEventEntry;
   offsetLabel?: string;
   onClose: () => void;
+  /** 重试回调（§22.3 失败叙事重试入口）：可选传入，缺省不渲染按钮 */
+  onRetry?: (entry: RunEventEntry) => void;
+  /** 失败叙事文案覆写 */
+  labels?: StepDetailPanelLabels;
 }) {
   const { t } = useTranslation();
   const input = entry.detail?.input;
   const output = entry.detail?.output ?? (!entry.detail?.input ? entry.text : undefined);
   const hasContent = !!(input || output);
+  // 失败信号：RunEventEntry 未投影步骤级 status（format 层口径），当前数据层以 kind=error
+  // 承载失败叙事（error 步骤 + execution.failed 事件）；步骤级 status 感知留待 B3 扩展
+  const isFailed = entry.kind === 'error';
+  const errorText = entry.text ?? entry.detail?.output;
+  const durationLabel = labels?.duration ?? DEFAULT_LABELS.duration;
 
   return (
     <div className="flex w-88 shrink-0 flex-col overflow-hidden border-l border-border bg-card">
@@ -111,6 +142,39 @@ export function StepDetailPanel({
       </div>
 
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto px-3 py-3">
+        {isFailed ? (
+          /* 失败叙事区（§22.3）：错误信息 + 耗时 + 重试入口三件套 */
+          <div
+            className="rounded-lg border border-accent-red/30 bg-accent-red-light/40 p-3"
+            data-testid="step-detail-error-section"
+          >
+            <p className="mb-1.5 flex items-center gap-1 text-3xs font-semibold uppercase tracking-wider text-accent-red">
+              <TriangleAlert aria-hidden="true" className="size-3" />
+              {labels?.errorTitle ?? DEFAULT_LABELS.errorTitle}
+            </p>
+            <pre className="whitespace-pre-wrap break-words font-mono text-2xs leading-relaxed text-accent-red">
+              {errorText ?? '—'}
+            </pre>
+            <div className="mt-2 flex items-center gap-2">
+              {entry.durationMs != null ? (
+                <span className="font-mono text-2xs tabular-nums text-content-text-secondary">
+                  {durationLabel} {formatDurationMs(entry.durationMs)}
+                </span>
+              ) : null}
+              {onRetry ? (
+                <Button
+                  variant="destructive"
+                  size="xs"
+                  className="ml-auto"
+                  onClick={() => onRetry(entry)}
+                >
+                  <RotateCcw aria-hidden="true" className="size-3" />
+                  {labels?.retry ?? DEFAULT_LABELS.retry}
+                </Button>
+              ) : null}
+            </div>
+          </div>
+        ) : null}
         {hasContent ? (
           <>
             {input ? <DetailSection label={t('runDetails.stepInput')} code={input} /> : null}

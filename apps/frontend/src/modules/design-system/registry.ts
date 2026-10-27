@@ -3,10 +3,11 @@
  *
  * 三条同源链（单向再生，禁止反向手工编辑）：
  *   ① registry.ts ──生成──► COMPONENTS.md（`node scripts/gen-components-md.mjs`）
- *   ② registry.ts ──渲染──► design-system 页（正文 demo 手写 + Registry 对账区遍历
- *      galleryExempt 豁免账；画廊覆盖率由 `check-component-registry.mjs` §4.2 ④ 门禁
- *      机器强制恒 100%——H 类批 H3 起 error，分母 ui+semantic 双层、排除 internal 与
- *      galleryExempt，2026-09-29 兑现）
+ *   ② registry.ts ──渲染──► design-system 画廊（2026-10-27 展示层路由化批起：索引卡片页
+ *      + 每分区单页路由，demo 本体在 sections/gallery-sections.gen.tsx 机械切分产物 +
+ *      Registry 对账区遍历 galleryExempt 豁免账；画廊覆盖率由 `check-component-registry.mjs`
+ *      §4.2 ④ 门禁（扫 sections/ 目录）机器强制恒 100%——H 类批 H3 起 error，分母 ui+semantic
+ *      双层、排除 internal 与 galleryExempt，2026-09-29 兑现）
  *   ③ registry.ts ──校验──► lint:registry（扫描真实引用回填 consumers，判定 LU）
  *
  * 字段口径：
@@ -47,6 +48,7 @@ export interface ComponentEntry {
   consumers?: number    // 由 lint 脚本回填
   expiresAt?: string    // deprecated 必填
   galleryExempt?: string // 画廊豁免槽位（H 类方案 §2.1）：登记理由后不计入画廊覆盖率分母；demo 豁免 ≠ 清退豁免，五态裁决面不受影响
+  aiNotes?: string      // ★ §22.7：给 AI 编码代理的契约摘要（数据契约 / 状态语义 / 禁区三段式），随 gen-components-md.mjs 生成进 COMPONENTS.md（2026-10-27 首例 cost-figure，登记范式：AI 相关 semantic 件建议必填）
   reviewBy?: string     // review 必填（§19.3 防滥用）
   review?: {            // ★ 裁决面数据（承接 〇之二 三段式）
     pending: true
@@ -66,10 +68,19 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
   { name: 'ai-execution-badge', file: 'modules/issue/components/ai-execution-badge.tsx', section: 'App Components', status: 'canonical' },
   // JEV 快速判断徽注（CAP-A-27 扩展批）：离散判定+置信度统一呈现，advisory 声明恒挂
   { name: 'ai-verdict-pill', file: 'semantic/ai-verdict-pill.tsx', section: 'Semantic', status: 'canonical' },
+  // 审批操作统一件（组件规划账本 B2 · CAP-A-27）：Agent 行动前请示的风险档 + 行动预览 +
+  // 单键批准/拒绝 + 决后收场仪式（确认层 1s → 凭证行）。消费方：executions 审批段。
+  { name: 'approval-card', file: 'semantic/approval-card.tsx', section: 'Semantic', status: 'canonical', aiNotes: '数据契约：title 必填（请求做什么）；riskSignal 为四档信号（复用 ai-verdict-pill 的 ConfidenceSignal 枚举，经 normalizeConfidenceSignal 防御归一，null=未知灰档），风险方向渲染内置于本件（3=红/2=黄/1=蓝/0=灰，与置信方向相反——高风险必须红），消费方只折算枚举不配色；riskLabel/preview/riskNote/requester 为 ReactNode 槽位，aiJudge advisory 附注由消费方组装传入。状态语义：resolved===undefined 为非受控，本件自管收场仪式（提交→确认覆盖层 role=status 约 1s→凭证行 决定+时间）；resolved 非 undefined 为受控，终态由父级数据驱动（null 待决 / approve / reject / neutral 系统处置），本件只发 onResolve；onResolve 返回 Promise 时等待落定再进确认态，reject 视为未决回滚待决态（错误呈现归消费方）。快捷键 Ctrl+Enter 批准 / Esc 拒绝，焦点在输入类控件内自动让路。禁区：禁绕过本件手写审批操作对（§22.4 收场仪式内置于本件，重写即丢仪式）；禁把 riskSignal 当置信度传（方向相反，高风险落绿档即事故）；禁在有 aiJudge 数据时省略 riskNote 附注（§22.3 观察位不丢）；消费方不得在卡内重复注册同键位快捷键' },
   { name: 'alert', file: 'ui/alert.tsx', section: 'Feedback', status: 'canonical' },
   { name: 'alert-dialog', file: 'ui/alert-dialog.tsx', section: 'Overlays', status: 'canonical' },
   { name: 'anchored-menu', file: 'ui/anchored-menu.tsx', section: 'Overlays', status: 'internal' },
   { name: 'aspect-ratio', file: 'ui/aspect-ratio.tsx', section: 'Layout & Shells', status: 'standby' },
+  // 自治边界拨盘（账本 B5）：「哪些动作它可以自己跑、哪些必先问我」的运行时边界操作 UI。
+  // 三档段选（锁定必问/先问我/自己跑，从严到宽），locked 档带锁标；滑块 translateX 归位
+  // 对齐 segmented-control 视觉语言；样例滑轨展示该成员近期真实动作的落档分布（只读）。
+  // 已接真：adjust-trust-dialog 拨盘即选择器，映射 Member.trustLevel 三级后走既有
+  // PATCH /members/:id 持久化。
+  { name: 'autonomy-dial', file: 'semantic/autonomy-dial.tsx', section: 'Semantic', status: 'canonical', aiNotes: '数据契约：value 走自治语义词表 locked/ask/auto 且必受控（配置入口，不持有态）；真实持久化形状是 Member.trustLevel（1/2/3），tier↔档位映射（观察者=locked/协助者=ask/受托者=auto，1:1 无损）由消费方持有，领域词表不进语义层；samples 只收真实动作样例（label+level），无动作→档位映射数据前禁造假样例（§9）。状态语义：三档即三态，selected 由 aria-checked 承载、滑块仅视觉；locked 档锁标 + lockedLabel 说明（为什么锁定）；disabled 整件退出键盘流。禁区：禁造第二套授权档位配置模型（B-07 唯一真相是 trustLevel 三级）、禁做非受控用法、禁绕过本件手写档位段选（宪法 §22.1 等人一等状态律的配置面承载件）' },
   { name: 'async-state', file: 'semantic/async-state.tsx', section: 'Feedback', status: 'canonical' },
   { name: 'autocomplete', file: 'ui/autocomplete.tsx', section: 'Controls', status: 'canonical' },
   { name: 'avatar', file: 'ui/avatar.tsx', section: 'Data Display', status: 'canonical' },
@@ -89,6 +100,13 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
   { name: 'combobox', file: 'ui/combobox.tsx', section: 'Controls', status: 'canonical' },
   { name: 'command', file: 'ui/command.tsx', section: 'Navigation', status: 'canonical' },
   { name: 'context-menu', file: 'ui/context-menu.tsx', section: 'Overlays', status: 'canonical' },
+  // 上下文占用格场（账本 B4）：上下文窗口渲染为定量格排，分区（系统提示/工具/记忆/对话/文件）
+  // 按 token 占比填充、尾部虚框（free）；悬停点亮 + tooltip「分区名 · token 数 · 占比」；
+  // 阈值语义色 <70 中性 / 70-90 warning / >90 danger 只落汇总读数；防御归一（负数/NaN 归零、
+  // 总和超限等比收缩到满）。role=img + 结论式 aria（§17.6）。登记 standby（chip 先例：组件
+  // 已落地、消费前置缺失——服务端需先暴露窗口上限（contextWindow）契约，禁消费方手造
+  // limit（§22.2），接线后升 canonical；接线方案留 .roadmap-handoff 交接快照）。
+  { name: 'context-usage', file: 'semantic/context-usage.tsx', section: 'Semantic', status: 'standby', aiNotes: '数据契约：segments（分区 key/label/tokens）+ limit（窗口总量）双输入；前端尚无窗口上限契约，禁传估算 limit 冒充（诚实渲染，§22.2）；tokens 负数/NaN/Infinity 内部归一为 0，分区总和超限等比收缩渲染到 100%。状态语义：data-usage-level = neutral/warning/danger（<70/70-90/>90，常量已导出），格子恒用分区色不参与阈值染色；compaction（压缩）占比变化直接反映为格场变化，收敛动画二期。禁区：禁绕过本件手写上下文格场、禁传 key=free 的分区（free 由组件派生）、禁在有窗口上限数据前挂载本件（无 limit 即整件 null）' },
   // G7 倒置收编迁出 ui/，保留登记保 LU（2026-09-29）
   { name: 'data-list', file: 'shared/components/data-list.tsx', section: 'App Components', status: 'canonical' },
   { name: 'data-table', file: 'ui/data-table.tsx', section: 'Data Display', status: 'canonical' },
@@ -102,6 +120,10 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
   { name: 'dual-track-metric-pill', file: 'semantic/dual-track-metric-pill.tsx', section: 'Data Display', status: 'canonical' },
   { name: 'empty-state', file: 'semantic/empty-state.tsx', section: 'Feedback', status: 'canonical' },
   { name: 'error-boundary', file: 'semantic/error-boundary.tsx', section: 'Feedback', status: 'canonical', galleryExempt: '运行时挂载件（入口/错误边界挂载），非画廊可 demo 形态' },
+  // 执行编排树（组件规划账本 B1 · P0 · CAP-A-04/B-03/C-06/G5）：「一个编排者+多个子执行」的
+  // 纵向缩进树视图——六态、等人琥珀高亮可计数（§22.1）、成本沿分支现算折叠不隐账（§22.2）、
+  // 失败分支保留可重试（§22.3）。消费方：run-details-dialog（单根退化态）。
+  { name: 'exec-tree', file: 'semantic/exec-tree.tsx', section: 'Semantic', status: 'canonical', aiNotes: '数据契约：root 每次全量传入、节点以 id 保位（展开面板等局部状态挂行组件，id 稳定即不丢）；cost/tokens 只传节点自身值，分支与全树汇总由本件遍历现算（汇总与折叠态无关，折叠不隐账）；重试产生新节点（新 id）由数据层挂 children，本件只渲染不覆盖。状态语义：六态 queued/running/waiting/done/failed/stopped——waiting=等人一等态（琥珀徽+「需要你处理」+头部计数 aria-live，视觉权级最高，禁 muted 降级）；running=蓝呼吸点+live 计时+CostFigure running 动效；done=绿勾；failed=红+可展开错误（mono 红字）+重试入口；queued/stopped=muted 降权。ExecutionRunStatus 映射：draft/planned→queued、in_progress→running、pending_approval→waiting、completed/approved→done、failed→failed、blocked/superseded/rejected→stopped。折叠=条件渲染（卸载，§22.5 inert 最强保证+深树渲染窗口），受控 collapsedIds/非受控 defaultCollapsedIds 双模。禁区：禁传预汇总成本值（§22.2 两处口径必漂移）；禁为演示伪造 children 假数据进生产（数据层平铺期只挂单根退化态）；禁把 waiting 渲染成 muted 灰态（§22.1）；禁覆盖式重试抹掉失败节点（§22.3，UI 层不得先于数据层抹历史）；连线/状态色必须走 TONE_CLASS 词表，禁自配色' },
   { name: 'field', file: 'ui/field.tsx', section: 'Controls', status: 'canonical' },
   { name: 'filter-chips', file: 'semantic/filter-chips.tsx', section: 'App Patterns', status: 'canonical' },
   { name: 'form', file: 'ui/form.tsx', section: 'Controls', status: 'canonical' },
@@ -110,6 +132,11 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
   { name: 'hover-card', file: 'ui/hover-card.tsx', section: 'Overlays', status: 'canonical' },
   { name: 'icon-metric', file: 'semantic/icon-metric.tsx', section: 'Data Display', status: 'canonical' },
   { name: 'icon-stack', file: 'semantic/icon-stack.tsx', section: 'Data Display', status: 'canonical' },
+  // diff 优先律承载件（宪法 §22.6 / 组件规划账本 B6）：AI 修改既有内容默认 diff 形态
+  // （改前/改后对照）而非替换后成品；零依赖词级 LCS、逐段接受/拒绝、应用前实时预览合成结果。
+  // 登记 standby（chip 先例：组件与 20 例测试已落地、消费接线留后续批——候选消费方
+  // document-enhance / PromptEditor / member-profile-draft，接线同批升 canonical）。
+  { name: 'inline-diff', file: 'semantic/inline-diff.tsx', section: 'Semantic', status: 'standby', aiNotes: '数据契约：before/after 均为纯文本（\\n 分段，词级 diff 与段落结构由本件按 token 流保持，词法=拉丁词/CJK 逐字/标点逐字/空白串，单侧超 2000 token 整段替换兜底）；逐段裁决默认全部=接受；appliedText 合成口径=逐段走裁决（接受取新增侧 added、拒绝取保留侧 removed）顺序拼接，onApply 只在点击「应用修改」时发出、不随裁决自动发出，onSegmentChange 携带全量段决策（含 unchanged 段恒 accepted）。状态语义：逐段裁决三态——changed 段接受/拒绝二态切换（默认接受）、unchanged 段恒接受不可裁决；预览态经预览开关（aria-pressed）实时合成 appliedText 可预览；before/after 一致只渲染一致性说明、无动作行；源文本变化（消费方回退重传 props）整体重置裁决与预览。禁区：禁引入 jsdiff 等外部 diff 依赖（§22.6 承载件零依赖，tokenize/diffTextSegments/synthesizeAppliedText 已导出可复用）；不做消费方原文持有与应用后回退——组件内无二次撤销态，消费方在 onApply 前自行保存 before、回退时重传 props；禁把本件当编辑器（只裁决不编辑文本）；禁消费方另造第二套 diff 呈现（§10.1 唯一实现）' },
   { name: 'input', file: 'ui/input.tsx', section: 'Controls', status: 'canonical' },
   { name: 'input-group', file: 'ui/input-group.tsx', section: 'Controls', status: 'canonical' },
   { name: 'input-otp', file: 'ui/input-otp.tsx', section: 'Controls', status: 'standby' },
@@ -237,6 +264,11 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
   // （choose_directory/choose_file）+后端实测验证+失效一键创建+保底报错，
   // 收编 git/workspace/project/settings 四域 6 处路径手输。
   { name: 'path-input', file: 'semantic/path-input.tsx', section: 'Semantic', status: 'canonical' },
+  // 成本一等公民承载件（宪法 §22.2 / 组件规划账本 A3，2026-10-27）：金额+token 双轨、
+  // mono tabular-nums、运行态数字滚动+微光（240ms 预算、reduced-motion 直出）、双缺席
+  // 「—」诚实降级禁造假数。由 run-overview-card / run-info-panel 内联成本展示抽出收编
+  // （两消费方同批接好，登记 canonical）。aiNotes 为 §22.7 登记范式首例。
+  { name: 'cost-figure', file: 'semantic/cost-figure.tsx', section: 'Semantic', status: 'canonical', aiNotes: '数据契约：amount/tokens 双轨且单边可缺席（null 或非有限数=无数据），本件只渲染调用方传入的自身值，组/分支级汇总必须由父级从成员值现算后传单值。状态语义：running=爬升中动效态（数字滚动 240ms+微光扫过，reduced-motion 直出终值），终态不传 running 即静默；双轨均缺席渲染「—」占位诚实降级。禁区：禁传预汇总值、禁传 0 冒充无数据、禁绕过本件手写成本展示（宪法 §22.2 成本一等公民律）' },
 
   // ── 跨模块业务组件：src/shared/components/ ───────────────────────────────
   { name: 'board-view', file: 'shared/components/board-view/board-view.tsx', section: 'App Components', status: 'canonical' },

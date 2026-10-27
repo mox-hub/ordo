@@ -15,6 +15,7 @@ import {
   Eye,
   FileText,
   Inbox,
+  Minus,
   RefreshCw,
   RotateCw,
   Server,
@@ -25,11 +26,13 @@ import {
 import { cn } from '@/lib/utils';
 import { Chip } from '@/components/semantic/chip';
 import { formatI18nRelativeTime } from '@/shared/lib/date-format';
+import { NEUTRAL_RECEIPT_LABEL } from './decision-receipt';
 import type {
   Decision,
   DecisionActionDef,
   DecisionActionOptions,
   DecisionImpactItem,
+  DecisionOutcome,
 } from './types';
 
 /** 默认四键：接受 / 微调 / 驳回 / 要替代方案（顺序与快捷键 1-4 全系统一致） */
@@ -329,6 +332,12 @@ export interface DecisionCardShellProps {
   dismissDirection?: 'left' | 'right' | 'up' | null;
   /** 布局形态变体：'auto'（自适应）| 'vertical'（卡片堆竖立黄金手卡比例） */
   variant?: 'auto' | 'vertical';
+  /**
+   * 审阅收场确认态（§22.4 第 1 拍）：决定提交后的「已通过 / 已驳回」全卡确认覆盖层，
+   * 约 1s 后由宿主收场（折叠为凭证行或滑出）。null = 无确认态。
+   * 覆盖层拦截交互（防连点重复决议），role="status" 让读屏器播报决定结果。
+   */
+  confirm?: { outcome: DecisionOutcome; label?: string } | null;
 }
 
 export function DecisionCardShell({
@@ -349,6 +358,7 @@ export function DecisionCardShell({
   stamp = null,
   dismissDirection = null,
   variant = 'auto',
+  confirm = null,
 }: DecisionCardShellProps) {
   const { t } = useTranslation();
   const [internalFlipped, setInternalFlipped] = useState(false);
@@ -465,6 +475,45 @@ export function DecisionCardShell({
           )}
         >
           {stamp === 'passed' ? t('decision.review.passStamp') : t('decision.review.rejectStamp')}
+        </div>
+      )}
+
+      {/* ── 审阅收场确认态（§22.4 第 1 拍）：决定图标 + 文案的全卡覆盖层，约 1s 后收场 ── */}
+      {confirm && (
+        <div
+          role="status"
+          data-decision-confirm={confirm.outcome}
+          className={cn(
+            'decision-card-confirm absolute inset-0 z-overlay flex flex-col items-center justify-center gap-3 rounded-[1.25rem] bg-background/80 backdrop-blur-sm',
+            confirm.outcome === 'passed' && 'text-accent-green',
+            confirm.outcome === 'rejected' && 'text-accent-red',
+            confirm.outcome === 'neutral' && 'text-content-text-secondary',
+          )}
+        >
+          <span
+            className={cn(
+              'flex size-14 items-center justify-center rounded-full shadow-xs',
+              confirm.outcome === 'passed' && 'bg-accent-green-light text-accent-green',
+              confirm.outcome === 'rejected' && 'bg-accent-red-light text-accent-red',
+              confirm.outcome === 'neutral' && 'bg-content-bg-secondary text-content-text-secondary',
+            )}
+          >
+            {confirm.outcome === 'passed' ? (
+              <Check className="size-8" />
+            ) : confirm.outcome === 'rejected' ? (
+              <X className="size-8" />
+            ) : (
+              <Minus className="size-8" />
+            )}
+          </span>
+          <span className="text-lg font-semibold tracking-wide">
+            {confirm.label ??
+              (confirm.outcome === 'passed'
+                ? t('decision.review.passStamp')
+                : confirm.outcome === 'rejected'
+                  ? t('decision.review.rejectStamp')
+                  : NEUTRAL_RECEIPT_LABEL)}
+          </span>
         </div>
       )}
 

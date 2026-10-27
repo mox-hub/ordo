@@ -3,7 +3,8 @@
  *
  * 一套 tone 词表（对齐 StatusPill 语义色 + accent token）同时服务任务与项目两侧，
  * 取代散落在 task-simple-list / project-simple-list / 看板 / 甘特里的多份本地配色：
- *   default=灰（待办/积压/已取消） info=蓝（进行中） warning=黄（评审/计划/有风险）
+ *   default=灰（待办/积压/已取消） info=蓝（进行中）
+ *   warning=黄（评审/计划/待决 triage——§22.1「等人」一等状态/有风险）
  *   success=绿（完成/正常/进行中项目） danger=红（偏离/紧急）
  *
  * 消费方：project-simple-list（StatusPill + 日期/优先级）、row-context-menu（右键子菜单）、
@@ -198,6 +199,20 @@ export const STATUS_GROUP_DEFAULT_ICON: Record<string, StatusIconKey> = {
   canceled: 'CircleXBig',
 };
 
+/**
+ * 状态分组 → 默认 tone 兜底偏置（§22.1「等人」一等状态律，账本 G2）。
+ *
+ * 自定义状态（StatusDefinition）的 key 不在上方静态词表时，tone 原本一律回落
+ * `default` 灰——triage（待决 / 等人裁决）组因此被降级渲染为 muted 灰态，正是
+ * §22.1 明令禁止的情形。本表只登记**偏离默认回落**的组：triage 兜底 `warning`
+ * 琥珀（+ STATUS_GROUP_DEFAULT_ICON.triage = CircleHelp 专属图标，§22.1 三要素中
+ * 的色与图标在此层落实；「可计数」属列表头职责不在本件）。其余组不登记、维持
+ * default 回落——只动「等人」类，不动其他状态。
+ */
+export const STATUS_GROUP_DEFAULT_TONE: Partial<Record<string, StatusTone>> = {
+  triage: 'warning',
+};
+
 /** 按落库 icon 键解析图标组件：注册表键 → 组件；空/未知 → 分组默认 → 空心圆 */
 export function resolveStatusIcon(
   icon: string | null | undefined,
@@ -222,6 +237,8 @@ export interface StatusVisualDefinition {
 /**
  * 构建动态状态视觉映射：定义 color/icon 优先，静态语义映射兜底。
  * tone/labelKey 恒取静态词表（浅底胶囊等封闭语义不受自定义色影响）；
+ * 静态词表无此 key 时按分组兜底 tone 偏置（STATUS_GROUP_DEFAULT_TONE，§22.1
+ * triage「等人」组兜底 warning，不落灰），再回落 default；
  * color 透传原值（hex）供图标/色点 inline 着色。
  */
 export function buildStatusVisualMap(
@@ -233,7 +250,10 @@ export function buildStatusVisualMap(
     const base = fallback[def.key];
     map.set(def.key, {
       labelKey: base?.labelKey ?? `status.custom.${def.key}`,
-      tone: base?.tone ?? 'default',
+      tone:
+        base?.tone ??
+        STATUS_GROUP_DEFAULT_TONE[def.group ?? ''] ??
+        'default',
       icon: resolveStatusIcon(def.icon, def.group),
       color: def.color || undefined,
     });

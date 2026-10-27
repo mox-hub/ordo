@@ -104,21 +104,31 @@ describe('DecisionCard contract_conflict（契约冲突卡）', () => {
   });
 
   it('动作栏四键：三个裁决键 + 驳回，裁决键点击把动作名透传给 onAction', () => {
-    const { onAction, container } = setup();
+    // 收场仪式（§22.4）开启后首次决议即进入确认态、动作栏锁定——
+    // 因此每个裁决键各用一张新卡验证透传（键位序不变：accept_file / accept_db / detach）。
+    const clickKey = (nth: number): { onAction: ReturnType<typeof vi.fn>; container: HTMLElement } => {
+      const onAction = vi.fn();
+      const { container } = render(
+        <DecisionCard decision={derivedConflict} onAction={onAction} />,
+      );
+      const bar = container.querySelector('[data-decision-actions]');
+      expect(bar).toBeTruthy();
+      expect(bar!.querySelectorAll('button').length).toBe(4);
+      fireEvent.click(bar!.querySelectorAll('button')[nth]);
+      return { onAction, container };
+    };
 
-    const bar = container.querySelector('[data-decision-actions]');
-    expect(bar).toBeTruthy();
-    const buttons = bar!.querySelectorAll('button');
-    expect(buttons.length).toBe(4);
+    const first = clickKey(0);
+    expect(first.onAction.mock.calls[0][0]).toBe('accept_file');
+    expect(first.onAction.mock.calls[0][1]).toBe(derivedConflict);
+    // 首键点击后确认态出现（收场仪式第 1 拍），动作栏锁定防重复决议
+    expect(first.container.querySelector('[data-decision-confirm="passed"]')).toBeTruthy();
+    expect(
+      (first.container.querySelector('[data-decision-actions] button') as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
 
-    fireEvent.click(buttons[0]);
-    expect(onAction.mock.calls[0][0]).toBe('accept_file');
-    expect(onAction.mock.calls[0][1]).toBe(derivedConflict);
-
-    fireEvent.click(buttons[1]);
-    expect(onAction.mock.calls[1][0]).toBe('accept_db');
-
-    fireEvent.click(buttons[2]);
-    expect(onAction.mock.calls[2][0]).toBe('detach');
+    expect(clickKey(1).onAction.mock.calls[0][0]).toBe('accept_db');
+    expect(clickKey(2).onAction.mock.calls[0][0]).toBe('detach');
   });
 });

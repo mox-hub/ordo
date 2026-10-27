@@ -14,11 +14,11 @@
 
 | 状态 | 数量 | 计入 LU 分母 | 必须在画廊展示 | 是否需消费方 |
 |---|---|---|---|---|
-| ✅ canonical | 321 | ✅ 计入 | ✅ 必须 | ✅ 必须 ≥1 |
-| 📦 standby | 17 | ❌ 不计 | ✅ 必须 | ❌ 不要求 |
+| ✅ canonical | 325 | ✅ 计入 | ✅ 必须 | ✅ 必须 ≥1 |
+| 📦 standby | 19 | ❌ 不计 | ✅ 必须 | ❌ 不要求 |
 | 🔒 internal | 6 | ❌ 不计 | ❌ 免 | — |
 | ⛔ deprecated | 1 | ❌ 不计 | ✅ 标记 deprecated | — |
-| **合计** | **345** | | | |
+| **合计** | **351** | | | |
 
 > **画廊豁免（H 类，2026-09-29 裁决）**：任何状态条目可登记 `galleryExempt`（一句话理由）豁免画廊 demo——豁免后不入覆盖率分母（`check-component-registry.mjs` §4.2 ④ 机器强制），但在设计系统页 Registry 对账区可见；**demo 豁免 ≠ 清退豁免**，五态裁决面不受影响。
 
@@ -35,7 +35,7 @@
 | Layout & Shells | 12 |
 | AI Execution | 25 |
 | App Patterns | 6 |
-| Semantic | 23 |
+| Semantic | 29 |
 | App Components | 203 |
 
 ## 待裁决清单（设计系统页「只看待裁决」视图同源）
@@ -264,13 +264,18 @@
 | sub-page-toolbar | `src/components/semantic/sub-page-toolbar.tsx` | ✅ canonical | — | — |
 | toolbar-row | `src/components/semantic/toolbar-row.tsx` | ✅ canonical | — | — |
 
-### Semantic（23）
+### Semantic（29）
 
-#### 语义组件层 `src/components/semantic/`（G 类：新增组件默认落点）（23）
+#### 语义组件层 `src/components/semantic/`（G 类：新增组件默认落点）（29）
 
 | 组件 | 路径 | 状态 | 消费方 | 治理说明 |
 |---|---|---|---|---|
 | ai-verdict-pill | `src/components/semantic/ai-verdict-pill.tsx` | ✅ canonical | — | — |
+| approval-card | `src/components/semantic/approval-card.tsx` | ✅ canonical | — | —（**aiNotes**：数据契约：title 必填（请求做什么）；riskSignal 为四档信号（复用 ai-verdict-pill 的 ConfidenceSignal 枚举，经 normalizeConfidenceSignal 防御归一，null=未知灰档），风险方向渲染内置于本件（3=红/2=黄/1=蓝/0=灰，与置信方向相反——高风险必须红），消费方只折算枚举不配色；riskLabel/preview/riskNote/requester 为 ReactNode 槽位，aiJudge advisory 附注由消费方组装传入。状态语义：resolved===undefined 为非受控，本件自管收场仪式（提交→确认覆盖层 role=status 约 1s→凭证行 决定+时间）；resolved 非 undefined 为受控，终态由父级数据驱动（null 待决 / approve / reject / neutral 系统处置），本件只发 onResolve；onResolve 返回 Promise 时等待落定再进确认态，reject 视为未决回滚待决态（错误呈现归消费方）。快捷键 Ctrl+Enter 批准 / Esc 拒绝，焦点在输入类控件内自动让路。禁区：禁绕过本件手写审批操作对（§22.4 收场仪式内置于本件，重写即丢仪式）；禁把 riskSignal 当置信度传（方向相反，高风险落绿档即事故）；禁在有 aiJudge 数据时省略 riskNote 附注（§22.3 观察位不丢）；消费方不得在卡内重复注册同键位快捷键） |
+| autonomy-dial | `src/components/semantic/autonomy-dial.tsx` | ✅ canonical | — | —（**aiNotes**：数据契约：value 走自治语义词表 locked/ask/auto 且必受控（配置入口，不持有态）；真实持久化形状是 Member.trustLevel（1/2/3），tier↔档位映射（观察者=locked/协助者=ask/受托者=auto，1:1 无损）由消费方持有，领域词表不进语义层；samples 只收真实动作样例（label+level），无动作→档位映射数据前禁造假样例（§9）。状态语义：三档即三态，selected 由 aria-checked 承载、滑块仅视觉；locked 档锁标 + lockedLabel 说明（为什么锁定）；disabled 整件退出键盘流。禁区：禁造第二套授权档位配置模型（B-07 唯一真相是 trustLevel 三级）、禁做非受控用法、禁绕过本件手写档位段选（宪法 §22.1 等人一等状态律的配置面承载件）） |
+| context-usage | `src/components/semantic/context-usage.tsx` | 📦 standby | — | —（**aiNotes**：数据契约：segments（分区 key/label/tokens）+ limit（窗口总量）双输入；前端尚无窗口上限契约，禁传估算 limit 冒充（诚实渲染，§22.2）；tokens 负数/NaN/Infinity 内部归一为 0，分区总和超限等比收缩渲染到 100%。状态语义：data-usage-level = neutral/warning/danger（<70/70-90/>90，常量已导出），格子恒用分区色不参与阈值染色；compaction（压缩）占比变化直接反映为格场变化，收敛动画二期。禁区：禁绕过本件手写上下文格场、禁传 key=free 的分区（free 由组件派生）、禁在有窗口上限数据前挂载本件（无 limit 即整件 null）） |
+| exec-tree | `src/components/semantic/exec-tree.tsx` | ✅ canonical | — | —（**aiNotes**：数据契约：root 每次全量传入、节点以 id 保位（展开面板等局部状态挂行组件，id 稳定即不丢）；cost/tokens 只传节点自身值，分支与全树汇总由本件遍历现算（汇总与折叠态无关，折叠不隐账）；重试产生新节点（新 id）由数据层挂 children，本件只渲染不覆盖。状态语义：六态 queued/running/waiting/done/failed/stopped——waiting=等人一等态（琥珀徽+「需要你处理」+头部计数 aria-live，视觉权级最高，禁 muted 降级）；running=蓝呼吸点+live 计时+CostFigure running 动效；done=绿勾；failed=红+可展开错误（mono 红字）+重试入口；queued/stopped=muted 降权。ExecutionRunStatus 映射：draft/planned→queued、in_progress→running、pending_approval→waiting、completed/approved→done、failed→failed、blocked/superseded/rejected→stopped。折叠=条件渲染（卸载，§22.5 inert 最强保证+深树渲染窗口），受控 collapsedIds/非受控 defaultCollapsedIds 双模。禁区：禁传预汇总成本值（§22.2 两处口径必漂移）；禁为演示伪造 children 假数据进生产（数据层平铺期只挂单根退化态）；禁把 waiting 渲染成 muted 灰态（§22.1）；禁覆盖式重试抹掉失败节点（§22.3，UI 层不得先于数据层抹历史）；连线/状态色必须走 TONE_CLASS 词表，禁自配色） |
+| inline-diff | `src/components/semantic/inline-diff.tsx` | 📦 standby | — | —（**aiNotes**：数据契约：before/after 均为纯文本（\\n 分段，词级 diff 与段落结构由本件按 token 流保持，词法=拉丁词/CJK 逐字/标点逐字/空白串，单侧超 2000 token 整段替换兜底）；逐段裁决默认全部=接受；appliedText 合成口径=逐段走裁决（接受取新增侧 added、拒绝取保留侧 removed）顺序拼接，onApply 只在点击「应用修改」时发出、不随裁决自动发出，onSegmentChange 携带全量段决策（含 unchanged 段恒 accepted）。状态语义：逐段裁决三态——changed 段接受/拒绝二态切换（默认接受）、unchanged 段恒接受不可裁决；预览态经预览开关（aria-pressed）实时合成 appliedText 可预览；before/after 一致只渲染一致性说明、无动作行；源文本变化（消费方回退重传 props）整体重置裁决与预览。禁区：禁引入 jsdiff 等外部 diff 依赖（§22.6 承载件零依赖，tokenize/diffTextSegments/synthesizeAppliedText 已导出可复用）；不做消费方原文持有与应用后回退——组件内无二次撤销态，消费方在 onApply 前自行保存 before、回退时重传 props；禁把本件当编辑器（只裁决不编辑文本）；禁消费方另造第二套 diff 呈现（§10.1 唯一实现）） |
 | subtask-badge | `src/components/semantic/subtask-badge.tsx` | ✅ canonical | — | — |
 | chip | `src/components/semantic/chip.tsx` | ✅ canonical | — | — |
 | nav-status-dot | `src/components/semantic/nav-status-dot.tsx` | ✅ canonical | — | — |
@@ -293,6 +298,7 @@
 | sticky-save-bar | `src/components/semantic/sticky-save-bar.tsx` | ✅ canonical | — | — |
 | settings-field-row | `src/components/semantic/settings-field-row.tsx` | ✅ canonical | — | — |
 | path-input | `src/components/semantic/path-input.tsx` | ✅ canonical | — | — |
+| cost-figure | `src/components/semantic/cost-figure.tsx` | ✅ canonical | — | —（**aiNotes**：数据契约：amount/tokens 双轨且单边可缺席（null 或非有限数=无数据），本件只渲染调用方传入的自身值，组/分支级汇总必须由父级从成员值现算后传单值。状态语义：running=爬升中动效态（数字滚动 240ms+微光扫过，reduced-motion 直出终值），终态不传 running 即静默；双轨均缺席渲染「—」占位诚实降级。禁区：禁传预汇总值、禁传 0 冒充无数据、禁绕过本件手写成本展示（宪法 §22.2 成本一等公民律）） |
 
 ### App Components（203）
 

@@ -85,7 +85,8 @@ describe('DecisionDeckStack（卡片堆叠、3D翻面、勾选过卡与翻页）
         expect(onAction).toHaveBeenCalledWith('accept', mockDecisions[0]);
         expect(screen.getByText('工单 #102 单元测试覆盖率达标验收')).toBeTruthy();
       },
-      { timeout: 2000 },
+      // 收场仪式节奏：约 1s 确认态 + 380ms 滑出后才上送并升起下一件（§22.4）
+      { timeout: 3000 },
     );
   });
 
@@ -102,10 +103,12 @@ describe('DecisionDeckStack（卡片堆叠、3D翻面、勾选过卡与翻页）
 
     await waitFor(
       () => {
-        expect(onAction).toHaveBeenCalledWith('reject', mockDecisions[0], undefined);
+        // 快捷驳回不带 opts：保持 2 参调用（opts 缺省不占位）
+        expect(onAction).toHaveBeenCalledWith('reject', mockDecisions[0]);
         expect(screen.getByText('工单 #102 单元测试覆盖率达标验收')).toBeTruthy();
       },
-      { timeout: 2000 },
+      // 收场仪式节奏：约 1s 确认态 + 380ms 滑出后才上送并升起下一件（§22.4）
+      { timeout: 3000 },
     );
   });
 

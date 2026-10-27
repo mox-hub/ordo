@@ -10,6 +10,13 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
 }));
 
+// 单元隔离：内联决策卡以桩渲染，工具卡分组逻辑不依赖 decision-card 真实实现
+vi.mock('@/shared/decision-card/decision-card', () => ({
+  DecisionCard: ({ decision }: { decision: { title: string } }) => (
+    <div data-testid="decision-card-stub">{decision.title}</div>
+  ),
+}));
+
 function renderList(messages: AssistantChatMessage[]) {
   return render(
     <AssistantChatSession initialMessages={messages} conversationId="conv-1">
@@ -80,5 +87,75 @@ describe('AssistantMessageList', () => {
       document.querySelector('[data-ai-component="assistant.tool-card"]'),
     ).toBeTruthy();
     expect(screen.getByText('已给出建议卡')).toBeTruthy();
+  });
+
+  it('连续 ≥2 张工具卡折叠为组汇总行（决策建议卡除外），text 段不被卷入', () => {
+    renderList([
+      {
+        id: 'a-tools',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-search_web',
+            toolCallId: 't1',
+            toolName: 'search_web',
+            state: 'output-available',
+            input: { query: 'x' },
+            output: { ok: 1 },
+          },
+          {
+            type: 'tool-search_web',
+            toolCallId: 't2',
+            toolName: 'search_web',
+            state: 'output-available',
+            input: { query: 'y' },
+            output: { ok: 2 },
+          },
+          { type: 'text', state: 'done', text: '查询完成' },
+        ] as AssistantChatMessage['parts'],
+      },
+    ]);
+
+    expect(
+      document.querySelector('[data-ai-component="assistant.tool-group"]'),
+    ).toBeTruthy();
+    // 头部与 aria-live 播报都会出现该文案
+    expect(screen.getAllByText('已用 2 个工具').length).toBeGreaterThanOrEqual(1);
+    // 组默认收起；text 段不被卷入组
+    expect(screen.getByText('查询完成')).toBeTruthy();
+    const groupHeader = screen
+      .getAllByText('已用 2 个工具')
+      .find((el) => el.closest('button'))?.closest('button');
+    const groupBody = document.getElementById(
+      groupHeader?.getAttribute('aria-controls') ?? '',
+    );
+    expect(groupBody?.hasAttribute('hidden')).toBe(true);
+  });
+
+  it('单个工具段保持独立卡片渲染，不强制成组', () => {
+    renderList([
+      {
+        id: 'a-one',
+        role: 'assistant',
+        parts: [
+          {
+            type: 'tool-search_web',
+            toolCallId: 't1',
+            toolName: 'search_web',
+            state: 'output-available',
+            input: { query: 'x' },
+            output: { ok: 1 },
+          },
+          { type: 'text', state: 'done', text: '好了' },
+        ] as AssistantChatMessage['parts'],
+      },
+    ]);
+
+    expect(
+      document.querySelector('[data-ai-component="assistant.tool-group"]'),
+    ).toBeNull();
+    expect(
+      document.querySelector('[data-ai-component="assistant.tool-card"]'),
+    ).toBeTruthy();
   });
 });

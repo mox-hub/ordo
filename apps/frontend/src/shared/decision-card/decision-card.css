@@ -173,6 +173,36 @@
   transition: transform 0.35s ease-out, opacity 0.3s ease-out !important;
 }
 
+/* ── 收场仪式动效（§22.4）：确认态覆盖层与凭证行入场，时长守 §7.1 白名单 180ms ── */
+.decision-card-confirm {
+  animation: decision-confirm-in 0.18s ease-out;
+}
+
+@keyframes decision-confirm-in {
+  from {
+    opacity: 0;
+    transform: scale(1.04);
+  }
+}
+
+.decision-receipt-in {
+  animation: decision-receipt-in 0.18s ease-out;
+}
+
+@keyframes decision-receipt-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .decision-card-confirm,
+  .decision-receipt-in {
+    animation: none !important;
+  }
+}
+
 /* ── 卡片堆叠层级（Deck Stacking Styles） ── */
 .decision-deck-stage {
   position: relative;

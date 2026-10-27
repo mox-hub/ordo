@@ -9,6 +9,8 @@
  *    `NaN` / `Infinity` / 负数耗时都归入此类。调用方需要占位符时自己写
  *    `formatDate(x) || '—'`——本模块不替调用方决定占位符长什么样，也不让一个脏数据
  *    把整棵 React 树炸掉（`date-fns` 对 Invalid Date 是抛 RangeError 的，必须在边界挡住）。
+ *    唯一例外是 `formatLiveDuration`：负值**钳 0**（live 计时竞态出的小负差值显 `0ms`
+ *    比空串诚实，见其 JSDoc）。
  * 3. **时区**：一律按用户**本地时区**渲染，存 UTC（§14.5）。不做 timeZone 入参——
  *    需要固定时区的是测试，不是产品。
  * 4. **locale**：默认取 i18n 的 `DEFAULT_LOCALE`（`zh-CN`）。输出会随语言变化的函数
@@ -255,4 +257,49 @@ export function formatDuration(ms: NumberInput): string {
   if (hours > 0) return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
   if (minutes > 0) return seconds > 0 ? `${minutes}m ${seconds}s` : `${minutes}m`;
   return `${seconds}s`;
+}
+
+/** 两位补零（分/秒的固定宽度槽位，配合调用方 `tabular-nums` 不抖动） */
+const pad2 = (n: number): string => String(n).padStart(2, '0');
+
+/**
+ * live 耗时（毫秒入参，§14.3 渐进精度口径）：时长随流逝越短越精、越长越粗——
+ *
+ * | 区间          | 输出形态        | 示例                |
+ * |---------------|-----------------|---------------------|
+ * | < 1s          | 整毫秒          | `850ms` / `0ms`     |
+ * | < 60s         | 0.1s 精度       | `12.3s`             |
+ * | < 1h          | `m分 ss秒`（补零） | `2m 05s`         |
+ * | < 24h         | `h时 mm分`（补零） | `3h 12m`         |
+ * | ≥ 24h         | `d天 h时`（不补零）| `2d 4h`          |
+ *
+ * 与 `formatDuration` 的分工：`formatDuration` 服务存量终态耗时口径（分档截断、
+ * 无天档、负数=脏数据返回 `''`），**保持不变**；本函数服务 live 计时/步骤耗时
+ * 等渐进精度场景（执行时间轴 / AI 工具卡 / 编排树共用，账本 G3 收编三处私有实现）。
+ *
+ * 边界行为：
+ * - **负值钳 0**——live 计时的 `now - startedAt` 在时钟竞态下可能出小负数，
+ *   显示 `0ms` 比空串诚实（有别于 `formatDuration` 的脏数据语义）。
+ * - `null` / `undefined` / `NaN` / ±Infinity 按模块惯例返回 `''`，不抛异常。
+ * - 分档以**原始毫秒值**判定后再取整：999.6ms 归毫秒档显示 `1000ms`
+ *   （与被收编的三处私有实现同行为，不额外聪明）。
+ *
+ * 输出仅文本；`font-mono tabular-nums` 由调用点负责（§14.4）。
+ */
+export function formatLiveDuration(ms: NumberInput): string {
+  const value = toNumber(ms);
+  if (value === null) return '';
+  const clamped = Math.max(0, value);
+  if (clamped < 1000) return `${Math.round(clamped)}ms`;
+  if (clamped < 60_000) return `${(clamped / 1000).toFixed(1)}s`;
+
+  const totalSeconds = Math.floor(clamped / 1000);
+  const days = Math.floor(totalSeconds / 86_400);
+  const hours = Math.floor((totalSeconds % 86_400) / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
+
+  if (days > 0) return `${days}d ${hours}h`;
+  if (hours > 0) return `${hours}h ${pad2(minutes)}m`;
+  return `${minutes}m ${pad2(seconds)}s`;
 }

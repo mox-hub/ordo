@@ -4,7 +4,7 @@
  * 后续 Clarify/Plan 等新决策类型 → 扩展 DecisionKind + 在此注册构建器。
  */
 import { useTranslation } from 'react-i18next';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import {
   AlertTriangle,
   ArrowRight,
@@ -47,10 +47,29 @@ import type {
   DecisionActionOptions,
   DecisionImpactItem,
   DecisionKind,
+  DecisionReceiptData,
   DecisionSlots,
+  DecisionUndoHandler,
 } from './types';
-import { decisionActionPolicy } from './types';
+import { decisionActionPolicy, resolveActionOutcome } from './types';
 import { DecisionCardShell } from './decision-card-shell';
+import { DecisionReceiptRow } from './decision-receipt';
+
+/** 审阅收场仪式缺省确认时长（§22.4：先确认态约 1s 再收场；参考节奏 1100ms 取整秒） */
+export const DEFAULT_CONFIRM_DURATION_MS = 1000;
+
+/** 单卡收场仪式状态机：确认态（决定已提交，视觉锁定）→ 凭证行（可撤销） */
+interface CeremonyState {
+  phase: 'confirming' | 'receipt';
+  action: string;
+  outcome: ReturnType<typeof resolveActionOutcome>;
+  /** 作出决定时携带的选项（原因 / clarify answer），Undo 时原样回传 */
+  opts?: DecisionActionOptions;
+  /** 决定时刻（毫秒），凭证行时间与确认态计时基准 */
+  at: number;
+  /** 上送是否已落定（成功）：确认态满时长且已落定才折叠为凭证行 */
+  settled: boolean;
+}
 
 /** 验收完成证据结构（与服务端 acceptance 模块 completionEvidence 对齐） */
 interface CompletionEvidence {
@@ -1332,6 +1351,18 @@ export interface DecisionCardProps {
   stamp?: 'passed' | 'rejected' | null;
   dismissDirection?: 'left' | 'right' | 'up' | null;
   variant?: 'auto' | 'vertical';
+  /**
+   * 审阅收场仪式（设计宪法 §22.4，缺省开启）：决议动作提交后先进入约 1s
+   * 「已通过 / 已驳回」确认态，再原位折叠为一行凭证（决定 + 时间 + 决定人），
+   * 不无声消失。卡片堆等自带仪式节奏的宿主应传 false 关闭（避免双重收场）。
+   */
+  ceremony?: boolean;
+  /** 确认态时长（毫秒），缺省 1000 */
+  confirmDurationMs?: number;
+  /** 撤销回调：传入即视为该决定可撤销，凭证行渲染 Undo 入口（§22.4） */
+  onUndo?: DecisionUndoHandler;
+  /** 显式声明可撤销（onUndo 未传时兜底开启 Undo 入口，点击只做本地恢复并需消费方自行回滚） */
+  undoable?: boolean;
 }
 
 export function DecisionCard({
@@ -1346,8 +1377,91 @@ export function DecisionCard({
   stamp,
   dismissDirection,
   variant,
+  ceremony = true,
+  confirmDurationMs = DEFAULT_CONFIRM_DURATION_MS,
+  onUndo,
+  undoable,
 }: DecisionCardProps) {
   const { t } = useTranslation();
+  const [ceremonyState, setCeremonyState] = useState<CeremonyState | null>(null);
+  // 卸载后不再回写状态：确认态计时器在卸载时由 effect cleanup 清除
+  const unmountedRef = useRef(false);
+  useEffect(() => {
+    unmountedRef.current = false;
+    return () => {
+      unmountedRef.current = true;
+    };
+  }, []);
+
+  // 确认态收场：决议上送已成功落定且确认态满 confirmDurationMs → 原位折叠为凭证行
+  useEffect(() => {
+    if (!ceremonyState || ceremonyState.phase !== 'confirming' || !ceremonyState.settled) return;
+    const remain = confirmDurationMs - (Date.now() - ceremonyState.at);
+    const timer = window.setTimeout(() => {
+      if (unmountedRef.current) return;
+      setCeremonyState((prev) => (prev ? { ...prev, phase: 'receipt' } : prev));
+    }, Math.max(0, remain));
+    return () => window.clearTimeout(timer);
+  }, [ceremonyState, confirmDurationMs]);
+
+  // opts 缺省时不占第三参：与既有 onAction 契约（2 参调用）保持逐字一致
+  const emit = (action: string, d: Decision, opts?: DecisionActionOptions) =>
+    opts === undefined ? onAction(action, d) : onAction(action, d, opts);
+
+  const handleAction = (action: string, d: Decision, opts?: DecisionActionOptions) => {
+    // 只读预览（回放数据）不进仪式；宿主传 ceremony=false 时自带收场节奏（卡片堆），直接透传
+    if (readOnly || !ceremony) {
+      emit(action, d, opts);
+      return;
+    }
+    // 非决议动作（微调 / 替代方案）不收场，直接透传
+    if (action === 'adjust' || action === 'alternative') {
+      emit(action, d, opts);
+      return;
+    }
+    // 仪式进行中防重入（确认态覆盖层已拦交互，此处兜底）
+    if (ceremonyState) return;
+    const outcome = resolveActionOutcome(action);
+    const at = Date.now();
+    setCeremonyState({ phase: 'confirming', action, outcome, opts, at, settled: false });
+    const settle = () => {
+      if (unmountedRef.current) return;
+      setCeremonyState((prev) => (prev && prev.phase === 'confirming' ? { ...prev, settled: true } : prev));
+    };
+    try {
+      const result = emit(action, d, opts) as unknown;
+      if (result instanceof Promise) {
+        // 折叠等「确认满时长 ∧ 上送成功」同时满足：服务端慢于确认时长就多等，
+        // 决不折叠出一张服务端并没落账的凭证；失败则回到待决（错误提示由消费方负责）
+        result.then(settle, (err: unknown) => {
+          console.error('[DecisionCard] resolve failed, ceremony reverted', err);
+          if (unmountedRef.current) return;
+          setCeremonyState(null);
+        });
+      } else {
+        settle();
+      }
+    } catch (err) {
+      console.error('[DecisionCard] resolve failed, ceremony reverted', err);
+      setCeremonyState(null);
+      return;
+    }
+  };
+
+  const canUndo = ceremonyState?.phase === 'receipt' && (undoable === true || onUndo != null);
+  const handleUndo = () => {
+    if (!ceremonyState) return;
+    const receipt: DecisionReceiptData = {
+      decision,
+      action: ceremonyState.action,
+      outcome: ceremonyState.outcome,
+      resolvedAt: ceremonyState.at,
+      opts: ceremonyState.opts,
+    };
+    setCeremonyState(null); // 恢复待决态（卡片原样回来）
+    onUndo?.(receipt);
+  };
+
   const builder = SLOT_BUILDERS[decision.kind];
   const slots: DecisionSlots = builder
     ? builder(decision, t as TFunc)
@@ -1357,12 +1471,30 @@ export function DecisionCard({
   // 挡掉后 clarify 退回 payload 预览（SLOT_BUILDERS 未注册 clarify 时的默认体）。
   const body =
     decision.kind === 'clarify' && !readOnly ? (
-      <ClarifyBody decision={decision} busy={busy} onAction={onAction} />
+      <ClarifyBody decision={decision} busy={busy} onAction={handleAction} />
     ) : (
       slots.body
     );
   const actions = KIND_ACTIONS[decision.kind];
   const policy = decisionActionPolicy(decision);
+
+  // 收场第 2 拍：凭证行原位替换卡面（决定 + 时间 + 决定人 + Undo 入口），不无声消失
+  if (ceremonyState?.phase === 'receipt') {
+    const receipt: DecisionReceiptData = {
+      decision,
+      action: ceremonyState.action,
+      outcome: ceremonyState.outcome,
+      resolvedAt: ceremonyState.at,
+      opts: ceremonyState.opts,
+    };
+    return (
+      <DecisionReceiptRow
+        receipt={receipt}
+        onUndo={canUndo ? handleUndo : undefined}
+        className={className}
+      />
+    );
+  }
 
   return (
     <DecisionCardShell
@@ -1375,24 +1507,36 @@ export function DecisionCard({
       cooldownSecs={policy.cooldownSecs}
       readOnly={readOnly}
       readOnlyNote={readOnlyNote}
-      onAction={onAction}
-      busy={busy}
+      onAction={handleAction}
+      busy={busy || ceremonyState?.phase === 'confirming'}
       className={className}
       isFlipped={isFlipped}
       onFlipChange={onFlipChange}
       stamp={stamp}
       dismissDirection={dismissDirection}
       variant={variant}
+      confirm={
+        ceremonyState?.phase === 'confirming' ? { outcome: ceremonyState.outcome } : null
+      }
     />
   );
 }
 
 export { DecisionCardShell } from './decision-card-shell';
+export {
+  DecisionReceiptRow,
+  DEFAULT_CEREMONY_TEXTS,
+  NEUTRAL_RECEIPT_LABEL,
+  type DecisionCeremonyTexts,
+} from './decision-receipt';
 export type {
   Decision,
   DecisionActionDef,
   DecisionCardAction,
   DecisionKind,
+  DecisionOutcome,
   DecisionProposer,
+  DecisionReceiptData,
+  DecisionUndoHandler,
   DecisionUrgency,
 } from './types';

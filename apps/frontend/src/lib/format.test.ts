@@ -7,6 +7,7 @@ import {
   formatDateShort,
   formatDateTime,
   formatDuration,
+  formatLiveDuration,
   formatNumber,
   formatPercent,
   formatRelative,
@@ -32,10 +33,11 @@ const ALL_FORMATTERS: Array<[string, AnyFormatter]> = [
   ['formatPercent', formatPercent],
   ['formatCurrency', formatCurrency],
   ['formatDuration', formatDuration],
+  ['formatLiveDuration', formatLiveDuration],
 ];
 
 describe('无效输入约定：一律返回空串，绝不抛异常', () => {
-  it('null / undefined 对全部 10 个函数都返回空串', () => {
+  it('null / undefined 对全部 11 个函数都返回空串', () => {
     for (const [name, fn] of ALL_FORMATTERS) {
       expect(fn(null), name).toBe('');
       expect(fn(undefined), name).toBe('');
@@ -71,9 +73,11 @@ describe('无效输入约定：一律返回空串，绝不抛异常', () => {
       expect(formatPercent(bad)).toBe('');
       expect(formatCurrency(bad)).toBe('');
       expect(formatDuration(bad)).toBe('');
+      expect(formatLiveDuration(bad)).toBe('');
     }
     expect(formatDuration(-1)).toBe('');
     expect(formatDuration(-3_600_000)).toBe('');
+    // 例外：formatLiveDuration 的负值不返回空串，钳 0（见下）
   });
 });
 
@@ -204,5 +208,32 @@ describe('formatDuration：1h 12m / 9m 23s / 45s / 300ms', () => {
   it('§14.3 的两个示例逐字对齐', () => {
     expect(formatDuration(4_320_000)).toBe('1h 12m');
     expect(formatDuration(5_400_000)).toBe('1h 30m');
+  });
+});
+
+describe('formatLiveDuration：live 计时渐进精度（账本 G3 收编三处私有实现）', () => {
+  it('五段渐进精度：850ms → 12.3s → 2m 05s → 3h 12m → 2d 4h', () => {
+    expect(formatLiveDuration(850)).toBe('850ms');
+    expect(formatLiveDuration(12_300)).toBe('12.3s');
+    expect(formatLiveDuration(125_000)).toBe('2m 05s');
+    expect(formatLiveDuration(11_520_000)).toBe('3h 12m');
+    expect(formatLiveDuration(187_200_000)).toBe('2d 4h');
+  });
+
+  it('档位边界：<1s / <60s / <1h / <24h 的贴边值各归各档', () => {
+    expect(formatLiveDuration(0)).toBe('0ms');
+    expect(formatLiveDuration(999)).toBe('999ms');
+    expect(formatLiveDuration(1_000)).toBe('1.0s');
+    expect(formatLiveDuration(59_900)).toBe('59.9s');
+    expect(formatLiveDuration(60_000)).toBe('1m 00s');
+    expect(formatLiveDuration(3_599_000)).toBe('59m 59s');
+    expect(formatLiveDuration(3_600_000)).toBe('1h 00m');
+    expect(formatLiveDuration(86_340_000)).toBe('23h 59m');
+    expect(formatLiveDuration(86_400_000)).toBe('1d 0h');
+  });
+
+  it('负值钳 0（live 计时竞态出的小负差值显 0ms，与 formatDuration 的脏数据空串有别）', () => {
+    expect(formatLiveDuration(-1)).toBe('0ms');
+    expect(formatLiveDuration(-3_600_000)).toBe('0ms');
   });
 });

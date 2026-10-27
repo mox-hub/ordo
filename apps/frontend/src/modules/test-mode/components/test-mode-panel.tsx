@@ -237,7 +237,7 @@ export function TestModePanel() {
                 src={captureState.screenshotDataUrl}
                 onChange={(dataUrl) => patchCapture({ annotatedDataUrl: dataUrl })}
               />
-              <div className="flex flex-col gap-1 text-xs text-text-secondary">
+              <div className="flex flex-col gap-1 text-xs text-content-text-secondary">
                 <span>{captureState.report.url}</span>
                 <span>
                   {t('testMode.capturedSummary', {
@@ -438,12 +438,12 @@ function QueueSection({
   }
   return (
     <div className="flex flex-col gap-1.5 rounded-md border border-border/60 p-2.5">
-      <span className="text-xs font-medium text-text-secondary">
+      <span className="text-xs font-medium text-content-text-secondary">
         {t('testMode.queue', { count: items.length })}
       </span>
       {items.map((item) => (
         <div key={item.id} className="flex items-center justify-between gap-2 text-xs">
-          <span className="truncate text-text-secondary" title={item.bundlePath}>
+          <span className="truncate text-content-text-secondary" title={item.bundlePath}>
             {item.bundlePath.split(/[\\/]/).pop()}
             {item.error ? ` · ${item.error}` : ''}
           </span>

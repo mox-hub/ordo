@@ -147,3 +147,49 @@ export function decisionActionPolicy(decision: Decision): DecisionActionPolicy {
 export type DecisionSlotsBuilder = (decision: Decision) => DecisionSlots;
 
 export type DecisionBodyRenderer = ComponentType<{ decision: Decision }>;
+
+// ─── 审阅收场仪式（设计宪法 §22.4：确认态 → 凭证行 → 可撤销） ───
+
+/**
+ * 决定结果的三档语义：通过（绿）/ 驳回（红）/ 中性处理（muted）。
+ * 由动作键推导（resolveActionOutcome），消费方可按 kind 覆写展示文案但不改语义档。
+ */
+export type DecisionOutcome = 'passed' | 'rejected' | 'neutral';
+
+/** 一次已作出的决定（凭证行数据）：决定 + 决定人 + 时间 + 撤销所需上下文 */
+export interface DecisionReceiptData {
+  decision: Decision;
+  /** 作出决定时的动作键（accept / reject / accept_file …），Undo 回调原样回传 */
+  action: string;
+  outcome: DecisionOutcome;
+  /** 展示文案（如「已通过」）；缺省按 outcome 推导（与印章文案同源） */
+  label?: string;
+  /** 决定时间（ISO 字符串或毫秒时间戳） */
+  resolvedAt: string | number;
+  /** 决定人展示名；缺省「我」（当前操作者） */
+  actor?: string;
+  /** 作出决定时携带的选项（原因 chips / clarify answer），Undo 回调原样回传 */
+  opts?: DecisionActionOptions;
+}
+
+/** 撤销回调签名：由消费方决定是否可撤销（传入即视为可撤销，组件展示 Undo 入口） */
+export type DecisionUndoHandler = (receipt: DecisionReceiptData) => void;
+
+/**
+ * 动作键 → 决定结果语义档。
+ * reject / cancel 归驳回；accept 族与 waive / detach 归通过；
+ * 其余（adjust / alternative 等非决议动作）归中性。
+ */
+export function resolveActionOutcome(action: string): DecisionOutcome {
+  if (action === 'reject' || action === 'cancel') return 'rejected';
+  if (
+    action === 'accept' ||
+    action === 'accept_file' ||
+    action === 'accept_db' ||
+    action === 'detach' ||
+    action === 'waive'
+  ) {
+    return 'passed';
+  }
+  return 'neutral';
+}

@@ -3,10 +3,11 @@
  * 状态色条 + 触发/用时 + 委托人→执行人 + 统计格 + 步骤构成条 + provider/mode 页脚。
  * 数据复用 run 详情 + 事件流水 hooks（打开才拉取）。
  */
-import { useMemo } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bot, Link2, X } from 'lucide-react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { CostFigure } from '@/components/semantic/cost-figure';
 import { StatusPill } from '@/components/semantic/status-pill';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
@@ -19,9 +20,7 @@ import {
 import {
   aggregateArtifacts,
   buildRunEventEntries,
-  formatCost,
   formatRunDuration,
-  formatTokens,
   resolveTriggerSource,
   summarizeEntryKinds,
   type RunEventKind,
@@ -80,7 +79,7 @@ function StatCell({
   label,
   accent,
 }: {
-  value: string;
+  value: ReactNode;
   label: string;
   accent?: string;
 }) {
@@ -123,8 +122,6 @@ export function RunOverviewCard({
     : (run.artifactsCount ?? 0);
   const stepCount = entries.length || run.stepsCount || 0;
 
-  const tokens = formatTokens(run.totalTokens);
-  const cost = formatCost(run.totalCost);
   const duration = formatRunDuration(run);
   const provider = run.providerId ?? data?.bindings?.[0]?.providerId ?? null;
   const triggerKey = TRIGGER_I18N[resolveTriggerSource(run)];
@@ -178,15 +175,15 @@ export function RunOverviewCard({
             ) : null}
           </div>
 
-          {/* 统计格 */}
+          {/* 统计格（成本位走 CostFigure 收编：§22.2 成本一等公民，缺席「—」诚实降级） */}
           <div className="grid grid-cols-4 gap-2">
             <StatCell
-              value={tokens ?? '—'}
+              value={<CostFigure size="md" tokens={run.totalTokens} running={stillActive} />}
               label={t('runDetails.card.tokens')}
               accent="text-accent-orange"
             />
             <StatCell
-              value={cost ?? '—'}
+              value={<CostFigure size="md" amount={run.totalCost} running={stillActive} />}
               label={t('runDetails.card.cost')}
               accent="text-accent-green"
             />

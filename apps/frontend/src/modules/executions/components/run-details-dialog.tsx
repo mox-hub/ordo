@@ -1,6 +1,6 @@
 /**
  * 运行详情面板 —— CLI 工具运行与内置 AI 助理运行共用的右滑 Sheet（对照运行详情设计稿）。
- * 头部（状态/目标/tokens/费用）→ 错误横幅 → 产出 chips → 时间轴 →
+ * 头部（状态/目标/tokens/费用）→ 错误横幅 → 产出 chips → 编排树 → 时间轴 →
  * 主区（事件流/原始日志页签）+ 右栏（步骤详情 / 运行信息面板）。
  * 数据：run 详情（steps 优先）+ events 流水轮询 + token 原始日志轮询。
  * 容器：日志流归 Sheet 不归 Dialog（F 类 F3.1 裁决，2xl 档）。
@@ -48,6 +48,11 @@ import { RunInfoPanel } from './run-info-panel';
 import { RunIsolationBadgeFromMetadata } from './run-isolation-badge';
 import { RunTimeline } from './run-timeline';
 import { StepDetailPanel } from './step-detail-panel';
+import {
+  ExecTree,
+  type ExecTreeNode,
+  type ExecTreeStatus,
+} from '@/components/semantic/exec-tree';
 
 type PillTone = 'default' | 'success' | 'warning' | 'danger' | 'info';
 
@@ -70,6 +75,49 @@ const TRIGGER_I18N: Record<TriggerSource, string> = {
   task: 'runDetails.trigger.task',
   api: 'runDetails.trigger.api',
 };
+
+/**
+ * B1 编排树单根退化态：ExecutionRunStatus → ExecTreeStatus 映射。
+ * 数据层目前平铺（Execution 无 parentExecutionId，仅 retryOfId 重试血缘），
+ * 此处根=本次执行、无子级；父子契约补齐后子级挂 children 即长出多级，映射表不变。
+ */
+const RUN_TO_TREE_STATUS: Record<ExecutionRunStatus, ExecTreeStatus> = {
+  draft: 'queued',
+  planned: 'queued',
+  in_progress: 'running',
+  pending_approval: 'waiting',
+  completed: 'done',
+  approved: 'done',
+  failed: 'failed',
+  blocked: 'stopped',
+  superseded: 'stopped',
+  rejected: 'stopped',
+};
+
+/** ISO → epoch ms（缺席 / 非法 → null，不造 0） */
+function isoToMs(iso?: string | null): number | null {
+  if (!iso) return null;
+  const ms = new Date(iso).getTime();
+  return Number.isFinite(ms) ? ms : null;
+}
+
+/** ExecutionRunDetail → ExecTreeNode（单根；waiting 语境文案为组件级中文常量，§16） */
+function runToTreeNode(data: RunDetailsData, subjectLabel: string | null): ExecTreeNode {
+  return {
+    id: data.id,
+    name: subjectLabel ?? data.id,
+    task: data.goal,
+    model: data.bindings?.[0]?.providerId ?? undefined,
+    status: RUN_TO_TREE_STATUS[data.status],
+    statusLabel:
+      data.status === 'pending_approval' ? '执行待审批，请在审批段处置' : undefined,
+    error: extractRunError(data),
+    cost: data.totalCost ?? null,
+    tokens: data.totalTokens ?? null,
+    startedAt: isoToMs(data.startedAt ?? data.createdAt),
+    endedAt: isoToMs(data.completedAt ?? data.terminatedAt),
+  };
+}
 
 function StatusPillFor({ status }: { status: ExecutionRunStatus }) {
   const { t } = useTranslation();
@@ -310,6 +358,13 @@ export function RunDetailsDialog({
 
             {/* 审批段（CAP-A-27）：人工执行验收流审批单 + AI 风险定级附注 */}
             <RunApprovalsSection approvals={data.approvals} />
+
+            {/* 编排树（账本 B1 单根退化态）：根=本次执行，处置归上方审批段、树内不重复接
+                onResolve；数据层父子契约落地后子级挂 children 即长出多级（§22.1/22.2/22.3） */}
+            <ExecTree
+              root={runToTreeNode(data, subjectLabel)}
+              className="shrink-0 border-b px-4 py-3"
+            />
 
             {hasTimeline && windowStart && windowEnd ? (
               <div className="shrink-0 border-b px-4 py-3">

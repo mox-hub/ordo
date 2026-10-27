@@ -12,8 +12,11 @@
  *
  * 阈值棘轮：提速前 6.53MB → 路由全量 lazy + i18n 拆语言 + AI markdown 懒岛后
  * 2.77MB（-58%）。2.77MB 里 react/base-ui/TanStack/zh-CN 语言包(~270KB)是合理
- * 常驻，余下 ~1MB 归因需 sourcemap visualizer 会话（批四结构批跟进）；阈值先
- * 钉 2900KB 防回退，归因后随批下修。
+ * 常驻，余下 ~1MB 归因需 sourcemap visualizer 会话（批四结构批跟进）。2026-10-27
+ * AI 组件执行批后实测 2908KB——增量主因 A18 就绪横幅（AiReadinessBanner）挂入
+ * shell-layout 主 chunk + AI 组件批 lazy 增量，无静态 import 回退（本轮新组件
+ * 全部经消费方 lazy chunk 加载，router 零改动）；阈值随批复核上调 2900→2950，
+ * sourcemap 归因会话后随批下修。
  */
 import fs from 'fs';
 import path from 'path';
@@ -23,7 +26,7 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const assetsDir = path.resolve(here, '../apps/frontend/dist/assets');
 
 const argIndex = process.argv.indexOf('--max-kb');
-const maxKb = argIndex > -1 ? Number(process.argv[argIndex + 1]) : 2900;
+const maxKb = argIndex > -1 ? Number(process.argv[argIndex + 1]) : 2950;
 
 if (!fs.existsSync(assetsDir)) {
   console.error(`[check-bundle] 未找到产物目录 ${assetsDir}，先运行 pnpm --filter frontend build`);

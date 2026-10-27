@@ -1,9 +1,15 @@
 /**
  * 决策卡片堆叠与集中批阅组件（Card Deck Stack）
  * 实现实体卡片堆叠（Deck Stacking）、3D 翻面（Card Flip）、印章落下与顺滑滑走（Dismiss Animation）、卡片翻页。
+ *
+ * 审阅收场仪式（设计宪法 §22.4，2026-10-27）：
+ * - 决定后先盖印确认态约 1s（决定图标 + 文案），再滑出离场——不无声消失；
+ * - 离场即在本卡组下方折叠为一行凭证（决定 + 时间 + 撤销入口），Undo 可恢复为待决态；
+ * - 一件离场后下一件自动升起进入焦点（按 id 过滤已决卡，父级刷新缩短列表不跳卡）；
+ * - 队列清空呈现完成态：完成语 + 本次批阅计数；待决数量变化经 aria-live 播报。
  */
 import './decision-card.css';
-import { useEffect, useState, useCallback, useRef } from 'react';
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import {
   Check,
@@ -15,8 +21,19 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import type { Decision, DecisionActionOptions } from './types';
-import { DecisionCard } from './decision-card';
+import type {
+  Decision,
+  DecisionActionOptions,
+  DecisionReceiptData,
+  DecisionUndoHandler,
+} from './types';
+import { resolveActionOutcome } from './types';
+import { DecisionCard, DEFAULT_CONFIRM_DURATION_MS } from './decision-card';
+import {
+  DecisionReceiptRow,
+  DEFAULT_CEREMONY_TEXTS,
+  type DecisionCeremonyTexts,
+} from './decision-receipt';
 
 export interface DecisionDeckStackProps {
   decisions: Decision[];
@@ -31,7 +48,20 @@ export interface DecisionDeckStackProps {
   className?: string;
   /** 伴随式紧凑尺寸（用于助手面板等受限视口伴随式呈现） */
   compact?: boolean;
+  /** 确认态时长（毫秒，§22.4 约定约 1s），缺省 1000 */
+  confirmDurationMs?: number;
+  /** 撤销回调：传入即视为可撤销，凭证行渲染 Undo 入口；点击恢复该卡为待决态并回调 */
+  onUndo?: DecisionUndoHandler;
+  /** 显式声明可撤销（onUndo 未传时兜底开启 Undo 入口，仅本地恢复待决态） */
+  undoable?: boolean;
+  /** 批阅进度变化（剩余待决 / 本次已处理 / 总数），供宿主 aria-live 播报与完成语 */
+  onProgress?: (info: { pending: number; resolvedCount: number; total: number }) => void;
+  /** 仪式文案覆写（缺省中文常量，i18n 登记批统一接入） */
+  ceremonyTexts?: Partial<DecisionCeremonyTexts>;
 }
+
+/** 确认态后滑出（印章落下 → 滑出）的滑出时长，与 decision-card.css 滑走动效对齐 */
+const DISMISS_MS = 380;
 
 export function DecisionDeckStack({
   decisions,
@@ -41,28 +71,159 @@ export function DecisionDeckStack({
   onIndexChange,
   className,
   compact = false,
+  confirmDurationMs = DEFAULT_CONFIRM_DURATION_MS,
+  onUndo,
+  undoable,
+  onProgress,
+  ceremonyTexts,
 }: DecisionDeckStackProps) {
   const { t } = useTranslation();
-  const [currentIndex, setCurrentIndex] = useState(0);
+  const texts = { ...DEFAULT_CEREMONY_TEXTS, ...ceremonyTexts };
+  // 本卡组内已作出的决定（id → 凭证）：桥接「点决定 → 父级刷新移除该卡」之间的空窗，
+  // 下一件按 id 过滤自动升起，父级列表缩短不跳卡、不双跳
+  const [resolved, setResolved] = useState<Map<string, DecisionReceiptData>>(new Map());
+  // Undo 恢复的待决卡（父级刷新尚未带回时本地兜底展示；带回后按 id 去重自然收敛）
+  const [reinstated, setReinstated] = useState<Decision[]>([]);
+  const [viewOffset, setViewOffset] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [activeStamp, setActiveStamp] = useState<'passed' | 'rejected' | null>(null);
   const [dismissDirection, setDismissDirection] = useState<'left' | 'right' | 'up' | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
+  const unmountedRef = useRef(false);
+
+  useEffect(() => {
+    unmountedRef.current = false;
+    return () => {
+      unmountedRef.current = true;
+    };
+  }, []);
+
+  const canUndo = undoable === true || onUndo != null;
+
+  /** 待决队列：Undo 兜底卡在前 + 父级列表过滤已决卡 */
+  const pending = useMemo(() => {
+    const base = decisions.filter((d) => !resolved.has(d.id));
+    const extra = reinstated.filter(
+      (r) => !resolved.has(r.id) && !decisions.some((d) => d.id === r.id),
+    );
+    return [...extra, ...base];
+  }, [decisions, resolved, reinstated]);
 
   const total = decisions.length;
-  const safeIndex = total > 0 ? Math.min(currentIndex, total - 1) : 0;
-  const currentDecision = decisions[safeIndex] ?? null;
+  const safeOffset = Math.max(0, Math.min(viewOffset, pending.length - 1));
+  const currentDecision = pending[safeOffset] ?? null;
 
   const onIndexChangeRef = useRef(onIndexChange);
+  const onProgressRef = useRef(onProgress);
   useEffect(() => {
     onIndexChangeRef.current = onIndexChange;
-  }, [onIndexChange]);
+    onProgressRef.current = onProgress;
+  }, [onIndexChange, onProgress]);
 
-  // 通知父级当前进度
+  // 进度上报：当前张在源列表中的位置（1 基）+ 剩余待决 / 本次已处理（供宿主播报）
   useEffect(() => {
-    onIndexChangeRef.current?.(Math.min(safeIndex + 1, total), total);
-  }, [safeIndex, total]);
+    if (unmountedRef.current) return;
+    const pos = currentDecision
+      ? Math.max(1, decisions.findIndex((d) => d.id === currentDecision.id) + 1)
+      : total;
+    onIndexChangeRef.current?.(Math.min(pos, total), total);
+    onProgressRef.current?.({
+      pending: pending.length,
+      resolvedCount: resolved.size,
+      total,
+    });
+  }, [currentDecision, decisions, total, pending.length, resolved.size]);
+
+  const sleep = (ms: number) => new Promise<void>((resolve) => window.setTimeout(resolve, ms));
+
+  /** 共用收场节奏：盖印确认态约 1s → 滑出 → 上送 → 记凭证 → 下一件自动升起 */
+  const performAction = useCallback(
+    async (
+      action: 'accept' | 'reject',
+      decision: Decision,
+      opts?: DecisionActionOptions,
+    ) => {
+      if (isProcessing) return;
+      setIsProcessing(true);
+      setActiveStamp(action === 'accept' ? 'passed' : 'rejected');
+
+      // §22.4 第 1 拍：确认态（印章 = 决定图标 + 文案）保持约 1s 再离场
+      await sleep(confirmDurationMs);
+      if (unmountedRef.current) return;
+      setDismissDirection(action === 'accept' ? 'right' : 'left');
+
+      // 滑出落地后再上送与记账（动作时刻即凭证时刻）；
+      // opts 缺省时不占第三参，与既有 onAction 契约（2 参调用）保持逐字一致
+      await sleep(DISMISS_MS);
+      if (unmountedRef.current) return;
+      try {
+        // onAction 可能返回 void 或 Promise——Promise.resolve 统一等待，同步异常仍走下方 catch
+        await Promise.resolve(
+          opts === undefined
+            ? onAction(action, decision)
+            : onAction(action, decision, opts),
+        );
+      } catch (err) {
+        // 上送失败：不升下一件、不记凭证，卡片回到待决态（错误提示由消费方 toast 负责）
+        console.error('[DecisionDeckStack] resolve failed, card restored', err);
+        setActiveStamp(null);
+        setDismissDirection(null);
+        setIsProcessing(false);
+        return;
+      }
+      setResolved((prev) => {
+        const next = new Map(prev);
+        next.set(decision.id, {
+          decision,
+          action,
+          outcome: resolveActionOutcome(action),
+          resolvedAt: Date.now(),
+          opts,
+        });
+        return next;
+      });
+      setActiveStamp(null);
+      setDismissDirection(null);
+      setIsFlipped(false);
+      setViewOffset(0);
+      setIsProcessing(false);
+    },
+    [isProcessing, onAction, confirmDurationMs],
+  );
+
+  // 勾选来过（通过并滑出）
+  const handlePass = useCallback(() => {
+    if (!currentDecision) return;
+    void performAction('accept', currentDecision);
+  }, [currentDecision, performAction]);
+
+  // 驳回并滑出
+  const handleReject = useCallback(
+    (opts?: DecisionActionOptions) => {
+      if (!currentDecision) return;
+      void performAction('reject', currentDecision, opts);
+    },
+    [currentDecision, performAction],
+  );
+
+  // 撤销：凭证行 → 恢复待决态并回调取消（下一件让位，该卡自动回到焦点）
+  const handleUndo = useCallback(
+    (receipt: DecisionReceiptData) => {
+      setResolved((prev) => {
+        const next = new Map(prev);
+        next.delete(receipt.decision.id);
+        return next;
+      });
+      setReinstated((prev) => [
+        receipt.decision,
+        ...prev.filter((d) => d.id !== receipt.decision.id),
+      ]);
+      setViewOffset(0);
+      onUndo?.(receipt);
+    },
+    [onUndo],
+  );
 
   // 快捷翻面
   const handleToggleFlip = useCallback(() => {
@@ -70,65 +231,19 @@ export function DecisionDeckStack({
     setIsFlipped((prev) => !prev);
   }, [isProcessing]);
 
-  // 勾选来过（通过并滑出）
-  const handlePass = useCallback(() => {
-    if (!currentDecision || isProcessing) return;
-    setIsProcessing(true);
-    setActiveStamp('passed');
-
-    // 150ms 盖章后向右滑出
-    setTimeout(() => {
-      setDismissDirection('right');
-    }, 150);
-
-    // 380ms 提交动作并切换到下一张
-    setTimeout(() => {
-      onAction('accept', currentDecision);
-      setActiveStamp(null);
-      setDismissDirection(null);
-      setIsFlipped(false);
-      setIsProcessing(false);
-      setCurrentIndex((prev) => prev + 1);
-    }, 380);
-  }, [currentDecision, isProcessing, onAction]);
-
-  // 驳回并滑出
-  const handleReject = useCallback(
-    (opts?: DecisionActionOptions) => {
-      if (!currentDecision || isProcessing) return;
-      setIsProcessing(true);
-      setActiveStamp('rejected');
-
-      // 150ms 盖章后向左滑出
-      setTimeout(() => {
-        setDismissDirection('left');
-      }, 150);
-
-      setTimeout(() => {
-        onAction('reject', currentDecision, opts);
-        setActiveStamp(null);
-        setDismissDirection(null);
-        setIsFlipped(false);
-        setIsProcessing(false);
-        setCurrentIndex((prev) => prev + 1);
-      }, 380);
-    },
-    [currentDecision, isProcessing, onAction],
-  );
-
   // 下一张 / 跳过
   const handleNext = useCallback(() => {
-    if (isProcessing || currentIndex >= total - 1) return;
+    if (isProcessing || safeOffset >= pending.length - 1) return;
     setIsFlipped(false);
-    setCurrentIndex((prev) => prev + 1);
-  }, [isProcessing, currentIndex, total]);
+    setViewOffset((prev) => Math.min(prev + 1, pending.length - 1));
+  }, [isProcessing, safeOffset, pending.length]);
 
   // 上一张
   const handlePrev = useCallback(() => {
-    if (isProcessing || currentIndex <= 0) return;
+    if (isProcessing || safeOffset <= 0) return;
     setIsFlipped(false);
-    setCurrentIndex((prev) => prev - 1);
-  }, [isProcessing, currentIndex]);
+    setViewOffset((prev) => Math.max(prev - 1, 0));
+  }, [isProcessing, safeOffset]);
 
   // 键盘快捷键监听
   useEffect(() => {
@@ -156,10 +271,19 @@ export function DecisionDeckStack({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handlePass, handleToggleFlip, handleNext, handlePrev]);
 
-  // 全部批阅完成态
-  if (!currentDecision || currentIndex >= total) {
+  // 凭证条：最新决定在前（与操作直觉一致：刚做的在最能看到的行）
+  const receipts = [...resolved.values()].reverse();
+
+  // 全部批阅完成态（§22.4：队列清空呈现完成态，计数归零 + 完成语播报，不给空白；
+  // 凭证条随完成态保留——已决定的不消失，可撤销的仍可撤销）
+  if (!currentDecision || pending.length === 0) {
     return (
-      <div className={cn('flex flex-col items-center justify-center p-8 text-center', className)}>
+      <div
+        role="status"
+        aria-live="polite"
+        data-decision-deck-done=""
+        className={cn('flex flex-col items-center justify-center p-8 text-center', className)}
+      >
         <div className="flex size-16 items-center justify-center rounded-xl bg-accent-green-light text-accent-green shadow-xs">
           <Sparkles className="size-8" />
         </div>
@@ -169,6 +293,31 @@ export function DecisionDeckStack({
         <p className="mt-1 text-sm text-muted-foreground">
           {t('decision.review.allDoneHint')}
         </p>
+        {resolved.size > 0 && (
+          <p
+            data-ai="deck-batch-count"
+            className="mt-2 rounded-full bg-accent-green-light px-3 py-1 text-xs font-medium text-accent-green tabular-nums"
+          >
+            {texts.batchDone(resolved.size)}
+          </p>
+        )}
+        {receipts.length > 0 && (
+          <div
+            data-decision-receipts=""
+            className="mt-4 w-full max-w-lg space-y-1.5 overflow-y-auto max-h-32 text-left"
+            aria-label={texts.batchDone(resolved.size)}
+          >
+            {receipts.map((receipt) => (
+              <DecisionReceiptRow
+                key={receipt.decision.id}
+                receipt={receipt}
+                undoLabel={texts.undo}
+                actorLabel={texts.actor}
+                onUndo={canUndo ? handleUndo : undefined}
+              />
+            ))}
+          </div>
+        )}
         {onAllDone && (
           <Button
             onClick={onAllDone}
@@ -184,7 +333,9 @@ export function DecisionDeckStack({
   }
 
   // 准备堆叠显示的卡片（最多同时渲染当前张和后两张底牌）
-  const visibleCards = decisions.slice(currentIndex, currentIndex + 3);
+  const visibleCards = pending.slice(safeOffset, safeOffset + 3);
+  const remainingLive =
+    pending.length > 0 ? texts.pendingLive(pending.length) : texts.doneLive;
 
   return (
     <div
@@ -195,6 +346,11 @@ export function DecisionDeckStack({
         className,
       )}
     >
+      {/* 待决计数播报（§8.5/§22.4：数量变化经 aria-live polite 播报，视觉隐藏） */}
+      <p role="status" aria-live="polite" className="sr-only" data-decision-live-count="">
+        {remainingLive}
+      </p>
+
       {/* ── 核心卡片堆叠舞台（Card Deck Stage） ── */}
       <div
         className={cn(
@@ -221,6 +377,7 @@ export function DecisionDeckStack({
             >
               <DecisionCard
                 decision={decision}
+                ceremony={false}
                 busy={busyId === decision.id || (isTop && isProcessing)}
                 onAction={(action, d, opts) => {
                   if (action === 'accept') {
@@ -254,7 +411,7 @@ export function DecisionDeckStack({
           variant="outline"
           size="icon"
           onClick={handlePrev}
-          disabled={currentIndex <= 0 || isProcessing}
+          disabled={safeOffset <= 0 || isProcessing}
           className={cn(
             'rounded-full border-border/80 shrink-0',
             compact ? 'size-8' : 'size-10',
@@ -322,7 +479,7 @@ export function DecisionDeckStack({
           variant="outline"
           size="icon"
           onClick={handleNext}
-          disabled={currentIndex >= total - 1 || isProcessing}
+          disabled={safeOffset >= pending.length - 1 || isProcessing}
           className={cn(
             'rounded-full border-border/80 shrink-0',
             compact ? 'size-8' : 'size-10',
@@ -334,6 +491,28 @@ export function DecisionDeckStack({
           <ChevronRight className={compact ? 'size-4' : 'size-5'} />
         </Button>
       </div>
+
+      {/* ── 凭证条（§22.4 第 2 拍）：已决定的不消失，折叠为一行凭证（决定 + 时间 + 撤销） ── */}
+      {receipts.length > 0 && (
+        <div
+          data-decision-receipts=""
+          className={cn(
+            'mt-3 w-full space-y-1.5 overflow-y-auto',
+            compact ? 'decision-deck-actions-compact max-h-24' : 'max-w-lg max-h-32',
+          )}
+          aria-label={texts.batchDone(resolved.size)}
+        >
+          {receipts.map((receipt) => (
+            <DecisionReceiptRow
+              key={receipt.decision.id}
+              receipt={receipt}
+              undoLabel={texts.undo}
+              actorLabel={texts.actor}
+              onUndo={canUndo ? handleUndo : undefined}
+            />
+          ))}
+        </div>
+      )}
 
       {/* 快捷键提示 */}
       <p className="mt-3 text-center text-2xs text-muted-foreground">
