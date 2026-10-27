@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useNavigate } from 'react-router-dom';
 import { useOnboarding } from '../hooks/use-onboarding';
 import type { CreateProjectData } from '../api/onboarding-api';
 import { EnvironmentStep } from '../components/environment-step';
@@ -16,6 +17,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { useAiReadiness } from '@/modules/ai-hub/hooks/use-ai-readiness';
 import { cn } from '@/lib/utils';
 import { useAppStore } from '@/infrastructure/store/app-store';
 import { persistOnboardingToShell } from '@/shared/lib/desktop-session';
@@ -32,6 +44,7 @@ import {
   Inbox,
   SkipForward,
   Sparkles,
+  TriangleAlert,
   Users,
   Zap,
   Shield,
@@ -197,17 +210,116 @@ function CreateProjectStep({ isPending, createProject }: CreateProjectStepProps)
   );
 }
 
+/**
+ * 完成步「内置 AI」就绪状态卡（CAP-A-18 硬引导切片，GAP-T-73）。
+ *
+ * 原版是无条件绿勾——用户跳过「配置 AI」也显示「AI 已就绪」，是完成页的
+ * 诚实化死角。改为消费 useAiReadiness（与全局悬浮横幅/设置页同源缓存）：
+ * - ready：维持绿卡；
+ * - unavailable/unconfigured/unverified：转全宽琥珀卡 + 双 CTA（去 AI 管理 / 回上一步）；
+ * - loading/unknown：中性灰（不假绿也不吓人）。
+ * 文案复用 aiHub.readiness.*（悬浮横幅同款），仅回退/检测态补 onboarding 专属键。
+ */
+function CompleteAiReadinessCard({
+  onGoConfigure,
+  onBackToAiStep,
+}: {
+  onGoConfigure: () => void;
+  onBackToAiStep: () => void;
+}) {
+  const { t } = useTranslation();
+  const { state } = useAiReadiness();
+
+  if (state === 'ready') {
+    return (
+      <div className="flex items-center gap-3 rounded-lg border border-border p-3">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
+          <Bot className="h-4 w-4 text-primary" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium">{t('onboarding.complete.aiReady.title')}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{t('onboarding.complete.aiReady.description')}</p>
+        </div>
+        <CheckCircle className="ml-auto h-5 w-5 shrink-0 text-accent-green" />
+      </div>
+    );
+  }
+
+  if (state === 'loading' || state === 'unknown') {
+    return (
+      <div className="flex items-center gap-3 rounded-lg border border-border p-3 opacity-80">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-muted">
+          <Bot className="h-4 w-4 text-muted-foreground" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-sm font-medium">{t('onboarding.complete.aiReady.title')}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {state === 'loading'
+              ? t('onboarding.complete.aiReadiness.checking')
+              : t('onboarding.complete.aiReadiness.cannotConfirm')}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const content = {
+    unavailable: {
+      titleKey: 'aiHub.readiness.unavailableTitle',
+      descKey: 'aiHub.readiness.unavailableDesc',
+    },
+    unconfigured: {
+      titleKey: 'aiHub.readiness.unconfiguredTitle',
+      descKey: 'aiHub.readiness.unconfiguredDesc',
+    },
+    unverified: {
+      titleKey: 'aiHub.readiness.unverifiedTitle',
+      descKey: 'aiHub.readiness.unverifiedDesc',
+    },
+  }[state];
+
+  return (
+    <div className="flex flex-col gap-3 rounded-lg border border-accent-orange/40 bg-accent-orange/5 p-3 sm:col-span-2">
+      <div className="flex items-start gap-3">
+        <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-accent-orange/15">
+          <TriangleAlert className="h-4 w-4 text-accent-orange" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium">{t(content.titleKey)}</p>
+          <p className="mt-0.5 text-xs leading-relaxed text-muted-foreground">
+            {t(content.descKey)}
+          </p>
+        </div>
+      </div>
+      <div className="flex justify-end gap-2">
+        <Button size="xs" variant="outline" onClick={onBackToAiStep}>
+          {t('onboarding.complete.aiReadiness.backToStep')}
+        </Button>
+        <Button size="xs" onClick={onGoConfigure}>
+          {t('aiHub.readiness.goConfigure')}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function CompleteStep({
   onFinish,
   onWatchReplay,
   onCreateAgent,
+  onGoConfigure,
+  onBackToAiStep,
   aiStepSkipped,
 }: {
   onFinish: () => void;
   /** 向导完成 → 先看回放（S6）。次序见 `use-onboarding.watchReplayThenStart` */
   onWatchReplay: () => void;
-  /** 跳过配置 AI 者的出口：落完成标记 → 成员页自动弹 AI 员工创建（见 use-onboarding.finishToCreateAgent） */
+  /** 跳过配置 AI 者的出口：落完成标记 → AI 员工创建页（见 use-onboarding.finishToCreateAgent） */
   onCreateAgent: () => void;
+  /** 就绪卡「去 AI 管理」：收口向导（落完成标记）后跳设置 AI 管理页 */
+  onGoConfigure: () => void;
+  /** 就绪卡「回上一步」：跳回 add-ai 配置步 */
+  onBackToAiStep: () => void;
   /** 「配置 AI」步是否被跳过——跳过者系统里没有 AI 员工，完成步补行动卡 */
   aiStepSkipped: boolean;
 }) {
@@ -260,16 +372,12 @@ function CompleteStep({
           <CheckCircle className="ml-auto h-5 w-5 shrink-0 text-accent-green" />
         </div>
 
-        <div className="flex items-center gap-3 rounded-lg border border-border p-3">
-          <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary/10">
-            <Bot className="h-4 w-4 text-primary" />
-          </div>
-          <div className="min-w-0">
-            <p className="text-sm font-medium">{t('onboarding.complete.aiReady.title')}</p>
-            <p className="mt-0.5 text-xs text-muted-foreground">{t('onboarding.complete.aiReady.description')}</p>
-          </div>
-          <CheckCircle className="ml-auto h-5 w-5 shrink-0 text-accent-green" />
-        </div>
+        {/* 内置 AI 就绪状态卡（CAP-A-18 硬引导切片）：按 useAiReadiness 真实状态
+            渲染——未就绪转全宽琥珀卡带双 CTA，不再无条件绿勾（诚实化） */}
+        <CompleteAiReadinessCard
+          onGoConfigure={onGoConfigure}
+          onBackToAiStep={onBackToAiStep}
+        />
 
         {/* 完成后第一站指引（CAP-A-18 内容同步）：G5-b integration 卡是新手
             第一个 AI 确认时刻——AI 干完活发来合入提议，人确认才生效。
@@ -338,6 +446,7 @@ function CompleteStep({
 
 export function OnboardingWizard() {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   const setOnboardingCompleted = useAppStore((s) => s.setOnboardingCompleted);
   const setOnboardingOpen = useAppStore((s) => s.setOnboardingOpen);
   const {
@@ -354,6 +463,44 @@ export function OnboardingWizard() {
     createProject,
     goToStep,
   } = useOnboarding();
+
+  // 就绪度（与悬浮横幅同源缓存）：仅用于 add-ai 步离开拦截
+  const { state: aiReadinessState } = useAiReadiness();
+  const [skipConfirmOpen, setSkipConfirmOpen] = useState(false);
+  const aiSkipConfirmShownRef = useRef(false);
+  const pendingLeaveRef = useRef<(() => void) | null>(null);
+
+  /**
+   * add-ai 步离开拦截（CAP-A-18 硬引导切片，GAP-T-73）：内置 AI 完全不可用
+   * （L1=零可用厂家）时，首次点「跳过/下一步」弹 AlertDialog 说明后果，可坚持
+   * 离开——诚实告知不强拦（A-14「可跳过不设门禁」裁决延续）。本轮向导会话
+   * 只拦一次；其余状态（已可用/查询中/查询失败）直接放行不添堵。
+   */
+  const leaveAddAiStep = (proceed: () => void) => {
+    if (
+      currentStepData?.id !== 'add-ai' ||
+      aiSkipConfirmShownRef.current ||
+      aiReadinessState !== 'unavailable'
+    ) {
+      proceed();
+      return;
+    }
+    aiSkipConfirmShownRef.current = true;
+    pendingLeaveRef.current = proceed;
+    setSkipConfirmOpen(true);
+  };
+
+  /** 就绪卡「去 AI 管理」：收口向导（与手动关闭同语义落完成标记）后跳设置 AI 管理页 */
+  const handleGoConfigureAi = () => {
+    handleDismiss();
+    navigate('/app/settings/ai');
+  };
+
+  /** 就绪卡「回上一步」：跳回 add-ai 配置步（左侧步骤轨对历史步可点回跳同款） */
+  const handleBackToAiStep = () => {
+    const index = state.steps.findIndex((step) => step.id === 'add-ai');
+    if (index >= 0) goToStep(index);
+  };
 
   /**
    * 主动触及一次性消费（2026-10-03 改版裁决）：向导被关闭（ESC/遮罩/关闭钮）即视为
@@ -390,6 +537,8 @@ export function OnboardingWizard() {
             onFinish={() => finishOnboarding.mutate()}
             onWatchReplay={watchReplayThenStart}
             onCreateAgent={finishToCreateAgent}
+            onGoConfigure={handleGoConfigureAi}
+            onBackToAiStep={handleBackToAiStep}
             aiStepSkipped={
               state.steps.find((step) => step.id === 'add-ai')?.status === 'skipped'
             }
@@ -414,14 +563,15 @@ export function OnboardingWizard() {
       : t('onboarding.common.next');
 
   return (
-    <Dialog
-      open
-      onOpenChange={(next) => {
-        if (!next) {
-          handleDismiss();
-        }
-      }}
-    >
+    <>
+      <Dialog
+        open
+        onOpenChange={(next) => {
+          if (!next) {
+            handleDismiss();
+          }
+        }}
+      >
       {/* 双栏规格（2026-10-11 七步统一批，896px=Dialog wide 档；高度升 760px 档，
           85vh 上限走既有 dialog-scroll 语义 token）：左竖步骤轨（可点回跳）
           + 右内容区内滚 + 固定底部操作栏（跳过/下一步收栏，不再随内容滚动） */}
@@ -517,7 +667,10 @@ export function OnboardingWizard() {
                   {t('onboarding.common.prev')}
                 </Button>
                 <div className="flex gap-2">
-                  <Button variant="outline" onClick={() => skipStep(currentStepData?.id || '')}>
+                  <Button
+                    variant="outline"
+                    onClick={() => leaveAddAiStep(() => skipStep(currentStepData?.id || ''))}
+                  >
                     {skipLabel}
                   </Button>
                   {isCreateProjectStep ? (
@@ -529,7 +682,7 @@ export function OnboardingWizard() {
                       {nextLabel}
                     </Button>
                   ) : (
-                    <Button onClick={nextStep}>
+                    <Button onClick={() => leaveAddAiStep(nextStep)}>
                       {nextLabel}
                       <ChevronRight className="ml-1 h-4 w-4" />
                     </Button>
@@ -540,6 +693,40 @@ export function OnboardingWizard() {
           </section>
         </div>
       </DialogContent>
-    </Dialog>
+      </Dialog>
+
+      {/* add-ai 步离开确认（§20.1 浮层串行律：AlertDialog Portal 同层，不嵌 Dialog）：
+          AI 完全不可用时的「仍要跳过」出口——诚实说明后果，选择权留给用户 */}
+      <AlertDialog
+        open={skipConfirmOpen}
+        onOpenChange={(next) => {
+          setSkipConfirmOpen(next);
+          if (!next) pendingLeaveRef.current = null;
+        }}
+      >
+        <AlertDialogContent size="sm">
+          <AlertDialogHeader>
+            <AlertDialogTitle>{t('onboarding.skipConfirm.title')}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {t('onboarding.skipConfirm.body')}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{t('onboarding.skipConfirm.cancel')}</AlertDialogCancel>
+            <AlertDialogAction
+              variant="outline"
+              onClick={() => {
+                setSkipConfirmOpen(false);
+                const proceed = pendingLeaveRef.current;
+                pendingLeaveRef.current = null;
+                proceed?.();
+              }}
+            >
+              {t('onboarding.skipConfirm.confirm')}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

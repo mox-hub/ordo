@@ -35,6 +35,17 @@ interface SilentScenario {
     context: Record<string, unknown>,
     deps: { prisma: PrismaService },
   ) => Promise<Record<string, unknown>>;
+  /**
+   * 可选的输出收口钩子（extractJsonObject 之后调用）：模型自由文本一律不直接出
+   * 契约——按 prepareContext 装载的候选做白名单校验，越界值置 null/回落而非抛错
+   * （草稿缺槽位由前端标「AI 未给出，请手动补」）。member-profile-draft 首用
+   * （CAP-A-18，GAP-T-74）。
+   */
+  postProcess?: (
+    data: Record<string, unknown>,
+    context: Record<string, unknown>,
+    deps: { prisma: PrismaService },
+  ) => Promise<Record<string, unknown>> | Record<string, unknown>;
 }
 
 export const SILENT_SCENARIOS: Record<string, SilentScenario> = {
@@ -1026,6 +1037,101 @@ ${JSON.stringify(snapshot)}
 只输出 JSON：{"headline": "...", "highlights": ["..."], "blockers": [{"what": "...", "who": "...", "since": "...", "why": "...", "whatYouCanDo": "..."}], "needsYou": [{"decisionId": "...", "oneLineWhy": "...", "urgency": "blocking"}], "honestGaps": ["..."]}`;
     },
   },
+  'member-profile-draft': {
+    description:
+      '「AI 创建 AI 同事」档案代写（CAP-A-18，GAP-T-74）：按用户一句自然语言描述，对照可用模型/CLI/执行角色候选代写 AI 员工全部入职档案；草稿分卡由人逐字段确认后走 POST /members 落库，AI 只代写不落库',
+    prepareContext: async (context, { prisma }) => {
+      const brief =
+        typeof context.brief === 'string' ? context.brief.trim() : '';
+      if (!brief) {
+        throw new BadRequestException('AI 员工档案代写缺少 brief（一句描述）');
+      }
+      // 候选清单（权威，来自数据库）：建议字段只能从中选，选不出置 null——防杜撰
+      const [modelCandidates, cliCandidates, roleCandidates, sampleAgents] =
+        await Promise.all([
+          prisma.aIModelConfig.findMany({
+            where: { enabled: true },
+            select: { name: true, provider: true },
+            orderBy: [{ provider: 'asc' }, { name: 'asc' }],
+            take: 40,
+          }),
+          prisma.cliProviderConfig.findMany({
+            where: { enabled: true },
+            select: { providerId: true, displayName: true, model: true },
+            orderBy: { providerId: 'asc' },
+          }),
+          prisma.projectRoleDefinition.findMany({
+            where: { projectId: null },
+            select: {
+              key: true,
+              name: true,
+              executionRole: true,
+              description: true,
+            },
+            orderBy: { key: 'asc' },
+          }),
+          prisma.member.findMany({
+            where: { type: 'ai_agent' },
+            select: { displayName: true, title: true, personalPrompt: true },
+            orderBy: { createdAt: 'desc' },
+            take: 3,
+          }),
+        ]);
+      return {
+        brief,
+        feedback:
+          typeof context.feedback === 'string' ? context.feedback.trim() : '',
+        candidates: {
+          models: modelCandidates.map((m) => ({
+            provider: m.provider,
+            model: m.name,
+          })),
+          cliProviders: cliCandidates.map((c) => ({
+            id: c.providerId,
+            displayName: c.displayName ?? c.providerId,
+            defaultModel: c.model ?? '',
+          })),
+          executionRoles: roleCandidates.map((r) => ({
+            key: r.key,
+            name: r.name,
+            executionRole: r.executionRole,
+            description: r.description ?? '',
+          })),
+        },
+        existingAgents: sampleAgents.map((a) => ({
+          displayName: a.displayName,
+          title: a.title ?? '',
+          personalPromptExcerpt: (a.personalPrompt ?? '').slice(0, 160),
+        })),
+      };
+    },
+    buildInstructions: (context) => {
+      const brief = String(context.brief ?? '').trim();
+      if (!brief) {
+        throw new BadRequestException('AI 员工档案代写缺少 brief（一句描述）');
+      }
+      const feedback = String(context.feedback ?? '').trim();
+      const candidates = (context.candidates ?? {}) as Record<string, unknown>;
+      const existing = Array.isArray(context.existingAgents)
+        ? context.existingAgents
+        : [];
+      return `你是项目管理系统的主 AI 助理「小周」。用户想招一位「AI 同事」（AI 员工），只给了一句自然语言描述，请你代写 TA 的完整入职档案。草稿会先呈现给用户逐字段确认修改后才创建——你只代写，不落库。
+用户描述：${brief}
+${feedback ? `用户对上一稿的反馈：${feedback}\n` : ''}
+可用候选（权威，来自数据库；建议字段只能从中选，选不出就置 null 并在 rationale 说明）：
+${JSON.stringify(candidates)}
+${existing.length > 0 ? `现有 AI 同事（风格参照，避免重名与职责撞车）：${JSON.stringify(existing)}` : ''}
+
+写法要求：
+- displayName：贴合职责的称呼（2~8 字，可带人味但不做作）；handle：kebab-case 英文短标识，不得与现有同事重复。
+- personalPrompt：Markdown 80~250 字，三段式——职责边界（做什么/不做什么）、工作方式（产出物形态/自查要点）、协作约定（何时汇报/何时升级找人）。条目具体可执行，不写空话。
+- thinkingLevel 只能是 minimal|low|medium|high|max，按职责复杂度选。
+- defaultCliProviderId 只能取候选 cliProviders[].id；suggestedProvider+suggestedModel 必须是候选 models[] 里的一对组合；defaultExecutionRole 只能取候选 executionRoles[].executionRole。
+- rationale 三行说人话：为什么推荐这个模型、为什么这个执行角色、个人提示词的设计思路。
+只输出 JSON：{"displayName":"...","handle":"...","title":"...","description":"...","personalPrompt":"...","thinkingLevel":"medium","defaultCliProviderId":null,"defaultExecutionRole":null,"suggestedProvider":null,"suggestedModel":null,"tags":["..."],"rationale":{"model":"...","role":"...","prompt":"..."}}`;
+    },
+    postProcess: (data, context) => sanitizeMemberProfileDraft(data, context),
+  },
 };
 
 /**
@@ -1379,6 +1485,115 @@ export function extractJsonObject(text: string): Record<string, unknown> {
   }
 }
 
+/** member-profile-draft 思考强度值域（与 team 模块 THINKING_LEVELS 同值域，独立声明防跨模块 import） */
+const MEMBER_DRAFT_THINKING_LEVELS = [
+  'minimal',
+  'low',
+  'medium',
+  'high',
+  'max',
+] as const;
+
+/** 系统级保留 handle：草稿撞上即弃用（xiaozhou=系统助理小周；ai-assistant=引导默认员工） */
+const MEMBER_DRAFT_RESERVED_HANDLES = new Set(['xiaozhou', 'ai-assistant']);
+
+/**
+ * member-profile-draft 输出白名单收口（GAP-T-74「AI 只代写」红线的服务端半）：
+ * 模型自由文本一律不信任——候选外的模型/CLI/角色建议置 null、thinkingLevel 枚举外
+ * 回落 medium、handle 规范化为 kebab-case（保留名撞上即弃用）、tags 只留字符串且
+ * 截到 6 个、输出只放行白名单键。置 null 而不抛错：草稿缺槽位由前端标
+ * 「AI 未给出，请手动补」，用户永远能继续（六问⑤）。
+ */
+export function sanitizeMemberProfileDraft(
+  data: Record<string, unknown>,
+  context: Record<string, unknown>,
+): Record<string, unknown> {
+  const str = (value: unknown): string | null => {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    return trimmed ? trimmed : null;
+  };
+
+  const candidates = (context.candidates ?? {}) as {
+    models?: Array<{ provider?: unknown; model?: unknown }>;
+    cliProviders?: Array<{ id?: unknown }>;
+    executionRoles?: Array<{ executionRole?: unknown }>;
+  };
+  const modelSet = new Set(
+    (candidates.models ?? [])
+      .filter(
+        (m) => typeof m.provider === 'string' && typeof m.model === 'string',
+      )
+      .map((m) => `${m.provider}::${m.model}`),
+  );
+  const cliSet = new Set(
+    (candidates.cliProviders ?? [])
+      .filter((c) => typeof c.id === 'string')
+      .map((c) => c.id as string),
+  );
+  const roleSet = new Set(
+    (candidates.executionRoles ?? [])
+      .filter((r) => typeof r.executionRole === 'string')
+      .map((r) => r.executionRole as string),
+  );
+
+  const rawHandle = (str(data.handle) ?? '').toLowerCase();
+  const normalizedHandle = rawHandle
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+  const handle =
+    normalizedHandle && !MEMBER_DRAFT_RESERVED_HANDLES.has(normalizedHandle)
+      ? normalizedHandle
+      : null;
+
+  const cliSuggestion = str(data.defaultCliProviderId);
+  const roleSuggestion = str(data.defaultExecutionRole);
+  const suggestedProvider = str(data.suggestedProvider);
+  const suggestedModel = str(data.suggestedModel);
+  const modelPairValid =
+    suggestedProvider !== null &&
+    suggestedModel !== null &&
+    modelSet.has(`${suggestedProvider}::${suggestedModel}`);
+
+  const thinkingSuggestion = str(data.thinkingLevel);
+
+  return {
+    displayName: str(data.displayName),
+    handle,
+    title: str(data.title),
+    description: str(data.description),
+    personalPrompt: str(data.personalPrompt),
+    thinkingLevel: (MEMBER_DRAFT_THINKING_LEVELS as readonly string[]).includes(
+      thinkingSuggestion ?? '',
+    )
+      ? thinkingSuggestion
+      : 'medium',
+    defaultCliProviderId:
+      cliSuggestion !== null && cliSet.has(cliSuggestion)
+        ? cliSuggestion
+        : null,
+    defaultExecutionRole:
+      roleSuggestion !== null && roleSet.has(roleSuggestion)
+        ? roleSuggestion
+        : null,
+    suggestedProvider: modelPairValid ? suggestedProvider : null,
+    suggestedModel: modelPairValid ? suggestedModel : null,
+    tags: Array.isArray(data.tags)
+      ? data.tags
+          .map((tag) => str(tag))
+          .filter((tag): tag is string => tag !== null)
+          .slice(0, 6)
+      : [],
+    rationale:
+      data.rationale &&
+      typeof data.rationale === 'object' &&
+      !Array.isArray(data.rationale)
+        ? data.rationale
+        : null,
+  };
+}
+
 @Injectable()
 export class AssistantSilentService {
   private readonly logger = new Logger(AssistantSilentService.name);
@@ -1585,7 +1800,13 @@ export class AssistantSilentService {
     );
     const durationMs = Date.now() - startedAt;
 
-    const data = extractJsonObject(result.content ?? '');
+    let data = extractJsonObject(result.content ?? '');
+    // 场景级输出收口：模型自由文本不直接出契约（候选白名单/枚举回落，见接口注）
+    if (def.postProcess) {
+      data = await def.postProcess(data, effectiveContext, {
+        prisma: this.prisma,
+      });
+    }
 
     const modelName = result.model ?? adapter.getModelName();
     const promptTokens = result.tokens?.prompt ?? 0;

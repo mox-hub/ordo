@@ -219,14 +219,15 @@ export function useOnboarding() {
   }, [completeOnboarding, navigate]);
 
   /**
-   * 跳过了「配置 AI」的用户在完成步的出口（CAP-A-18 AI 员工引导闭环切片）：
-   * 落完成标记关向导 → 直达成员页并自动弹「新建成员」对话框（AI 页签预填，
-   * members-page 消费 ?create=ai）。没有 AI 员工，「指派 AI」必撞空态——
+   * 跳过了「配置 AI」的用户在完成步的出口（CAP-A-18 AI 员工引导闭环切片 →
+   * 硬引导切片升级落点）：落完成标记关向导 → 直达「AI 创建 AI 同事」专属页。
+   * 该页在内置 AI 未配置（跳过者的常态）时自动降级为手动表单——原
+   * `/app/members?create=ai` 弹对话框的语义被页面降级链吸收，深链换新居。
    * 与配置成功路径的自动建员工（configure-ai-step.createDefaultAgent）互为两翼。
    */
   const finishToCreateAgent = useCallback(() => {
     completeOnboarding();
-    navigate('/app/members?create=ai');
+    navigate('/app/members/create/ai');
   }, [completeOnboarding, navigate]);
 
   const resetOnboarding = useCallback(() => {

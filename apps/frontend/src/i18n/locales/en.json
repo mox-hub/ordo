@@ -1972,6 +1972,7 @@
       "loadingMembers": "Loading AI members…",
       "noMembers": "No AI members are registered yet.",
       "noMembersHint": "Create an AI member in member management first.",
+      "goCreateAgent": "Create one with AI",
       "dispatching": "Dispatching…",
       "dispatchAndExecute": "Dispatch & execute",
       "dispatchedWithExecution": "Dispatched to AI member (execution {{id}}…)",
@@ -4937,7 +4938,50 @@
       "urlRequired": "Remote URL is required"
     }
   },
+  "aiMemberCreate": {
+    "title": "Create AI Teammate",
+    "subtitle": "Describe the teammate you want in one sentence — AI drafts the full profile, and nothing is created until you confirm it item by item.",
+    "briefLabel": "What kind of AI teammate do you want?",
+    "briefPlaceholder": "e.g. A senior code reviewer — strict but constructive, mainly for PR reviews",
+    "generate": "Draft profile with AI",
+    "generating": "Understanding your description, matching models and roles, writing the profile…",
+    "generateFailed": "AI drafting failed",
+    "manualFallback": "The built-in AI is not configured yet, so drafting is unavailable. Set up AI first, or create one manually.",
+    "openManual": "Create manually (members page)",
+    "confirmHint": "AI only drafts — review every item before it is saved; every field is editable.",
+    "sectionIdentity": "Identity",
+    "sectionModel": "Model suggestion",
+    "sectionPrompt": "Personal prompt",
+    "sectionExecution": "Execution setup",
+    "fieldDisplayName": "Display name",
+    "fieldHandle": "Handle",
+    "fieldTitle": "Title",
+    "fieldDescription": "Description",
+    "fieldProvider": "Provider",
+    "fieldModel": "Model",
+    "fieldCliProvider": "Default CLI",
+    "fieldExecutionRole": "Execution role",
+    "fieldThinkingLevel": "Thinking level",
+    "aiNotGiven": "Not provided by AI — please fill in",
+    "regenerate": "Regenerate",
+    "feedbackPlaceholder": "Feedback on the previous draft (optional): e.g. \"name too casual\", \"be stricter\"",
+    "submit": "Create",
+    "submitting": "Creating…",
+    "missingRequired": "Display name and model suggestion (provider + model) are required to create",
+    "createdToast": "AI teammate created"
+  },
   "aiHub": {
+    "readiness": {
+      "unavailableTitle": "Built-in AI is not configured — AI features are unavailable",
+      "unavailableDesc": "AI assistant, AI drafting and requirement review all need at least one model provider with a saved API key",
+      "unconfiguredTitle": "Default model not set",
+      "unconfiguredDesc": "A usable provider was detected but no default model is set: AI features fall back to the first available provider — setting one explicitly is recommended",
+      "unverifiedTitle": "Default model failed its last validation",
+      "unverifiedDesc": "The provider behind the default model failed its latest live check; AI features may be unavailable",
+      "goConfigure": "Configure",
+      "goCheck": "Check",
+      "later": "Not now"
+    },
     "title": "AI Management",
     "description": "Configure model services, CLI tools, MCP servers, and skills",
     "settings": "Settings",
@@ -6378,6 +6422,12 @@
       "prev": "Back",
       "escClose": "Press ESC to close"
     },
+    "skipConfirm": {
+      "title": "Skip AI setup?",
+      "body": "The built-in AI powers the AI assistant, AI drafting, requirement review and more. Skipping leaves them unavailable — you can set things up anytime in Settings → AI Management, and the app will keep reminding you.",
+      "confirm": "Skip anyway",
+      "cancel": "Keep configuring"
+    },
     "rail": {
       "title": "Initial setup",
       "subtitle": "Every step is skippable",
@@ -6511,6 +6561,11 @@
       "aiReady": {
         "title": "AI teammate is standing by",
         "description": "Configure a model in Settings → AI Management to start executing tasks"
+      },
+      "aiReadiness": {
+        "backToStep": "Back to AI setup",
+        "checking": "Checking built-in AI status…",
+        "cannotConfirm": "AI configuration status is unavailable right now"
       },
       "inboxHint": {
         "title": "First stop: the notification center",

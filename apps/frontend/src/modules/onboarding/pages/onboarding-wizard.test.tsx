@@ -37,6 +37,18 @@ vi.mock('../hooks/use-onboarding', () => ({
   useOnboarding: () => useOnboardingMock(),
 }));
 
+// 向导根组件消费 useNavigate（就绪卡「去 AI 管理」出口）——透传 mock
+const navigateMock = vi.hoisted(() => vi.fn());
+vi.mock('react-router-dom', () => ({
+  useNavigate: () => navigateMock,
+}));
+
+// 就绪度（CAP-A-18 硬引导切片）：默认 ready，硬引导用例按需覆盖
+const readinessMock = vi.hoisted(() => vi.fn());
+vi.mock('@/modules/ai-hub/hooks/use-ai-readiness', () => ({
+  useAiReadiness: () => readinessMock(),
+}));
+
 vi.mock('@/shared/types/electron-api', () => ({
   invoke: vi.fn().mockResolvedValue({ roots: [], path: null }),
   isDesktopShellAvailable: () => false,
@@ -92,6 +104,11 @@ function mockStateAt(
   stepStatusOverrides: Record<number, 'skipped'> = {},
 ) {
   const finishToCreateAgent = vi.fn();
+  const skipStep = vi.fn();
+  const nextStep = vi.fn();
+  const goToStep = vi.fn();
+  readinessMock.mockReset();
+  readinessMock.mockReturnValue({ state: 'ready', detail: null });
   useOnboardingMock.mockReturnValue({
     state: {
       currentStep: stepIndex,
@@ -106,16 +123,16 @@ function mockStateAt(
     currentStepData: steps[stepIndex],
     isLastStep: stepIndex === steps.length - 1,
     isFirstStep: stepIndex === 0,
-    nextStep: vi.fn(),
+    nextStep,
     prevStep: vi.fn(),
-    skipStep: vi.fn(),
+    skipStep,
     finishOnboarding: { mutate: vi.fn(), isPending: false, error: null },
     watchReplayThenStart: vi.fn(),
     finishToCreateAgent,
     createProject: { mutate: vi.fn(), isPending: false, error: null },
-    goToStep: vi.fn(),
+    goToStep,
   });
-  return { finishToCreateAgent };
+  return { finishToCreateAgent, skipStep, nextStep, goToStep };
 }
 
 /** 结构性断言：透传键名模式下渲染区不得出现任何中文字符（硬编码文案 = 违规）。
@@ -350,5 +367,54 @@ describe('OnboardingWizard 统一底部操作栏（2026-10-11 七步对齐批）
     expect(screen.getByText('TESTBOX')).toBeTruthy();
     expect(screen.getByText('D:\\ws')).toBeTruthy();
     expect(screen.queryByText('onboarding.workspaceRoot.webEmpty')).toBeNull();
+  });
+});
+
+describe('OnboardingWizard 硬引导切片（CAP-A-18，GAP-T-73）', () => {
+  it('add-ai 步 + L1（零可用厂家）：点跳过先弹后果确认；「仍要跳过」才真正离开', () => {
+    const { skipStep } = mockStateAt(5);
+    readinessMock.mockReturnValue({ state: 'unavailable', detail: null });
+    render(<OnboardingWizard />);
+
+    fireEvent.click(screen.getByText('onboarding.common.skip'));
+    // 后果确认出现，跳过未执行（诚实告知，不强拦）
+    expect(screen.getByText('onboarding.skipConfirm.title')).toBeTruthy();
+    expect(skipStep).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText('onboarding.skipConfirm.confirm'));
+    expect(skipStep).toHaveBeenCalledWith('add-ai');
+  });
+
+  it('add-ai 步 + L1：拦截只发生一次——「继续配置」关闭后，再次点跳过直接执行', () => {
+    const { skipStep } = mockStateAt(5);
+    readinessMock.mockReturnValue({ state: 'unavailable', detail: null });
+    render(<OnboardingWizard />);
+
+    fireEvent.click(screen.getByText('onboarding.common.skip'));
+    fireEvent.click(screen.getByText('onboarding.skipConfirm.cancel'));
+    expect(screen.queryByText('onboarding.skipConfirm.title')).toBeNull();
+
+    fireEvent.click(screen.getByText('onboarding.common.skip'));
+    expect(skipStep).toHaveBeenCalledWith('add-ai');
+  });
+
+  it('add-ai 步 + 已就绪：不拦截直接跳过（不添堵）', () => {
+    const { skipStep } = mockStateAt(5);
+    render(<OnboardingWizard />);
+
+    fireEvent.click(screen.getByText('onboarding.common.skip'));
+    expect(skipStep).toHaveBeenCalledWith('add-ai');
+    expect(screen.queryByText('onboarding.skipConfirm.title')).toBeNull();
+  });
+
+  it('complete 步 + L1：就绪卡转琥珀警告态（标题/描述/双 CTA 全键名），不再无条件绿勾', () => {
+    mockStateAt(6);
+    readinessMock.mockReturnValue({ state: 'unavailable', detail: null });
+    render(<OnboardingWizard />);
+
+    expect(screen.getByText('aiHub.readiness.unavailableTitle')).toBeTruthy();
+    expect(screen.getByText('aiHub.readiness.unavailableDesc')).toBeTruthy();
+    expect(screen.getByText('aiHub.readiness.goConfigure')).toBeTruthy();
+    expect(screen.getByText('onboarding.complete.aiReadiness.backToStep')).toBeTruthy();
   });
 });

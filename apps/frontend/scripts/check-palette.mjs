@@ -147,6 +147,7 @@ const NEUTRAL_LEGACY_ALLOWLIST = new Set([
   "modules/team-member/components/member-avatar.tsx:text-white",
   "modules/team-member/components/team-card.tsx:text-white",
   "modules/team-member/pages/team-detail-page.tsx:text-white",
+  "modules/ai-hub/components/ai-readiness-banner.tsx:text-white", // accent-red 实底警示横幅白字，同 (b) 组 accent 实底先例；橙态已用 text-background 自适应
 ]);
 
 // C3 内联裸色（84 处 / 64 键）。分五类：

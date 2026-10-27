@@ -283,6 +283,11 @@ const DeliveryPage = lazy(() =>
 const MembersPage = lazy(() =>
   import('@/modules/team-member/pages/members-page'),
 );
+const AiMemberCreatePage = lazy(() =>
+  import('@/modules/team-member/pages/ai-member-create-page').then((m) => ({
+    default: m.AiMemberCreatePage,
+  })),
+);
 const OfficePage = lazy(() =>
   import('@/modules/office/pages/office-page').then((m) => ({
     default: m.OfficePage,
@@ -698,6 +703,18 @@ export const router = createBrowserRouter([
     element: (
           <Suspense fallback={null}>
             <MembersPage />
+          </Suspense>
+        ),
+        errorElement: <ErrorPage />,
+      },
+      {
+        // 「AI 创建 AI 同事」专属页（CAP-A-18，GAP-T-74）：静态段优先级天然高于
+        // members/:memberId；须声明在其前可读性更好
+        path: 'members/create/ai',
+        handle: { selfScroll: true },
+        element: (
+          <Suspense fallback={null}>
+            <AiMemberCreatePage />
           </Suspense>
         ),
         errorElement: <ErrorPage />,

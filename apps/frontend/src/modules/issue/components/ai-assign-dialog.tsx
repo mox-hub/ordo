@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { Bot, Radio, Terminal } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { Spinner } from '@/components/ui/spinner';
@@ -53,6 +54,7 @@ export function AiAssignDialog({
   onSuccess,
 }: AiAssignDialogProps) {
   const { t } = useTranslation();
+  const navigate = useNavigate();
   // 拉全仓注册的 AI 员工（不限于本项目绑定的成员）
   const { data: membersData, isLoading } = useMembers({
     type: 'ai_agent',
@@ -269,6 +271,21 @@ export function AiAssignDialog({
             <p className="mt-1 text-xs text-muted-foreground">
               {t('task.aiAssign.noMembersHint')}
             </p>
+            {/* 空态 CTA（CAP-A-18 AI 创建 AI 同事切片）：把「先到成员管理手动建」的
+                文案出口升级为一键直达 AI 代写专属页（未配置内置 AI 时页面自动降级手动表单） */}
+            <Button
+              size="sm"
+              variant="outline"
+              className="mt-3"
+              data-ai-action="issue.ai-assign.go-create-ai"
+              onClick={() => {
+                onOpenChange(false);
+                navigate('/app/members/create/ai');
+              }}
+            >
+              <Bot className="mr-1 size-3.5" />
+              {t('task.aiAssign.goCreateAgent')}
+            </Button>
           </div>
         ) : (
           <div className="space-y-2 max-h-96 overflow-y-auto">

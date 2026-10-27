@@ -6,7 +6,7 @@
  * 同批追加（CAP-A-20）：快捷设置卡——工作区内置模型（provider+model 持久化，
  * AI 调用链无显式偏好时的默认目标）与模型服务厂家启停，一处配置。
  */
-import { AlertCircle, Brain, Cpu, Server, Sparkles, Terminal, Zap } from 'lucide-react';
+import { AlertCircle, Brain, Cpu, Server, Sparkles, Terminal, TriangleAlert, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,7 @@ import { Switch } from '@/components/ui/switch';
 import { toast } from '@/components/ui/toast';
 import { useTranslation } from 'react-i18next';
 import { useAiProviders, useUpdateProvider } from '@/modules/ai-hub/hooks/use-ai-providers';
+import { useAiReadiness } from '@/modules/ai-hub/hooks/use-ai-readiness';
 import {
   useQuickJudgeSettings,
   useUpdateQuickJudgeSettings,
@@ -289,6 +290,9 @@ export function OverviewTab({ onNavigateTab }: { onNavigateTab: (tab: AiManageme
   const { data: aiProviders = [], isLoading: providersLoading } = useAiProviders();
   const connectedProviders = aiProviders.filter((p) => p.status === 'connected').length;
 
+  // 内置 AI 就绪度（CAP-A-18 硬引导切片）：L1 时本页顶部出提示条
+  const { state: aiReadinessState } = useAiReadiness();
+
   // CLI providers（真实）
   const { data: cliData, isLoading: cliLoading } = useCliProviders();
   const cliProviders = cliData?.providers ?? [];
@@ -322,6 +326,21 @@ export function OverviewTab({ onNavigateTab }: { onNavigateTab: (tab: AiManageme
 
   return (
     <div className="space-y-6">
+      {/* 内置 AI 完全不可用提示条（CAP-A-18 硬引导切片）：本页就是配置面，
+          提示条只指路不另设 CTA——快捷设置卡就在正下方 */}
+      {aiReadinessState === 'unavailable' ? (
+        <div
+          className="flex items-start gap-2 rounded-lg border border-accent-orange/40 bg-accent-orange/10 p-3 text-xs text-accent-orange"
+          data-ai-component="ai-hub.overview-readiness-note"
+          role="status"
+        >
+          <TriangleAlert className="mt-0.5 size-3.5 shrink-0" />
+          <span className="min-w-0">
+            <span className="font-medium">{t('aiHub.readiness.unavailableTitle')}</span>
+            <span className="ml-2 opacity-80">{t('aiHub.readiness.unavailableDesc')}</span>
+          </span>
+        </div>
+      ) : null}
       {/* 快捷设置：内置模型 + 厂家启停（一次性配置面） */}
       <QuickSettingsCard onNavigateTab={onNavigateTab} />
 

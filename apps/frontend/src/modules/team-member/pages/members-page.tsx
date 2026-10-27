@@ -161,6 +161,15 @@ export default function MembersPage() {
             />
             {isAdmin && (
               <HeaderActionButton
+                icon={Bot}
+                label={t('aiMemberCreate.title', '创建 AI 同事')}
+                onClick={() => navigate('/app/members/create/ai')}
+                data-ai-component="team-member.members.ai-create-button"
+                data-ai-action="team-member.members.ai-create-button.click"
+              />
+            )}
+            {isAdmin && (
+              <HeaderActionButton
                 icon={Plus}
                 label={t('members.create', '新建成员')}
                 onClick={() => setShowCreate(true)}

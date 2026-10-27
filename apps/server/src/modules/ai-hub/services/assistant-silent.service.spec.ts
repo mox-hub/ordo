@@ -127,6 +127,7 @@ describe('AssistantSilentService.run', () => {
       'release-notes',
       'release-notes-draft',
       'surface-narration',
+      'member-profile-draft',
     ]);
   });
 
@@ -1044,6 +1045,182 @@ describe('AssistantSilentService.run', () => {
       await expect(
         service.run('workflow-draft', {}, 'p1', 'u1'),
       ).rejects.toThrow(/缺少流程描述/);
+      expect(chat).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('member-profile-draft（CAP-A-18 AI 创建 AI 同事，GAP-T-74）', () => {
+    const FULL_PAYLOAD =
+      '{"displayName":"评审官老王","handle":"reviewer-laowang","title":"资深代码评审","description":"严格但给建设性意见","personalPrompt":"## 职责\\n只评审不改码","thinkingLevel":"high","defaultCliProviderId":"claude-code","defaultExecutionRole":"reviewer","suggestedProvider":"glm","suggestedModel":"glm-4.7","tags":["review","quality"],"rationale":{"model":"GLM 上下文长","role":"职责是评审","prompt":"三段式"}}';
+
+    const makeAgentService = (
+      prismaShape: Record<string, unknown>,
+      chatContent = FULL_PAYLOAD,
+    ) => {
+      const chat = vi.fn().mockResolvedValue({
+        content: chatContent,
+        model: 'test-model',
+        tokens: { prompt: 10, completion: 5, total: 15 },
+      });
+      const prisma = {
+        aIUsageLog: { create: vi.fn().mockResolvedValue({}) },
+        ...prismaShape,
+      };
+      const service = new AssistantSilentService(
+        prisma as never,
+        {
+          resolveBuiltinAdapter: async () => ({
+            getProvider: () => 'glm',
+            getModelName: () => 'm',
+            chat,
+          }),
+        } as never,
+        { estimateCostUsd: vi.fn().mockResolvedValue(null) } as never,
+      );
+      return { service, chat, prisma };
+    };
+
+    const fullPrisma = () => ({
+      aIModelConfig: {
+        findMany: vi.fn().mockResolvedValue([
+          { name: 'glm-4.7', provider: 'glm' },
+          { name: 'deepseek-v4', provider: 'deepseek' },
+        ]),
+      },
+      cliProviderConfig: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([
+            { providerId: 'claude-code', displayName: null, model: null },
+          ]),
+      },
+      projectRoleDefinition: {
+        findMany: vi.fn().mockResolvedValue([
+          {
+            key: 'reviewer',
+            name: '评审官',
+            executionRole: 'reviewer',
+            description: null,
+          },
+        ]),
+      },
+      member: {
+        findMany: vi
+          .fn()
+          .mockResolvedValue([
+            { displayName: '小码', title: '编码员', personalPrompt: '写码' },
+          ]),
+      },
+    });
+
+    it('侦查四源候选 → instructions 含 brief/候选/既有同事与「只代写不落库」红线，输出收口后档案', async () => {
+      const prismaShape = fullPrisma();
+      const { service, chat, prisma } = makeAgentService(prismaShape);
+      const result = await service.run(
+        'member-profile-draft',
+        { brief: '要一个严格的资深代码评审同事' },
+        null,
+        'u1',
+      );
+
+      expect(prisma.aIModelConfig.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({ where: { enabled: true } }),
+      );
+      expect(result.data).toMatchObject({
+        displayName: '评审官老王',
+        handle: 'reviewer-laowang',
+        thinkingLevel: 'high',
+        defaultCliProviderId: 'claude-code',
+        defaultExecutionRole: 'reviewer',
+        suggestedProvider: 'glm',
+        suggestedModel: 'glm-4.7',
+        tags: ['review', 'quality'],
+      });
+      const [, options] = chat.mock.calls[0];
+      const instructions = (options as { instructions: string }).instructions;
+      expect(instructions).toContain('严格的资深代码评审同事');
+      expect(instructions).toContain('glm-4.7');
+      expect(instructions).toContain('claude-code');
+      expect(instructions).toContain('小码');
+      expect(instructions).toContain('你只代写，不落库');
+    });
+
+    it('白名单收口：候选外建议置 null、thinkingLevel 枚举外回落 medium、保留 handle 弃用、白名单外键丢弃', async () => {
+      // 全部建议越界的模型输出
+      const chat = vi.fn().mockResolvedValue({
+        content:
+          '{"displayName":"X","handle":"Xiaozhou","thinkingLevel":"ultra","defaultCliProviderId":"codex","defaultExecutionRole":"ceo","suggestedProvider":"openai","suggestedModel":"gpt-9","tags":["a",1,"b"],"junk":"drop"}',
+        model: 'm',
+        tokens: { prompt: 1, completion: 1, total: 2 },
+      });
+      const service = new AssistantSilentService(
+        {
+          aIUsageLog: { create: vi.fn().mockResolvedValue({}) },
+          ...fullPrisma(),
+        } as never,
+        {
+          resolveBuiltinAdapter: async () => ({
+            getProvider: () => 'glm',
+            getModelName: () => 'm',
+            chat,
+          }),
+        } as never,
+        { estimateCostUsd: vi.fn().mockResolvedValue(null) } as never,
+      );
+
+      const result = await service.run(
+        'member-profile-draft',
+        { brief: '招个人' },
+        null,
+        'u1',
+      );
+
+      expect(result.data).toMatchObject({
+        handle: null, // 小写后撞系统保留 handle → 弃用（前端标「AI 未给出」）
+        thinkingLevel: 'medium', // 枚举外回落
+        defaultCliProviderId: null, // 候选外
+        defaultExecutionRole: null, // 候选外
+        suggestedProvider: null, // 候选外组合，整对弃用
+        suggestedModel: null,
+        tags: ['a', 'b'], // 非字符串剔除
+      });
+      expect((result.data as Record<string, unknown>).junk).toBeUndefined();
+    });
+
+    it('handle 规范化：大小写/空格/下划线归一 kebab-case', async () => {
+      const chat = vi.fn().mockResolvedValue({
+        content: '{"displayName":"X","handle":"  Senior Reviewer_02 "}',
+        model: 'm',
+        tokens: { prompt: 1, completion: 1, total: 2 },
+      });
+      const service = new AssistantSilentService(
+        {
+          aIUsageLog: { create: vi.fn().mockResolvedValue({}) },
+          ...fullPrisma(),
+        } as never,
+        {
+          resolveBuiltinAdapter: async () => ({
+            getProvider: () => 'glm',
+            getModelName: () => 'm',
+            chat,
+          }),
+        } as never,
+        { estimateCostUsd: vi.fn().mockResolvedValue(null) } as never,
+      );
+      const result = await service.run(
+        'member-profile-draft',
+        { brief: '招个人' },
+        null,
+        'u1',
+      );
+      expect(result.data).toMatchObject({ handle: 'senior-reviewer-02' });
+    });
+
+    it('缺 brief → 400（不触 LLM）', async () => {
+      const { service, chat } = makeAgentService(fullPrisma());
+      await expect(
+        service.run('member-profile-draft', {}, null, 'u1'),
+      ).rejects.toThrow(/brief/);
       expect(chat).not.toHaveBeenCalled();
     });
   });

@@ -68,6 +68,7 @@ import { PageErrorFallback } from '@/components/semantic/page-error-fallback';
 import { AssistantFab } from '@/modules/assistant';
 import { TestModeFab } from '@/modules/test-mode/components/test-mode-fab';
 import { ConnectionBanner } from '@/shared/components/connection-banner';
+import { AiReadinessBanner } from '@/modules/ai-hub/components/ai-readiness-banner';
 import { useGlobalHotkey } from '@/shared/hotkeys/use-global-hotkey';
 import { getEffectiveCombo } from '@/shared/hotkeys/hotkey-store';
 import { formatComboForDisplay } from '@/shared/hotkeys/hotkey-utils';
@@ -377,6 +378,8 @@ export function ShellLayout() {
         <div className="flex h-screen overflow-hidden bg-sidebar text-foreground" data-ai-component="layout.shell" data-ai-role="content">
           {/* 实时连接断线横幅（兜底改造批 1）：断线期间数据陈旧，需全局可见 */}
           <ConnectionBanner />
+          {/* AI 就绪度横幅（CAP-A-18 三件套 ③）：内置 AI 完全不可用时硬提醒；断线时让位 */}
+          <AiReadinessBanner />
           {/* Mobile sidebar backdrop */}
           {mobileSidebarOpen ? (
             <button

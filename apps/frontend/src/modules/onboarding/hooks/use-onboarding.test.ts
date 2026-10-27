@@ -134,8 +134,8 @@ describe('watchReplayThenStart（S6：向导完成 → 先看回放）', () => {
   });
 });
 
-describe('finishToCreateAgent（CAP-A-18 AI 员工引导闭环：跳过配置 AI 者的完成步出口）', () => {
-  it('★ 先落完成标记关向导，再直达成员页 AI 员工创建深链（?create=ai 由 members-page 消费弹对话框）', () => {
+describe('finishToCreateAgent（CAP-A-18：跳过配置 AI 者的完成步出口）', () => {
+  it('★ 先落完成标记关向导，再直达「AI 创建 AI 同事」专属页深链（内置 AI 未配置时页面自动降级手动表单）', () => {
     const { result } = renderHook(() => useOnboarding(), { wrapper: createWrapper() });
 
     act(() => {
@@ -145,7 +145,7 @@ describe('finishToCreateAgent（CAP-A-18 AI 员工引导闭环：跳过配置 AI
     expect(setOnboardingCompletedMock).toHaveBeenCalledWith(true);
     expect(setOnboardingOpenMock).toHaveBeenCalledWith(false);
     expect(persistOnboardingMock).toHaveBeenCalledWith(true);
-    expect(navigateMock).toHaveBeenCalledWith('/app/members?create=ai');
+    expect(navigateMock).toHaveBeenCalledWith('/app/members/create/ai');
     expect(postMock).not.toHaveBeenCalled();
   });
 
@@ -155,7 +155,7 @@ describe('finishToCreateAgent（CAP-A-18 AI 员工引导闭环：跳过配置 AI
     act(() => {
       result.current.finishToCreateAgent();
     });
-    expect(navigateMock).toHaveBeenCalledWith('/app/members?create=ai');
+    expect(navigateMock).toHaveBeenCalledWith('/app/members/create/ai');
     expect(navigateMock).not.toHaveBeenCalledWith('/app');
   });
 });

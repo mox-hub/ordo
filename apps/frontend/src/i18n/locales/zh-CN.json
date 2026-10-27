@@ -1972,6 +1972,7 @@
       "loadingMembers": "加载 AI 员工…",
       "noMembers": "系统中还没有注册的 AI 员工。",
       "noMembersHint": "请先到成员管理创建 AI 员工。",
+      "goCreateAgent": "用 AI 创建 AI 同事",
       "dispatching": "派发中…",
       "dispatchAndExecute": "派发并执行",
       "dispatchedWithExecution": "已派发给 AI 员工 (Execution {{id}}…)",
@@ -4937,7 +4938,50 @@
       "urlRequired": "远程 URL 为必填"
     }
   },
+  "aiMemberCreate": {
+    "title": "创建 AI 同事",
+    "subtitle": "一句话描述你想要的 AI 同事，AI 代写全部入职档案，你逐项确认后才创建。",
+    "briefLabel": "你想要一位什么样的 AI 同事？",
+    "briefPlaceholder": "例：资深代码评审工程师，严格但给建设性意见，主要负责 PR 评审",
+    "generate": "AI 代写档案",
+    "generating": "正在理解描述、对照可用模型与角色，撰写档案…",
+    "generateFailed": "AI 代写失败",
+    "manualFallback": "内置 AI 尚未配置，暂时无法代写档案。你可以先去完成 AI 配置，或直接手动创建。",
+    "openManual": "手动创建（成员页）",
+    "confirmHint": "AI 只代写，落库前请逐项过目——任何字段都可以改。",
+    "sectionIdentity": "身份",
+    "sectionModel": "模型建议",
+    "sectionPrompt": "个人提示词",
+    "sectionExecution": "执行配置",
+    "fieldDisplayName": "显示名",
+    "fieldHandle": "Handle",
+    "fieldTitle": "职务",
+    "fieldDescription": "描述",
+    "fieldProvider": "厂家",
+    "fieldModel": "模型",
+    "fieldCliProvider": "默认 CLI",
+    "fieldExecutionRole": "执行角色",
+    "fieldThinkingLevel": "思考强度",
+    "aiNotGiven": "AI 未给出，请手动补",
+    "regenerate": "重新生成",
+    "feedbackPlaceholder": "对上一稿的反馈（可选）：比如「名字太随意」「更严格一些」",
+    "submit": "确认创建",
+    "submitting": "创建中…",
+    "missingRequired": "显示名与模型建议（厂家+模型）必填才能创建",
+    "createdToast": "AI 同事已创建"
+  },
   "aiHub": {
+    "readiness": {
+      "unavailableTitle": "内置 AI 尚未配置，AI 功能不可用",
+      "unavailableDesc": "AI 助理、AI 起草、需求评估等能力需要先配置至少一个模型厂家并保存 API Key",
+      "unconfiguredTitle": "内置模型未设置",
+      "unconfiguredDesc": "已检测到可用模型厂家，但未设置默认模型：AI 功能会自动回落到首个可用厂家，建议显式设置",
+      "unverifiedTitle": "默认模型最近一次验证失败",
+      "unverifiedDesc": "内置模型指向的厂家实测未通过，AI 功能可能不可用",
+      "goConfigure": "去配置",
+      "goCheck": "去检查",
+      "later": "暂不"
+    },
     "title": "AI 管理",
     "description": "配置模型服务、CLI 工具、MCP 服务器与技能",
     "settings": "设置",
@@ -6378,6 +6422,12 @@
       "prev": "上一步",
       "escClose": "按 ESC 关闭"
     },
+    "skipConfirm": {
+      "title": "跳过配置 AI？",
+      "body": "内置 AI 是 AI 助理对话、AI 起草、需求评估等智能能力的前提。跳过后这些功能将不可用；你随时可以在「设置 → AI 管理」补配，应用也会持续提醒。",
+      "confirm": "仍要跳过",
+      "cancel": "继续配置"
+    },
     "rail": {
       "title": "初始设置",
       "subtitle": "全部步骤均可跳过",
@@ -6511,6 +6561,11 @@
       "aiReady": {
         "title": "AI 同事整装待发",
         "description": "在「设置 → AI 管理」配置模型后即可执行任务"
+      },
+      "aiReadiness": {
+        "backToStep": "回到上一步配置",
+        "checking": "正在检测内置 AI 状态…",
+        "cannotConfirm": "暂时无法确认 AI 配置状态"
       },
       "inboxHint": {
         "title": "第一站：通知中心",
