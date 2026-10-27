@@ -82,6 +82,9 @@ describe('DesignSystemPage（索引）', () => {
     // 卡片网格：分区标签渲染（如高密度卡分区卡）
     expect(screen.getAllByText('AI High-Density Cards [AI]').length).toBeGreaterThan(0);
 
+    // 卡片放大批（2026-10-27）：分区「已被调用次数」上卡（consumers.gen 生成产物，>0 才显示）
+    expect(screen.getAllByText(/处调用/).length).toBeGreaterThan(0);
+
     const nestedButtonErrors = consoleError.mock.calls.filter((args) =>
       String(args[0]).includes('cannot contain a nested <button>'),
     );

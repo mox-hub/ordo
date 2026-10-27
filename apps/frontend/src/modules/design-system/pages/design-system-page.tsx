@@ -13,6 +13,7 @@ import { cn } from '@/lib/utils'
 import { COMPONENT_REGISTRY } from '../registry'
 import { SECTIONS, SECTION_GROUPS } from '../gallery-kit'
 import { GALLERY_SECTIONS } from '../sections/gallery-sections.gen'
+import { SECTION_CALLS } from '../consumers.gen'
 
 /** 五态徽标点（色值沿用本模块既有 accent-* token，禁自配色） */
 const STATUS_DOT: Record<string, string> = {
@@ -52,7 +53,7 @@ function SectionThumb({ sectionId }: { sectionId: string }) {
   return (
     <div
       ref={setHost}
-      className="relative h-36 shrink-0 overflow-hidden rounded-md border border-border/60 bg-background"
+      className="relative h-48 shrink-0 overflow-hidden rounded-md border border-border/60 bg-background"
       aria-hidden="true"
     >
       {Demo && inView && (
@@ -227,17 +228,18 @@ export function DesignSystemPage() {
                 {g.label}
                 <span className="ml-2 text-3xs text-muted-foreground/50 font-normal">{g.items.length}</span>
               </h2>
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-3">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(340px,1fr))] gap-4">
                 {g.items.map((s) => {
                   const entry = registryByName.get(s.id)
+                  const calls = SECTION_CALLS[s.id] ?? 0
                   return (
                     <Link
                       key={s.id}
                       to={`/app/design-system/section/${s.id}`}
-                      className="group rounded-lg border border-border bg-card p-2 flex flex-col gap-2 hover:border-accent-blue/50 hover:shadow-sm transition-all"
+                      className="group rounded-lg border border-border bg-card p-2.5 flex flex-col gap-2.5 hover:border-accent-blue/50 hover:shadow-sm transition-all"
                     >
                       <SectionThumb sectionId={s.id} />
-                      <div className="px-1 pb-1 space-y-1">
+                      <div className="px-1 pb-1 space-y-1.5">
                         <div className="flex items-start justify-between gap-2">
                           <span className="text-sm font-medium text-foreground leading-snug">{s.label}</span>
                           <ArrowUpRight className="size-3.5 text-muted-foreground opacity-0 group-hover:opacity-100 transition-opacity shrink-0 mt-0.5" />
@@ -252,6 +254,17 @@ export function DesignSystemPage() {
                             </>
                           ) : (
                             <span className="px-1 py-px rounded bg-muted/60 text-muted-foreground">聚合展示区</span>
+                          )}
+                          {calls > 0 && (
+                            <>
+                              <span className="text-muted-foreground/40">·</span>
+                              <span
+                                className="shrink-0 tabular-nums"
+                                title="该分区 demo 所含自研组件的生产消费方数之和（strict 口径，由 check-component-registry §五 生成）"
+                              >
+                                {calls} 处调用
+                              </span>
+                            </>
                           )}
                         </div>
                       </div>

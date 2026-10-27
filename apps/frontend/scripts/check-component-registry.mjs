@@ -1,4 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -384,6 +384,147 @@ try {
 if (errors.length > 0) {
   console.error("Component registry check failed:\n" + errors.join("\n\n"));
   process.exit(1);
+}
+
+// ---------------------------------------------------------------------------
+// §五 画廊分区「已被调用次数」生成（2026-10-27 卡片放大批）：置于门禁 exit 之后，
+// 门禁通过才再生。口径 = 分区 demo 实际渲染的自研组件（ui|semantic）之 §19.3 strict
+// 消费方数求和（与上方 LU 判定同源：src/modules|shared 非测试非画廊引用，按文件去重）。
+// 静态启发解析：gallery-sections.gen.tsx 的 GallerySec_<id> 函数体内 <Symbol> JSX 标签
+// ∩ ui/semantic 导出符号表（lucide 图标与 demo helper 不在表内自然过滤；泛型参数命中
+// 符号名的误报罕见且影响 ≤ 1 次计数，容忍）。产物 consumers.gen.ts 入库供 DEV-only
+// 索引卡 import；仅内容变化时写盘，CI 只读环境零副作用。
+// ---------------------------------------------------------------------------
+const CONSUMERS_GEN_PATH = join(GALLERY_MODULE_DIR, "consumers.gen.ts");
+try {
+  const entryByStem = new Map();
+  for (const e of registryEntries) {
+    if (/^(ui|semantic)\//.test(e.file)) {
+      entryByStem.set(e.file.split("/")[1].replace(/\.tsx?$/, ""), e);
+    }
+  }
+
+  // stem → 导出 JSX 符号集（export function/const + export { A, B } 两形态；小写导出如
+  // buttonVariants 非 JSX 标签排除）。符号→stems 反查允许多候选（同名符号跨文件罕见，
+  // 命中任一候选即计入，宁多勿漏）。
+  const stemsOfSymbol = new Map();
+  for (const [stem, entry] of entryByStem) {
+    const abs = join(PKG_ROOT, "src", "components", entry.file);
+    if (!existsSync(abs)) continue;
+    const source = readFileSync(abs, "utf8");
+    const syms = new Set();
+    for (const m of source.matchAll(/export\s+(?:async\s+)?(?:function|const)\s+(\w+)/g)) {
+      syms.add(m[1]);
+    }
+    for (const m of source.matchAll(/export\s*\{([^}]+)\}/g)) {
+      for (const piece of m[1].split(",")) {
+        const name = piece.trim().split(/\s+as\s+/).pop();
+        if (/^[A-Z]/.test(name ?? "")) syms.add(name);
+      }
+    }
+    for (const s of syms) {
+      if (!stemsOfSymbol.has(s)) stemsOfSymbol.set(s, new Set());
+      stemsOfSymbol.get(s).add(stem);
+    }
+  }
+
+  // kit 内函数/常量定义体索引：GallerySec 之外的 demo helper（DatePickerDemo、RefCapsuleDemo
+  // 等）在 kit 定义、gen 分段内引用——不展开会漏计「间接引用型」分区（与 §4.2④ 门禁改扫
+  // kit 同因）。切片到下一声明头，提取标签为超集无害（中间模块级常量无 JSX 标签）。
+  const kitSource = readFileSync(join(GALLERY_MODULE_DIR, "gallery-kit.tsx"), "utf8");
+  const kitHeads = [
+    ...kitSource.matchAll(/^(?:export\s+)?(?:async\s+)?(?:function|const)\s+(\w+)/gm),
+  ];
+  const kitBodyOf = new Map();
+  for (let i = 0; i < kitHeads.length; i++) {
+    kitBodyOf.set(
+      kitHeads[i][1],
+      kitSource.slice(
+        kitHeads[i].index,
+        i + 1 < kitHeads.length ? kitHeads[i + 1].index : kitSource.length,
+      ),
+    );
+  }
+
+  // gen 分段（函数名 = 'GallerySec_' + 分区 id 的 kebab→snake，分区 id 全 kebab 可逆）
+  const genSource = readFileSync(
+    join(GALLERY_MODULE_DIR, "sections", "gallery-sections.gen.tsx"),
+    "utf8",
+  );
+  const heads = [...genSource.matchAll(/^function (GallerySec_[A-Za-z0-9_]+)\(/gm)];
+  // gen 的 GallerySec_* 函数体并入递归索引：嵌套子锚的分区是转发壳
+  // （如 ai-verdict-pill → <GallerySec_confidence_bar />），转发目标体内的组件
+  // 属于转发分区的实际展示内容，须计入（分区非互斥划分，同一组件可在多分区计入）。
+  for (let i = 0; i < heads.length; i++) {
+    kitBodyOf.set(
+      heads[i][1],
+      genSource.slice(
+        heads[i].index,
+        i + 1 < heads.length ? heads[i + 1].index : genSource.length,
+      ),
+    );
+  }
+  const strictCount = (entry) =>
+    consumersOf(entry, (f) => !isGallery(f) && inModulesOrShared(f)).length;
+  const sectionCalls = {};
+  for (let i = 0; i < heads.length; i++) {
+    const id = heads[i][1].slice("GallerySec_".length).replace(/_/g, "-");
+    const bodyEnd = i + 1 < heads.length ? heads[i + 1].index : genSource.length;
+    const body = genSource.slice(heads[i].index, bodyEnd);
+    const labels = new Set();
+    for (const m of body.matchAll(/<([A-Z][A-Za-z0-9_]*)/g)) labels.add(m[1]);
+    // 递归展开分区引用的 helper 与转发分区（kit/gen 内定义、非自研组件符号），至闭包
+    const queue = [...labels].filter((s) => !stemsOfSymbol.has(s) && kitBodyOf.has(s));
+    const seen = new Set(queue);
+    while (queue.length > 0) {
+      const helperBody = kitBodyOf.get(queue.pop()) ?? "";
+      for (const m of helperBody.matchAll(/<([A-Z][A-Za-z0-9_]*)/g)) {
+        labels.add(m[1]);
+        if (!seen.has(m[1]) && !stemsOfSymbol.has(m[1]) && kitBodyOf.has(m[1])) {
+          seen.add(m[1]);
+          queue.push(m[1]);
+        }
+      }
+    }
+    const stems = new Set();
+    for (const sym of labels) {
+      for (const stem of stemsOfSymbol.get(sym) ?? []) stems.add(stem);
+    }
+    let sum = 0;
+    for (const stem of stems) {
+      const entry = entryByStem.get(stem);
+      if (entry) sum += strictCount(entry);
+    }
+    sectionCalls[id] = sum;
+  }
+
+  const banner =
+    "/**\n" +
+    " * 分区「已被调用次数」生成产物 —— scripts/check-component-registry.mjs §五 自动再生，勿手改。\n" +
+    " * 口径：分区 demo 实际渲染的 ui|semantic 组件之 §19.3 strict 消费方数（src/modules|shared\n" +
+    " * 非测试非画廊引用，按文件去重）求和；0 = 纯 token/治理聚合区，或分区组件确无生产引用。\n" +
+    " */\n" +
+    `export const SECTION_CALLS: Record<string, number> = ${JSON.stringify(sectionCalls, null, 2)}\n`;
+  if (existsSync(CONSUMERS_GEN_PATH)) {
+    if (readFileSync(CONSUMERS_GEN_PATH, "utf8") === banner) {
+      console.log(
+        `\n[§五 分区调用数生成] consumers.gen.ts 无变化（${Object.keys(sectionCalls).length} 分区）。`,
+      );
+    } else {
+      writeFileSync(CONSUMERS_GEN_PATH, banner);
+      console.log(
+        `\n[§五 分区调用数生成] consumers.gen.ts 已再生（${Object.keys(sectionCalls).length} 分区，内容有变化）。`,
+      );
+    }
+  } else {
+    writeFileSync(CONSUMERS_GEN_PATH, banner);
+    console.log(
+      `\n[§五 分区调用数生成] consumers.gen.ts 已首生（${Object.keys(sectionCalls).length} 分区）。`,
+    );
+  }
+} catch (err) {
+  // 生成失败不阻断门禁（展示增强非治理红线）：显式报告而非静默
+  console.warn(`\n[§五 分区调用数生成] 失败（不阻断）：${err?.message ?? err}`);
 }
 
 // ---------------------------------------------------------------------------

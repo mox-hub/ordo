@@ -36,8 +36,8 @@ const ALLOWED_TOKENS = new Set([
   "grid-cols-[minmax(0,1fr)_190px_auto_auto]",
   "grid-cols-[minmax(0,1fr)_380px]",
   // 响应式 auto-fill 卡片网格（2026-10-27 设计系统索引页）：列数随容器宽自适应，无法用固定档 token 表达
-  // （活体缩略批 230→250：缩略预览需要更宽卡片看清内容）
-  "grid-cols-[repeat(auto-fill,minmax(250px,1fr))]",
+  // （活体缩略批 230→250；卡片放大批 250→340：max-w-6xl 内容宽 1088px 下 340 恰为三列）
+  "grid-cols-[repeat(auto-fill,minmax(340px,1fr))]",
   // 活体缩略预览反向宽（2026-10-27）：缩放 0.4 后内容宽需 1/0.4=250% 才铺满卡片，配 origin-top-left
   "w-[250%]",
   "grid-cols-[auto_100px_1fr_140px_100px_120px_100px_40px]",
