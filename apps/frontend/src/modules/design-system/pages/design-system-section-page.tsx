@@ -50,6 +50,7 @@ export function DesignSystemSectionPage() {
         <button
           type="button"
           onClick={() => navigate('/app/design-system')}
+          data-ai-action="design-system.section.back.click"
           className="size-7 shrink-0 rounded-md flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
           title="返回画廊索引"
         >

@@ -588,3 +588,46 @@
   -ms-overflow-style: none !important;
   scrollbar-width: none !important;
 }
+
+/* 代码高亮 token 主题（CAP-A-32 产物预览 + 既有 MDX 代码块共用的 rehype-highlight
+   输出此前无任何样式、高亮类名裸奔）。色值一律引既有 accent/muted token，不新增色名。 */
+.hljs {
+  color: var(--color-foreground, inherit);
+}
+.hljs-comment,
+.hljs-quote {
+  color: var(--color-muted-foreground, #6b7280);
+  font-style: italic;
+}
+.hljs-keyword,
+.hljs-selector-tag,
+.hljs-built_in,
+.hljs-tag {
+  color: var(--color-accent-purple, #8b5cf6);
+}
+.hljs-string,
+.hljs-regexp,
+.hljs-addition {
+  color: var(--color-accent-green, #22c55e);
+}
+.hljs-number,
+.hljs-literal,
+.hljs-type,
+.hljs-attr {
+  color: var(--color-accent-yellow, #eab308);
+}
+.hljs-title,
+.hljs-name,
+.hljs-function .hljs-title,
+.hljs-function {
+  color: var(--color-accent-blue, #3b82f6);
+}
+.hljs-deletion,
+.hljs-symbol {
+  color: var(--color-accent-red, #ef4444);
+}
+.hljs-meta,
+.hljs-section {
+  color: var(--color-accent-blue, #3b82f6);
+  font-weight: 600;
+}

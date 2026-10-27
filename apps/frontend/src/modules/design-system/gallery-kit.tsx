@@ -118,6 +118,9 @@ export const SECTIONS = [
   // status-definition-dialog 走 galleryExempt 不设条目（由 status-definition-list demo 间接覆盖）。
   { id: 'chip', label: 'Chip', group: 'Data Display' },
   { id: 'nav-status-dot', label: 'Nav Status Dot', group: 'Data Display' },
+  // 产物管理标准件（CAP-A-32，2026-10-27）：两件 semantic 入画廊 Data Display 组
+  { id: 'file-type-icon', label: 'File Type Icon', group: 'Data Display' },
+  { id: 'artifact-source-badge', label: 'Artifact Source Badge', group: 'Data Display' },
   { id: 'stat-tiles', label: 'Stat Tiles', group: 'Data Visualization' },
   { id: 'charts', label: 'Charts', group: 'Data Visualization' },
   { id: 'chart-card', label: 'Chart Card', group: 'Data Visualization' },

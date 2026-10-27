@@ -196,6 +196,12 @@ export function ShellLayout() {
             icon: getEntityIcon('document').icon,
             label: t('document.title'),
           },
+          // 产物库：统一产物层（CAP-A-32），与文档并列的协同底座
+          {
+            to: '/app/artifacts',
+            icon: getEntityIcon('artifact').icon,
+            label: t('artifact.title'),
+          },
           { to: '/app/members', icon: getEntityIcon('member').icon, label: t('nav.members') },
           { to: '/app/teams', icon: getEntityIcon('team').icon, label: t('nav.teams') },
           { to: '/app/workflows', icon: getEntityIcon('workflow').icon, label: t('nav.workflow') },

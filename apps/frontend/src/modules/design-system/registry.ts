@@ -273,8 +273,20 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
   // 「—」诚实降级禁造假数。由 run-overview-card / run-info-panel 内联成本展示抽出收编
   // （两消费方同批接好，登记 canonical）。aiNotes 为 §22.7 登记范式首例。
   { name: 'cost-figure', file: 'semantic/cost-figure.tsx', section: 'Semantic', status: 'canonical', aiNotes: '数据契约：amount/tokens 双轨且单边可缺席（null 或非有限数=无数据），本件只渲染调用方传入的自身值，组/分支级汇总必须由父级从成员值现算后传单值。状态语义：running=爬升中动效态（数字滚动 240ms+微光扫过，reduced-motion 直出终值），终态不传 running 即静默；双轨均缺席渲染「—」占位诚实降级。禁区：禁传预汇总值、禁传 0 冒充无数据、禁绕过本件手写成本展示（宪法 §22.2 成本一等公民律）' },
+  // 产物管理标准件（CAP-A-32，2026-10-27）：文件类型图标按扩展名→MIME 两级映射
+  // （扩展名优先），tone 走 §19.5 封闭词表；产物列表/预览/上传唯一出口，禁页面自拼 File* 映射
+  { name: 'file-type-icon', file: 'semantic/file-type-icon.tsx', section: 'Data Display', status: 'canonical' },
+  // 产物来源徽标（CAP-A-32）：upload/execution/document 三源标注；传 to 即整枚为溯源跳转
+  { name: 'artifact-source-badge', file: 'semantic/artifact-source-badge.tsx', section: 'Data Display', status: 'canonical' },
 
   // ── 跨模块业务组件：src/shared/components/ ───────────────────────────────
+  // 产物管理标准件族（CAP-A-32，2026-10-27）：业务页面即插即用，宿主只传归属
+  // （projectId/issueId），上传/预览/版本/溯源全内置
+  { name: 'artifact-preview-dialog', file: 'shared/components/artifact/artifact-preview-dialog.tsx', section: 'App Components', status: 'canonical' },
+  { name: 'artifact-section', file: 'shared/components/artifact/artifact-section.tsx', section: 'App Components', status: 'canonical' },
+  { name: 'artifact-upload-dialog', file: 'shared/components/artifact/artifact-upload-dialog.tsx', section: 'App Components', status: 'canonical' },
+  { name: 'artifact-version-list', file: 'shared/components/artifact/artifact-version-list.tsx', section: 'App Components', status: 'canonical' },
+  { name: 'file-previewer', file: 'shared/components/artifact/file-previewer.tsx', section: 'App Components', status: 'canonical' },
   { name: 'board-view', file: 'shared/components/board-view/board-view.tsx', section: 'App Components', status: 'canonical' },
   { name: 'bottom-dock', file: 'shared/components/bottom-dock/bottom-dock.tsx', section: 'App Components', status: 'canonical' },
   { name: 'dock-metric-badge', file: 'shared/components/bottom-dock/dock-metric-badge.tsx', section: 'App Components', status: 'canonical' },

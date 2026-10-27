@@ -1793,6 +1793,64 @@ model DocumentReference {
   @@index([documentId], name: "idx_document_references_document_id")
 }
 
+// ==================== Artifact Core Models（CAP-A-32 产物管理） ====================
+
+/// 产物统一登记表（三源：upload 人工上传 / execution 执行产物 / document 文档引用）。
+/// projectId/issueId/documentId 沿用 DocumentTaskLink 先例为裸 String + 索引（无 FK 约束，
+/// 避免触碰既有模型关系图）；execution 产物以 (projectId, logicalPath, kind) 为合并键，
+/// 同一文件跨执行/commit 追加版本不裂行。
+model Artifact {
+  id          String    @id @default(cuid())
+  projectId   String
+  issueId     String? // 主归属工单（可空 = 项目级产物）
+  kind        String    @default("upload") // upload | execution | document
+  name        String // 展示名（含扩展名）
+  logicalPath String? // execution: 工作区根相对 POSIX 路径（版本合并键；upload/document 为空）
+  documentId  String? // kind=document 时引用 Document.id（预览/版本代理现有文档链路）
+  mimeType    String?
+  sizeBytes   Int?
+  checksum    String? // 当前版本 sha256（执行产物 >5MB 诚实置空）
+  createdBy   String
+  isDeleted   Boolean   @default(false)
+  deletedAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  versions ArtifactVersion[]
+
+  @@unique([projectId, logicalPath, kind])
+  @@index([projectId], name: "idx_artifacts_project_id")
+  @@index([issueId], name: "idx_artifacts_issue_id")
+  @@index([kind], name: "idx_artifacts_kind")
+  @@index([documentId], name: "idx_artifacts_document_id")
+  @@index([isDeleted], name: "idx_artifacts_is_deleted")
+}
+
+/// 产物版本账（三源统一版本语义）：upload=每次上传新版本（文件快照落受管存储）；
+/// execution=每次执行/commit 追加版本（文件本体不复制，读实时源，版本行记 commitSha/diffStat）；
+/// document=代理 DocumentVersion（documentVersionId 引用，不复制数据）。
+model ArtifactVersion {
+  id                String   @id @default(cuid())
+  artifactId        String
+  version           Int // 产物内自增序号 1..n
+  origin            String // upload | execution | document
+  storagePath       String? // upload: 受管存储相对路径（{artifactId}/v{n}/{filename}）
+  executionId       String? // 来源执行
+  commitSha         String? // execution: 采集时 worktree HEAD
+  diffStat          Json? // execution: { insertions, deletions, filesTotal }
+  sizeBytes         Int?
+  checksum          String?
+  documentVersionId String? // document: 代理 DocumentVersion.id
+  createdBy         String?
+  createdAt         DateTime @default(now())
+
+  artifact Artifact @relation(fields: [artifactId], references: [id], onDelete: Cascade)
+
+  @@unique([artifactId, version])
+  @@index([executionId], name: "idx_artifact_versions_execution_id")
+  @@index([artifactId], name: "idx_artifact_versions_artifact_id")
+}
+
 // ==================== v2 Runtime Layer ====================
 
 /// Local Runtime 节点身份（长期存在，绑定到用户+设备）

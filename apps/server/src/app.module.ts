@@ -34,6 +34,7 @@ import { GitModule } from './modules/git/git.module';
 import { ConfigModule as AppConfigModule } from './modules/config/config.module';
 import { DocumentEnhanceModule } from './modules/document/document-enhance.module';
 import { DocumentModule } from './modules/document/document.module';
+import { ArtifactModule } from './modules/artifact/artifact.module';
 import { EventsGateway } from './gateways/events.gateway';
 import { PluginModule } from './modules/plugins/plugin.module';
 import { RuntimeModule } from './modules/runtime/runtime.module';
@@ -112,6 +113,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     AcceptanceModule,
     DocumentEnhanceModule,
     DocumentModule,
+    ArtifactModule,
     CliDispatchModule,
     McpServerModule,
     CliProviderModule,

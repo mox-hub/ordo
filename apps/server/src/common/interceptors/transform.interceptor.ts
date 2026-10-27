@@ -3,6 +3,7 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
+  StreamableFile,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -56,6 +57,11 @@ export class TransformInterceptor<T> implements NestInterceptor<
 
     return next.handle().pipe(
       map((raw: unknown) => {
+        // 二进制流透传（产物 raw 预览端点，CAP-A-32）：包装会破坏 Content-Type/长度。
+        // StreamableFile 非信封形状，运行时原样放行——以断言绕开 Observable 泛型并型。
+        if (raw instanceof StreamableFile) {
+          return raw as unknown as ApiResponse<T>;
+        }
         const statusCode = response.statusCode ?? 200;
         return {
           status: statusCode,

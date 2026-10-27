@@ -54,6 +54,7 @@ import {
   Flag,
   FolderKanban,
   GitBranch,
+  Package,
   Play,
   Scale,
   ShieldCheck,
@@ -81,6 +82,7 @@ export type EntityKind =
   | 'decision' // 决策（DecisionProposal / 收件箱）
   | 'workspace' // 工作区（每工作区一库）
   | 'repository' // 仓库
+  | 'artifact' // 产物（CAP-A-32 统一产物层）
   | 'release'; // 发版（ordo-ref chip 首个增量登记：新增实体=一行）
 
 export interface EntityIconEntry {
@@ -110,6 +112,8 @@ export interface EntityIconEntry {
  *   的 decisions 导航原用 Inbox（「收件箱页面」语义），已于第二批统一为本口径。
  * - workspace=Database：工作区 = 独立 SQLite 库（每工作区一库），仓库语义无撞车。
  * - repository=GitBranch：page-registry /app/repositories、route-preview 多数派。
+ * - artifact=Package：产物统一层（CAP-A-32）nav/page-registry 口径；PackageOpen 留给
+ *   产物区块空态动作语义，不撞车。
  * - release=Tag：ordo-ref chip 既有口径。
  */
 export const ENTITY_ICONS: Record<EntityKind, EntityIconEntry> = {
@@ -126,6 +130,7 @@ export const ENTITY_ICONS: Record<EntityKind, EntityIconEntry> = {
   decision: { icon: Scale, tone: 'warning' },
   workspace: { icon: Database, tone: 'default' },
   repository: { icon: GitBranch, tone: 'danger' },
+  artifact: { icon: Package, tone: 'info' },
   release: { icon: Tag, tone: 'default' },
 };
 

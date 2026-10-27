@@ -211,6 +211,24 @@ export function formatCompact(value: NumberInput, options?: NumberFormatOptions)
 }
 
 /**
+ * 文件大小（字节入参，产物管理 CAP-A-32）：`1.5 MB` / `832 KB` / `24 B`。
+ * 1024 进制二档单位；<1KB 显示字节；无效/负数返回 `''`。
+ */
+export function formatBytes(bytes: NumberInput): string {
+  const n = toNumber(bytes);
+  if (n === null || n < 0) return '';
+  if (n < 1024) return `${Math.round(n)} B`;
+  const units = ['KB', 'MB', 'GB', 'TB'];
+  let value = n / 1024;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024;
+    unitIndex++;
+  }
+  return `${value >= 100 ? Math.round(value) : value.toFixed(1)} ${units[unitIndex]}`;
+}
+
+/**
  * 百分比：入参是**比值**不是百分数——`0.425` → `42.5%`
  * （与仓内既有 `Math.round(ratio * 100)` 后拼 `%` 的写法同口径）。
  * 无效输入返回 `''`。

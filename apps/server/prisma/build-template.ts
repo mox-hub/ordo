@@ -90,8 +90,10 @@ seed()
     // 模板即继承——此前模板库是 legacy DELETE 模式，全部工作区库因此跑在
     // 非 WAL 下（读写互斥 SQLITE_BUSY；备份「-wal sidecar 在用判定」永不命中，
     // 在用库被当静态库裸拷贝 → 撕裂备份）。
-    await prisma.$executeRawUnsafe('PRAGMA journal_mode=WAL;');
-    await prisma.$executeRawUnsafe('PRAGMA wal_checkpoint(TRUNCATE);');
+    // PRAGMA 一律带返回行，须走 $queryRawUnsafe（$executeRawUnsafe 在 Prisma 6.19 起
+    // 拒绝「Execute returned results」，2026-10-27 产物批修复）。
+    await prisma.$queryRawUnsafe('PRAGMA journal_mode=WAL;');
+    await prisma.$queryRawUnsafe('PRAGMA wal_checkpoint(TRUNCATE);');
     await prisma.$disconnect();
     // 断连合并后清残留 sidecar，避免把半格文件留在仓库
     for (const suffix of ['-wal', '-shm']) {

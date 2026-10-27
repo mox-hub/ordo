@@ -23,6 +23,25 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
 }));
 
+// 产物区块（CAP-A-32）经项目封装 useTranslation 读 i18n 实例——与 react-i18next 同口径桩
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string, opts?: string | { defaultValue?: string }) =>
+      typeof opts === 'string' ? opts : (opts?.defaultValue ?? key),
+  }),
+}));
+
+// 产物区块数据面桩（区块挂主栏后页面测试不依赖真实产物查询）
+vi.mock('@/modules/artifact/hooks/use-artifacts', () => ({
+  useArtifacts: () => ({ data: { data: [], meta: { page: 1, pageSize: 50, total: 0, totalPages: 0 } }, isLoading: false }),
+  useUploadArtifacts: () => ({ mutateAsync: vi.fn().mockResolvedValue({}) }),
+  useUploadArtifactVersion: () => ({ mutateAsync: vi.fn().mockResolvedValue({}) }),
+  useArtifactVersions: () => ({ data: [] }),
+  useArtifactDetail: () => ({ data: undefined }),
+  useUpdateArtifact: () => ({ mutateAsync: vi.fn().mockResolvedValue({}) }),
+  useDeleteArtifact: () => ({ mutateAsync: vi.fn().mockResolvedValue({}) }),
+}));
+
 // ── 可断言的 mutation 桩（拆分流 / 子任务落库共用） ──
 const hooks = vi.hoisted(() => ({
   updateMutateAsync: vi.fn(async (..._args: unknown[]) => undefined),

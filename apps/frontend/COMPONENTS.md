@@ -14,11 +14,11 @@
 
 | 状态 | 数量 | 计入 LU 分母 | 必须在画廊展示 | 是否需消费方 |
 |---|---|---|---|---|
-| ✅ canonical | 325 | ✅ 计入 | ✅ 必须 | ✅ 必须 ≥1 |
+| ✅ canonical | 333 | ✅ 计入 | ✅ 必须 | ✅ 必须 ≥1 |
 | 📦 standby | 19 | ❌ 不计 | ✅ 必须 | ❌ 不要求 |
 | 🔒 internal | 6 | ❌ 不计 | ❌ 免 | — |
 | ⛔ deprecated | 1 | ❌ 不计 | ✅ 标记 deprecated | — |
-| **合计** | **351** | | | |
+| **合计** | **359** | | | |
 
 > **画廊豁免（H 类，2026-09-29 裁决）**：任何状态条目可登记 `galleryExempt`（一句话理由）豁免画廊 demo——豁免后不入覆盖率分母（`check-component-registry.mjs` §4.2 ④ 机器强制），但在设计系统页 Registry 对账区可见；**demo 豁免 ≠ 清退豁免**，五态裁决面不受影响。
 
@@ -28,15 +28,15 @@
 |---|---|
 | Foundations | 1 |
 | Controls | 27 |
-| Data Display | 15 |
+| Data Display | 17 |
 | Feedback | 10 |
 | Navigation | 11 |
 | Overlays | 12 |
 | Layout & Shells | 12 |
 | AI Execution | 25 |
 | App Patterns | 6 |
-| Semantic | 29 |
-| App Components | 203 |
+| Semantic | 30 |
+| App Components | 208 |
 
 ## 待裁决清单（设计系统页「只看待裁决」视图同源）
 
@@ -94,7 +94,7 @@
 | raw-button | `src/components/raw/raw-button.tsx` | 🔒 internal | — | — |
 | raw-input | `src/components/raw/raw-input.tsx` | 🔒 internal | — | — |
 
-### Data Display（15）
+### Data Display（17）
 
 #### UI 原子层 `src/components/ui/`（10）
 
@@ -111,7 +111,7 @@
 | progress | `src/components/ui/progress.tsx` | ✅ canonical | — | — |
 | table | `src/components/ui/table.tsx` | ✅ canonical | — | — |
 
-#### 语义组件层 `src/components/semantic/`（G 类：新增组件默认落点）（5）
+#### 语义组件层 `src/components/semantic/`（G 类：新增组件默认落点）（7）
 
 | 组件 | 路径 | 状态 | 消费方 | 治理说明 |
 |---|---|---|---|---|
@@ -120,6 +120,8 @@
 | icon-metric | `src/components/semantic/icon-metric.tsx` | ✅ canonical | — | — |
 | icon-stack | `src/components/semantic/icon-stack.tsx` | ✅ canonical | — | — |
 | status-pill | `src/components/semantic/status-pill.tsx` | ✅ canonical | — | — |
+| file-type-icon | `src/components/semantic/file-type-icon.tsx` | ✅ canonical | — | — |
+| artifact-source-badge | `src/components/semantic/artifact-source-badge.tsx` | ✅ canonical | — | — |
 
 ### Feedback（10）
 
@@ -264,9 +266,9 @@
 | sub-page-toolbar | `src/components/semantic/sub-page-toolbar.tsx` | ✅ canonical | — | — |
 | toolbar-row | `src/components/semantic/toolbar-row.tsx` | ✅ canonical | — | — |
 
-### Semantic（29）
+### Semantic（30）
 
-#### 语义组件层 `src/components/semantic/`（G 类：新增组件默认落点）（29）
+#### 语义组件层 `src/components/semantic/`（G 类：新增组件默认落点）（30）
 
 | 组件 | 路径 | 状态 | 消费方 | 治理说明 |
 |---|---|---|---|---|
@@ -301,14 +303,19 @@
 | path-input | `src/components/semantic/path-input.tsx` | ✅ canonical | — | — |
 | cost-figure | `src/components/semantic/cost-figure.tsx` | ✅ canonical | — | —（**aiNotes**：数据契约：amount/tokens 双轨且单边可缺席（null 或非有限数=无数据），本件只渲染调用方传入的自身值，组/分支级汇总必须由父级从成员值现算后传单值。状态语义：running=爬升中动效态（数字滚动 240ms+微光扫过，reduced-motion 直出终值），终态不传 running 即静默；双轨均缺席渲染「—」占位诚实降级。禁区：禁传预汇总值、禁传 0 冒充无数据、禁绕过本件手写成本展示（宪法 §22.2 成本一等公民律）） |
 
-### App Components（203）
+### App Components（208）
 
-#### 跨模块业务组件 `src/shared/components/`（29）
+#### 跨模块业务组件 `src/shared/components/`（34）
 
 | 组件 | 路径 | 状态 | 消费方 | 治理说明 |
 |---|---|---|---|---|
 | data-list | `src/shared/components/data-list.tsx` | ✅ canonical | — | — |
 | property-panel | `src/shared/components/property-panel.tsx` | ✅ canonical | — | — |
+| artifact-preview-dialog | `src/shared/components/artifact/artifact-preview-dialog.tsx` | ✅ canonical | — | — |
+| artifact-section | `src/shared/components/artifact/artifact-section.tsx` | ✅ canonical | — | — |
+| artifact-upload-dialog | `src/shared/components/artifact/artifact-upload-dialog.tsx` | ✅ canonical | — | — |
+| artifact-version-list | `src/shared/components/artifact/artifact-version-list.tsx` | ✅ canonical | — | — |
+| file-previewer | `src/shared/components/artifact/file-previewer.tsx` | ✅ canonical | — | — |
 | board-view | `src/shared/components/board-view/board-view.tsx` | ✅ canonical | — | — |
 | bottom-dock | `src/shared/components/bottom-dock/bottom-dock.tsx` | ✅ canonical | — | — |
 | dock-metric-badge | `src/shared/components/bottom-dock/dock-metric-badge.tsx` | ✅ canonical | — | — |

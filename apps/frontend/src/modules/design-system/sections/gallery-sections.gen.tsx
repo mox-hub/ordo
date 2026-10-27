@@ -5249,6 +5249,7 @@ function GallerySec_ai_density_cards() {
   )
 }
 
+
 function GallerySec_form_dialog() {
   const [open, setOpen] = React.useState(false)
   return (
@@ -5665,6 +5666,8 @@ import { AutonomyDial } from '@/components/semantic/autonomy-dial'
 import type { AutonomyLevel } from '@/components/semantic/autonomy-dial'
 import { ContextUsage } from '@/components/semantic/context-usage'
 import { CostFigure } from '@/components/semantic/cost-figure'
+import { FileTypeIcon } from '@/components/semantic/file-type-icon'
+import { ArtifactSourceBadge } from '@/components/semantic/artifact-source-badge'
 import { ExecTree } from '@/components/semantic/exec-tree'
 import type { ExecTreeNode } from '@/components/semantic/exec-tree'
 import { InlineDiff } from '@/components/semantic/inline-diff'
@@ -5715,6 +5718,63 @@ function GallerySec_cost_figure() {
           <SubLabel>running 动效（240ms 数字滚动 + 微光，reduced-motion 直出终值）</SubLabel>
           <CostFigure amount={0.318} tokens={96_500} running size="md" />
         </div>
+      </div>
+    </>
+  )
+}
+
+function GallerySec_file_type_icon() {
+  return (
+    <>
+      <SectionTitle>File Type Icon — 文件类型图标（CAP-A-32）</SectionTitle>
+      <p className="text-3xs text-muted-foreground mb-3">
+        扩展名优先 → MIME 兜底两级映射；产物列表/预览/上传唯一出口。
+      </p>
+      <div className="flex items-center gap-6 flex-wrap">
+        {[
+          { name: 'spec.pdf' },
+          { name: '报告.docx' },
+          { name: '数据.xlsx' },
+          { name: '汇报.pptx' },
+          { name: 'app.tsx' },
+          { name: 'schema.prisma' },
+          { name: 'README.md' },
+          { name: '现场截图.png' },
+          { name: '打包.zip' },
+          { name: 'demo.mp4' },
+          { name: '未知格式.xyz' },
+        ].map((item) => (
+          <div key={item.name} className="flex items-center gap-1.5">
+            <FileTypeIcon name={item.name} />
+            <span className="text-xs text-muted-foreground">{item.name}</span>
+          </div>
+        ))}
+        <div className="flex items-center gap-1.5">
+          <FileTypeIcon mimeType="application/octet-stream" />
+          <span className="text-xs text-muted-foreground">仅 MIME（未知扩展）</span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <FileTypeIcon name="hero.png" size="md" />
+          <span className="text-xs text-muted-foreground">md 档</span>
+        </div>
+      </div>
+    </>
+  )
+}
+
+function GallerySec_artifact_source_badge() {
+  return (
+    <>
+      <SectionTitle>Artifact Source Badge — 产物来源徽标（CAP-A-32）</SectionTitle>
+      <p className="text-3xs text-muted-foreground mb-3">
+        upload/execution/document 三源标注；不传 to 为纯标注，传 to 整枚为溯源跳转。
+      </p>
+      <div className="flex items-center gap-4 flex-wrap">
+        <ArtifactSourceBadge kind="upload" />
+        <ArtifactSourceBadge kind="execution" />
+        <ArtifactSourceBadge kind="document" />
+        <ArtifactSourceBadge kind="execution" to="/app/executions" />
+        <ArtifactSourceBadge kind="document" to="/app/documents" />
       </div>
     </>
   )
@@ -5947,6 +6007,8 @@ export const GALLERY_SECTIONS: Record<string, React.ComponentType> = {
   'form-dialog': GallerySec_form_dialog,
   'registry-audit': GallerySec_registry_audit,
   'cost-figure': GallerySec_cost_figure,
+  'file-type-icon': GallerySec_file_type_icon,
+  'artifact-source-badge': GallerySec_artifact_source_badge,
   'exec-tree': GallerySec_exec_tree,
   'approval-card': GallerySec_approval_card,
   'autonomy-dial': GallerySec_autonomy_dial,

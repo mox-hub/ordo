@@ -127,7 +127,9 @@
       "unsavedDesc": "关闭后已填内容将丢失。",
       "keepEditing": "继续编辑",
       "discard": "放弃更改"
-    }
+    },
+    "done": "完成",
+    "previousPage": "上一页"
   },
   "workspace": {
     "backups": {
@@ -6681,5 +6683,92 @@
     "estimateHint": "按当前证据状态逐条预估标准达成概率（AI 快速判断，仅辅助参考）",
     "completionTypeMismatch": "AI 认为完成形态应为 {{type}}",
     "coverageHint": "AI 复核：或已被现有标准覆盖（{{pct}}%），采纳前请人工确认"
+  },
+  "artifact": {
+    "title": "产物",
+    "kind": {
+      "all": "全部",
+      "upload": "上传",
+      "execution": "执行产物",
+      "document": "文档"
+    },
+    "metrics": {
+      "total": "产物总数"
+    },
+    "list": {
+      "upload": "上传产物",
+      "empty": "暂无产物",
+      "emptyDescription": "上传文件，或派发 AI 任务——执行产生的文件会自动出现在这里",
+      "versions": "{{count}} 个版本"
+    },
+    "filter": {
+      "searchPlaceholder": "搜索产物名称…",
+      "kindGroup": "来源类型",
+      "projectGroup": "项目"
+    },
+    "columns": {
+      "name": "名称",
+      "kind": "来源",
+      "issue": "归属工单",
+      "size": "大小",
+      "updatedAt": "更新时间"
+    },
+    "menu": {
+      "open": "打开",
+      "delete": "删除"
+    },
+    "preview": {
+      "loading": "加载预览…",
+      "error": "预览加载失败，请尝试下载后查看",
+      "dialogTitle": "产物预览",
+      "latestVersion": "最新版",
+      "download": "下载",
+      "maximize": "最大化",
+      "restore": "还原",
+      "unknownType": "未知类型",
+      "fallbackHint": "该格式暂不支持在线预览，可下载后查看。"
+    },
+    "upload": {
+      "title": "上传产物",
+      "description": "支持多选与拖拽；单文件上限 50MB。",
+      "dropzone": "选择或拖入文件",
+      "dropTitle": "拖入文件，或点击选择",
+      "dropHint": "上传后自动进入产物库，可随时预览与版本管理",
+      "uploading": "上传中…",
+      "failed": "失败",
+      "more": "继续添加"
+    },
+    "versions": {
+      "title": "版本历史",
+      "empty": "暂无版本记录",
+      "preview": "预览此版本",
+      "download": "下载此版本"
+    },
+    "section": {
+      "title": "产物",
+      "upload": "上传",
+      "empty": "暂无产物；可上传文件，AI 任务执行产生的文件会自动出现在这里"
+    },
+    "aside": {
+      "properties": "属性",
+      "basic": "基本信息",
+      "kind": "来源",
+      "type": "类型",
+      "size": "大小",
+      "checksum": "指纹 (SHA-256)",
+      "checksumSkipped": "未计算",
+      "createdAt": "创建时间",
+      "updatedAt": "更新时间",
+      "lineage": "溯源",
+      "issue": "归属工单",
+      "execution": "来源执行",
+      "document": "文档",
+      "openDocument": "打开文档",
+      "lineageEmpty": "人工上传产物",
+      "name": "名称"
+    },
+    "detail": {
+      "notFound": "产物不存在或已被删除"
+    }
   }
 }

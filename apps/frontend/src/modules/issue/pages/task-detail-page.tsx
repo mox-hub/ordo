@@ -94,6 +94,7 @@ import {
   parseIssueDecompose,
 } from '@/modules/assistant/hooks/use-silent-ai';
 import { ExecutionItemsPanel } from '../components/execution-items-panel';
+import { ArtifactSection } from '@/shared/components/artifact/artifact-section';
 import { TaskPromptPanel } from '../components/task-prompt-panel';
 import { useIssueExecutions } from '@/modules/execution/hooks/use-execution';
 import type { ExecutionStatus } from '@/modules/execution/api/execution-api';
@@ -572,6 +573,11 @@ export function TaskDetailPage() {
 
           {/* Execution items（4d：统一执行单位，主栏与子任务同级，置于其上方） */}
           <ExecutionItemsPanel issueId={task.id} projectId={task.projectId} />
+
+          {/* 产物区块（CAP-A-32）：上传附件 + AI 执行产出自动纳管，标准嵌入件 */}
+          {task.projectId && (
+            <ArtifactSection projectId={task.projectId} issueId={task.id} />
+          )}
 
           {/* Sub-task section（metadata 供「AI 拆分待确认建议」块消费） */}
           <SubTaskSection

@@ -64,6 +64,7 @@ export const PAGE_REGISTRY: Record<string, PageRegistryEntry> = {
   "/app/workflows": { icon: getEntityIcon("workflow").icon, labelKey: "nav.workflow", color: "hsl(var(--accent-purple))" },
   "/app/acceptance": { icon: getEntityIcon("acceptance").icon, labelKey: "nav.acceptance", color: "hsl(var(--accent-green))" },
   "/app/documents": { icon: getEntityIcon("document").icon, labelKey: "document.title", color: "hsl(var(--accent-blue))" },
+  "/app/artifacts": { icon: getEntityIcon("artifact").icon, labelKey: "artifact.title", color: "hsl(var(--accent-purple))" },
   "/app/analytics": { icon: BarChart3, labelKey: "nav.analytics", color: "hsl(var(--accent-purple))" },
   "/app/repositories": { icon: getEntityIcon("repository").icon, labelKey: "git.title", color: "hsl(var(--accent-red))" },
   "/app/office": { icon: DoorOpen, labelKey: "nav.office", color: "hsl(var(--accent-purple))" },

@@ -61,6 +61,7 @@ import { useTabs } from '@/shared/tabs/tabs-context';
 import { useDebouncedCallback } from '@/shared/hooks/use-debounced-callback';
 import { useEntityNavigation } from '@/shared/hooks/use-entity-navigation';
 import { LinkedDocsPanel } from '../components/linked-docs-panel';
+import { ArtifactSection } from '@/shared/components/artifact/artifact-section';
 import { IssueDetailHeading } from '../components/issue-detail-heading';
 import { ActivityFeed } from '@/modules/activity';
 import { useSetViewingContext } from '@/shared/viewing-context';
@@ -362,6 +363,9 @@ export function BugDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* 产物区块（CAP-A-32）：上传附件 + AI 执行产出自动纳管，标准嵌入件 */}
+          {bug.projectId && <ArtifactSection projectId={bug.projectId} issueId={bug.id} />}
 
           {/* Linked documents 已移至右侧栏 */}
           <div className="px-6 py-4 flex-1 min-h-0 flex flex-col">

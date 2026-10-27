@@ -119,15 +119,17 @@ vi.mock('@/modules/assistant/api/assistant-api', () => ({
 const detailState: { release?: Record<string, unknown> } = {};
 /** 列表数据可变槽（各用例注入不同平台/通道/计划时间组合） */
 const listState: { releases?: Array<Record<string, unknown>> } = {};
-/** 创建/更新 mutation 的 mutate 间谍（载荷断言用） */
+/** 创建/更新 mutation 的 mutate 间谍（载荷断言用）；FormDialog 迁移后组件走 mutateAsync（promise 式） */
 const createMutate = vi.fn();
+const createMutateAsync = vi.fn().mockResolvedValue({ id: 'rel-new' });
 const updateMutate = vi.fn();
+const updateMutateAsync = vi.fn().mockResolvedValue({ id: 'rel-new' });
 
 vi.mock('../hooks/use-releases', () => ({
   useReleases: () => ({ data: listState.releases, isLoading: false }),
   useRelease: () => ({ data: detailState.release, isLoading: false }),
-  useCreateRelease: () => ({ mutate: createMutate, isPending: false }),
-  useUpdateRelease: () => ({ mutate: updateMutate, isPending: false }),
+  useCreateRelease: () => ({ mutate: createMutate, mutateAsync: createMutateAsync, isPending: false }),
+  useUpdateRelease: () => ({ mutate: updateMutate, mutateAsync: updateMutateAsync, isPending: false }),
   useGateRelease: () => ({ mutate: vi.fn(), isPending: false }),
   useApprovalRequest: () => ({ mutate: vi.fn(), isPending: false }),
   usePublishRelease: () => ({ mutate: vi.fn(), isPending: false }),
@@ -376,8 +378,8 @@ describe('ReleaseListPage', () => {
     // 提交（计划时间预填链路依赖真实日历弹层，jsdom 成本高，载荷断言覆盖
     // platforms/hotfixOfId；plannedAt 预填逻辑由 handleMilestoneChange 单线保证）
     await user.click(screen.getByText('创建草案'));
-    expect(createMutate).toHaveBeenCalledTimes(1);
-    const payload = createMutate.mock.calls[0][0] as Record<string, unknown>;
+    expect(createMutateAsync).toHaveBeenCalledTimes(1);
+    const payload = createMutateAsync.mock.calls[0][0] as Record<string, unknown>;
     expect(payload.version).toBe('2.0.0');
     expect(payload.platforms).toEqual(['windows', 'web']);
     expect(payload.hotfixOfId).toBeNull();

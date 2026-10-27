@@ -131,6 +131,14 @@ const DocumentEditPage = lazyNamed(
   () => import('@/modules/document/pages/document-edit-page'),
   'DocumentEditPage',
 );
+const ArtifactsPage = lazyNamed(
+  () => import('@/modules/artifact/pages/artifacts-page'),
+  'ArtifactsPage',
+);
+const ArtifactDetailRoute = lazyNamed(
+  () => import('@/modules/artifact/pages/artifact-detail-page'),
+  'ArtifactDetailPage',
+);
 const RepositoryListPage = lazyNamed(
   () => import('@/modules/git/pages/repository-list-page'),
   'RepositoryListPage',
@@ -881,6 +889,18 @@ export const router = createBrowserRouter([
         path: 'documents',
         handle: { selfScroll: true },
         element: <DocumentsPage />,
+        errorElement: <ErrorPage />,
+      },
+      {
+        path: 'artifacts',
+        handle: { selfScroll: true },
+        element: <ArtifactsPage />,
+        errorElement: <ErrorPage />,
+      },
+      {
+        path: 'artifacts/:artifactId',
+        element: <ArtifactDetailRoute />,
+        handle: { selfScroll: true },
         errorElement: <ErrorPage />,
       },
       {
