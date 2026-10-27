@@ -7,6 +7,7 @@
  */
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { UnifiedCreateDialog } from '../unified-create-dialog';
 
 // vitest 环境无 i18next 实例：t() 直通返回 key
@@ -121,12 +122,17 @@ const DRAFT_RESPONSE = {
 
 function setup(props?: Partial<Parameters<typeof UnifiedCreateDialog>[0]>) {
   const onOpenChange = vi.fn();
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
   render(
-    <UnifiedCreateDialog
-      open
-      onOpenChange={onOpenChange}
-      {...props}
-    />,
+    <QueryClientProvider client={queryClient}>
+      <UnifiedCreateDialog
+        open
+        onOpenChange={onOpenChange}
+        {...props}
+      />
+    </QueryClientProvider>,
   );
   return { onOpenChange };
 }
@@ -292,7 +298,52 @@ describe('UnifiedCreateDialog 双界面（CAP-A-18）', () => {
     });
   });
 
-  it('死装饰不渲染：无附件按钮；项目类型无 Template/Lead 死块', () => {
+  it('缺陷提交：severity/priority 缺省随 DEFAULT_BUG，type=bug 落库', async () => {
+    setup({ defaultType: 'bug' });
+    fireEvent.change(screen.getByPlaceholderText('unifiedCreate.placeholder.bug'), {
+      target: { value: '登录页崩溃' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'unifiedCreate.title.bug' }));
+    await waitFor(() => {
+      expect(createTaskMutate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: '登录页崩溃',
+          type: 'bug',
+          severity: 'medium',
+          priority: 'high',
+        }),
+      );
+    });
+  });
+
+  it('文档提交：category 缺省 custom 落库（draft 默认不触发补写 update）', async () => {
+    setup({ defaultType: 'doc' });
+    fireEvent.change(screen.getByPlaceholderText('unifiedCreate.placeholder.doc'), {
+      target: { value: '接口设计文档' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'unifiedCreate.title.doc' }));
+    await waitFor(() => {
+      expect(createDocumentMutate).toHaveBeenCalledWith(
+        expect.objectContaining({ title: '接口设计文档', category: 'custom' }),
+      );
+    });
+  });
+
+  it('项目手动提交：落库后统一跳 init 页（绑定工作区目录 + 种生契约三件套）', async () => {
+    setup({ defaultType: 'project' });
+    fireEvent.change(screen.getByPlaceholderText('unifiedCreate.placeholder.project'), {
+      target: { value: '新项目' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'unifiedCreate.title.project' }));
+    await waitFor(() => {
+      expect(createProjectMutate).toHaveBeenCalledWith(
+        expect.objectContaining({ name: '新项目' }),
+      );
+      expect(mockNavigate).toHaveBeenCalledWith('/app/projects/pr1/init');
+    });
+  });
+
+  it('死装饰不渲染：附件假按钮已随批二剔除；项目类型无 Template/Lead 死块', () => {
     setup({ defaultType: 'project' });
     expect(document.querySelector('[title="添加附件"]')).toBeNull();
     expect(screen.queryByText('unifiedCreate.linear.labels')).not.toBeInTheDocument();
@@ -301,10 +352,10 @@ describe('UnifiedCreateDialog 双界面（CAP-A-18）', () => {
     expect(screen.queryByText('unifiedCreate.field.author')).not.toBeInTheDocument();
   });
 
-  it('底部布局：左侧附件与连续创建开关并列，右侧智能体穿梭按钮', () => {
+  it('底部布局：左侧连续创建开关，右侧智能体穿梭按钮（附件假按钮已剔除）', () => {
     setup({ defaultType: 'task' });
-    // 左侧附件
-    expect(document.querySelector('[title="添加附件"]')).toBeInTheDocument();
+    // 左侧附件假按钮已删（无后端支撑，真实附件能力另立项）
+    expect(document.querySelector('[title="添加附件"]')).toBeNull();
     // 左侧连续创建
     expect(screen.getByText('unifiedCreate.createMore')).toBeInTheDocument();
     // 右侧模式穿梭按钮
