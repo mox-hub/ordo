@@ -38,7 +38,8 @@ import { ToolbarRow, useToolbarViews } from '@/components/semantic/toolbar-row';
 import { MENU_ITEM_CLASS, MENU_SURFACE_CLASS } from '@/components/ui/menu-surface';
 import { DocumentPreviewDialog } from '@/modules/document/components/document-preview-dialog';
 import { DocumentTableView } from '@/modules/document/components/document-table-view';
-import { UnifiedCreateDialog } from '@/shared/components/create-dialog';
+import { useCreateDialogDeepLink } from '@/shared/components/create-dialog';
+import { useAppStore } from '@/infrastructure/store/app-store';
 import { cn } from '@/lib/utils';
 import { CORE_AI_PAGE_IDS } from '@/shared/ai/identifiers';
 import { useDocuments } from '../hooks/use-documents';
@@ -81,13 +82,14 @@ function resolveCategory(key?: string | null) {
 }
 
 export function DocumentsPage() {
+  const openCreateDialog = useAppStore((s) => s.openCreateDialog);
+  useCreateDialogDeepLink({ type: 'doc' });
   const { t } = useTranslation();
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<StatusFilter>('all');
   const [category, setCategory] = useState<CategoryFilter>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [previewDocument, setPreviewDocument] = useState<DocumentListItem | null>(null);
-  const [createOpen, setCreateOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
 
   // 已保存视图：快照记忆搜索/状态/分类/视图样式
@@ -186,7 +188,7 @@ export function DocumentsPage() {
               label={t('document.newDocument')}
               data-ai-component="document.document-list.header.new"
               data-ai-role="nav"
-              onClick={() => setCreateOpen(true)}
+              onClick={() => openCreateDialog({ type: 'doc' })}
             />
           )}
         />
@@ -378,8 +380,6 @@ export function DocumentsPage() {
         document={previewDocument}
       />
 
-      {/* 创建文档（J15：原 document-new-page 跳页并入统一创建弹窗 doc 模式；正文编辑仍在文档页原位） */}
-      <UnifiedCreateDialog open={createOpen} onOpenChange={setCreateOpen} defaultType="doc" />
     </PageShell>
   );
 }

@@ -270,6 +270,11 @@ export function ShellLayout() {
     setOpen(!aiPanelOpen);
   });
 
+  // 全局创建快捷键：N 唤起统一创建面板（默认任务类型；单键在输入态自动让位，见 use-global-hotkey）
+  useGlobalHotkey('create-dialog', () => {
+    useAppStore.getState().openCreateDialog({ type: 'task' });
+  });
+
   useEffect(() => {
     if (!mobileSidebarOpen) return;
 
@@ -366,7 +371,12 @@ export function ShellLayout() {
             : (entry.icon ?? undefined),
           // 品牌彩色（page-registry 唯一真相源），命令面板图标着色与侧边栏同源
           iconColor: entry.to ? PAGE_REGISTRY[entry.to]?.color : undefined,
-          onSelect: entry.action ? commandActions[entry.action] : undefined,
+          // 创建类命令：直接唤起统一创建面板（app-store 全局实例）
+          onSelect: entry.createType
+            ? () => useAppStore.getState().openCreateDialog({ type: entry.createType })
+            : entry.action
+              ? commandActions[entry.action]
+              : undefined,
         })),
     [commandActions, isAdminRole, resolvedMode, t],
   );

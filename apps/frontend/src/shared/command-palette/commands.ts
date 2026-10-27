@@ -60,6 +60,9 @@ export type CommandGroupId =
 /** 需要运行时回调的命令动作 id（shell-layout 负责绑定实现） */
 export type CommandActionId = 'toggleTheme' | 'openAiPanel' | 'openGlobalSearch' | 'logout';
 
+/** 创建类命令：声明后命令即唤起统一创建面板并预置实体类型（无需 action 回调） */
+export type CommandCreateType = 'task' | 'bug' | 'doc' | 'project' | 'milestone';
+
 export type CommandEntry = {
   id: string;
   /** label 的 i18n key，渲染时经 t() 翻译 */
@@ -75,6 +78,8 @@ export type CommandEntry = {
   /** 路由跳转目标（与 action 二选一） */
   to?: string;
   action?: CommandActionId;
+  /** 创建类命令：唤起统一创建面板（与 action/to 互斥） */
+  createType?: CommandCreateType;
   /** 仅全局 admin 角色可见 */
   adminOnly?: boolean;
   /** 实体类命令：经 entity-icons 注册表解析图标（单一图标真相源） */
@@ -166,6 +171,12 @@ export const commandEntries: CommandEntry[] = [
   { id: 'cmd-admin', labelKey: 'nav.admin', to: '/app/admin', group: 'system', adminOnly: true, icon: UserCog, keywords: ['admin', 'accounts', 'invites', '管理'] },
   { id: 'cmd-help', labelKey: 'shell.openHelp', to: '/app/help', group: 'system', icon: CircleHelp, keywords: ['help', 'docs', '帮助'] },
   // —— 操作 ——
+  // 创建类命令：唤起统一创建面板并预置实体类型（openCreateDialog 走 app-store 全局实例）
+  { id: 'cmd-create-task', labelKey: 'shell.createTask', group: 'actions', entity: 'issue', createType: 'task', keywords: ['create', 'new', 'task', 'issue', '创建', '新建', '任务', '工单'] },
+  { id: 'cmd-create-bug', labelKey: 'shell.createBug', group: 'actions', entity: 'bug', createType: 'bug', keywords: ['create', 'new', 'bug', '创建', '新建', '缺陷', '报缺陷'] },
+  { id: 'cmd-create-doc', labelKey: 'shell.createDoc', group: 'actions', entity: 'document', createType: 'doc', keywords: ['create', 'new', 'doc', 'document', '创建', '新建', '文档'] },
+  { id: 'cmd-create-project', labelKey: 'shell.createProject', group: 'actions', entity: 'project', createType: 'project', keywords: ['create', 'new', 'project', '创建', '新建', '项目', '立项'] },
+  { id: 'cmd-create-milestone', labelKey: 'shell.createMilestone', group: 'actions', entity: 'milestone', createType: 'milestone', keywords: ['create', 'new', 'milestone', '创建', '新建', '里程碑'] },
   {
     id: 'cmd-theme',
     labelKey: 'shell.switchToDark',

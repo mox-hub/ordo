@@ -5299,7 +5299,12 @@
     "groupSettings": "设置",
     "groupCollaboration": "协作与工具",
     "noTabsOpen": "暂无打开的标签页",
-    "appName": "Ordo"
+    "appName": "Ordo",
+    "createTask": "创建任务",
+    "createBug": "创建缺陷",
+    "createDoc": "创建文档",
+    "createProject": "创建项目",
+    "createMilestone": "创建里程碑"
   },
   "hotkeys": {
     "commandPalette": "打开命令面板",
@@ -5315,7 +5320,9 @@
     "createPanelSwitch": "创建面板切换类型",
     "createPanelSwitchDesc": "统一创建面板内 Ctrl+1..5 在任务/缺陷/文档等项目/里程碑间切换",
     "createPanelSubmit": "创建面板提交",
-    "createPanelSubmitDesc": "统一创建面板内 Ctrl+Enter 提交（AI 代理模式为生成/确认草稿）"
+    "createPanelSubmitDesc": "统一创建面板内 Ctrl+Enter 提交（AI 代理模式为生成/确认草稿）",
+    "createDialog": "创建面板",
+    "createDialogDesc": "唤起统一创建面板（任务/缺陷/文档/项目/里程碑）"
   },
   "commandPalette": {
     "title": "命令面板",

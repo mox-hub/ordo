@@ -33,7 +33,8 @@ import { AsyncState } from '@/components/semantic/async-state';
 import { useAllBugs, useDeleteTask, useUpdateTask } from '../hooks/use-project-tasks';
 import { useProjectList } from '@/modules/project/hooks/use-project-list';
 import type { Task } from '../api/issue-api';
-import { UnifiedCreateDialog } from '@/shared/components/create-dialog';
+import { useCreateDialogDeepLink } from '@/shared/components/create-dialog';
+import { useAppStore } from '@/infrastructure/store/app-store';
 import { ListActionButton } from '@/shared/components/data-list';
 import { BugSimpleList } from '../components/bug-simple-list';
 import { TaskTableView } from '../components/task-table-view';
@@ -82,7 +83,6 @@ export function BugsPage() {
   const [search, setSearch] = useState('');
   // 筛选条件条（Linear 形态）：字段 + 算子 + 值集，空数组 = 无筛选
   const [conditions, setConditions] = useState<FilterCondition[]>([]);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [dispatchBug, setDispatchBug] = useState<{ bug: Task; projectId: string } | null>(null);
   const statsCards = usePersistentToggle('bugs-page.stats');
 
@@ -315,9 +315,8 @@ export function BugsPage() {
     navigate(`/app/bugs/${bug.id}`);
   };
 
-  const handleCreateBug = () => {
-    setShowCreateDialog(true);
-  };
+  const openCreateDialog = useAppStore((s) => s.openCreateDialog);
+  useCreateDialogDeepLink({ type: 'bug' });
 
   return (
     <PageShell aiPage="bugs.bugs-list" className="overflow-hidden">
@@ -343,21 +342,11 @@ export function BugsPage() {
               activeLabel={t('task.hideStats', 'Hide stats')}
               aiId="bugs.bugs-list.stats-toggle"
             />
-            <HeaderActionButton icon={Plus} label={t("task.bug.report")} onClick={handleCreateBug} />
+            <HeaderActionButton icon={Plus} label={t("task.bug.report")} onClick={() => openCreateDialog({ type: 'bug' })} />
           </>
         }
       />
 
-      {/* Unified Create Dialog */}
-      <UnifiedCreateDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-        defaultType="bug"
-        onSuccess={(type, id) => {
-          console.log(`Created ${type} with id: ${id}`);
-          refetch();
-        }}
-      />
 
       {/* AI Dispatch Dialog */}
       {dispatchBug && (
@@ -545,7 +534,7 @@ export function BugsPage() {
               groupBy={groupBy}
               getProjectName={getProjectName}
               getAiExecution={getIssueExecution}
-              onGroupCreate={() => setShowCreateDialog(true)}
+              onGroupCreate={() => openCreateDialog({ type: 'bug' })}
               selectionActions={(selected, close) => (
                 <ListActionButton
                   onClick={async () => {

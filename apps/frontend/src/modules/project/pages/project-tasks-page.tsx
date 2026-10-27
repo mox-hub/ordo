@@ -29,7 +29,8 @@ import {
   type FilterFieldDef,
 } from '@/components/semantic/filter-chips';
 import { TASK_STATUS_VISUALS, TONE_TEXT_CLASS } from '@/shared/status/status-visuals';
-import { UnifiedCreateDialog } from '@/shared/components/create-dialog';
+import { useCreateDialogDeepLink } from '@/shared/components/create-dialog';
+import { useAppStore } from '@/infrastructure/store/app-store';
 import { ListActionButton } from '@/shared/components/data-list';
 import { useConfirm } from '@/shared/confirm/use-confirm';
 import { CORE_AI_PAGE_IDS } from '@/shared/ai/identifiers';
@@ -93,6 +94,8 @@ function restoreConditions(snap: {
 }
 
 export function ProjectTasksPage() {  const { t } = useTranslation();
+  const openCreateDialog = useAppStore((s) => s.openCreateDialog);
+  useCreateDialogDeepLink({ type: 'task' });
   const navigate = useNavigate();
   const { projectId } = useParams<{ projectId: string }>();
 
@@ -102,7 +105,6 @@ export function ProjectTasksPage() {  const { t } = useTranslation();
   const [search, setSearch] = useState('');
   // 筛选条件条（Linear 形态）：字段 + 算子 + 值集，空数组 = 无筛选
   const [conditions, setConditions] = useState<FilterCondition[]>([]);
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [dispatchTask, setDispatchTask] = useState<Task | null>(null);
 
   useLinearSyncEvents(projectId);
@@ -302,7 +304,7 @@ export function ProjectTasksPage() {  const { t } = useTranslation();
               id: 'project.project-board.header.new-task',
               icon: Plus,
               label: t('task.create'),
-              onClick: () => setShowCreateDialog(true),
+              onClick: () => openCreateDialog({ type: 'task', projectId }),
             },
           ]}
           />
@@ -328,7 +330,7 @@ export function ProjectTasksPage() {  const { t } = useTranslation();
             loading={isLoading}
             onTaskClick={handleTaskClick}
             groupBy={groupBy}
-            onGroupCreate={() => setShowCreateDialog(true)}
+            onGroupCreate={() => openCreateDialog({ type: 'task', projectId })}
             selectionActions={(selected, close) => (
               <>
                 <ListActionButton
@@ -417,14 +419,6 @@ export function ProjectTasksPage() {  const { t } = useTranslation();
         )}
       </section>
 
-      {/* Unified Create Dialog */}
-      <UnifiedCreateDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-        defaultType="task"
-        projectId={projectId}
-        onSuccess={() => refetch()}
-      />
 
       {/* AI Dispatch Dialog */}
       {dispatchTask && projectId ? (

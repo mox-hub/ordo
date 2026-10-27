@@ -48,6 +48,15 @@ export const HOTKEY_DEFINITIONS: HotkeyDefinition[] = [
     descKey: 'hotkeys.aiAssistantDesc',
   },
   {
+    // 全局创建（统一创建面板优化批一）：单键 N 唤起创建面板；输入态自动让位由
+    // use-global-hotkey 的 isEditableTarget 守卫承担
+    id: 'create-dialog',
+    group: 'global',
+    defaultKeys: 'n',
+    labelKey: 'hotkeys.createDialog',
+    descKey: 'hotkeys.createDialogDesc',
+  },
+  {
     id: 'document-save',
     group: 'document',
     defaultKeys: 'mod+s',

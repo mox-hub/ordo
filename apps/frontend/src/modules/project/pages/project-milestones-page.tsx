@@ -24,7 +24,8 @@ import { CORE_AI_PAGE_IDS } from '@/shared/ai/identifiers';
 import { cn } from '@/lib/utils';
 import { useProjectDashboardSummary } from '../hooks/use-project-dashboard-summary';
 import { ProjectDetailFrame } from '../components/dashboard/project-detail-frame';
-import { UnifiedCreateDialog } from '@/shared/components/create-dialog';
+import { useCreateDialogDeepLink } from '@/shared/components/create-dialog';
+import { useAppStore } from '@/infrastructure/store/app-store';
 import {
   useProjectIterations,
   useProjectMilestones,
@@ -107,6 +108,8 @@ type TimelineEntry =
   | { kind: 'milestone'; at: string; milestone: MilestoneRef };
 
 export function ProjectMilestonesPage() {
+  const openCreateDialog = useAppStore((s) => s.openCreateDialog);
+  useCreateDialogDeepLink({ type: 'milestone' });
   const { t } = useTranslation();
   const { projectId } = useParams<{ projectId: string }>();
   const {
@@ -123,7 +126,6 @@ export function ProjectMilestonesPage() {
     data: iterations,
     isLoading: iterationsLoading,
   } = useProjectIterations(projectId);
-  const [showUnifiedCreate, setShowUnifiedCreate] = useState(false);
   // P1-19：迭代可用性——详情对话框（卡片点击）/ 创建编辑表单对话框
   const [detailIteration, setDetailIteration] = useState<IterationRef | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -199,7 +201,7 @@ export function ProjectMilestonesPage() {
           <HeaderActionButton
             icon={Plus}
             label={t('project.detail.newMilestone')}
-            onClick={() => setShowUnifiedCreate(true)}
+            onClick={() => openCreateDialog({ type: 'milestone', projectId })}
             data-ai-component="project.project-milestones.header.new-milestone"
             data-ai-action="project.project-milestones.header.new-milestone.click"
             data-ai-role="submit"
@@ -302,13 +304,6 @@ export function ProjectMilestonesPage() {
         </div>
       </AsyncState>
 
-      {/* Unified Create Dialog */}
-      <UnifiedCreateDialog
-        open={showUnifiedCreate}
-        onOpenChange={setShowUnifiedCreate}
-        defaultType="milestone"
-        projectId={projectId}
-      />
 
       {/* P1-19：迭代详情（卡片点击）+ 创建/编辑表单；key 保证创建/编辑切换时表单重置 */}
       <IterationDetailDialog

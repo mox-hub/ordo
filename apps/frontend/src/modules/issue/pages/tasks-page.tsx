@@ -4,7 +4,7 @@
  */
 
 import { useEffect, useState, useMemo, useCallback } from 'react';
-import { useNavigate, useLocation, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import {
   Plus, AlertCircle, ListTodo, Bot as BotIcon, List, Kanban, CalendarRange, TableProperties, Trash2, CircleDashed, SearchX, Flag, Users, Target, Upload, SlidersHorizontal, Tag as TagIcon,
 } from 'lucide-react';
@@ -17,6 +17,7 @@ import { FavoriteToggle } from '@/shared/components/favorite-toggle';
 import { HeaderActionButton } from '@/components/semantic/header-action-button';
 import { QuickCardsToggle } from '@/components/semantic/quick-cards-toggle';
 import { usePersistentToggle } from '@/shared/hooks/use-persistent-toggle';
+import { useAppStore } from '@/infrastructure/store/app-store';
 import { PageShell } from '@/components/semantic/page-shell';
 import { StatsCard } from '@/components/semantic/stats-card';
 import { ToolbarRow, useToolbarViews, normalizeFilterSelection } from '@/components/semantic/toolbar-row';
@@ -35,7 +36,7 @@ import { useAllTasks, useDeleteTask, useUpdateTask } from '../hooks/use-project-
 import { useIssueTypes, useIssueTypeOf } from '../hooks/use-issue-types';
 import { useProjectList } from '@/modules/project/hooks/use-project-list';
 import type { Task } from '../api/issue-api';
-import { UnifiedCreateDialog } from '@/shared/components/create-dialog';
+import { useCreateDialogDeepLink } from '@/shared/components/create-dialog';
 import { useTranslation } from 'react-i18next';
 import { AiAssignDialog, type AiAssignIssueRef } from '../components/ai-assign-dialog';
 import { TaskSimpleList } from '../components/task-simple-list';
@@ -189,8 +190,6 @@ export function TasksPage() {
   // 筛选初值优先级（P1-16）：URL 参数 > 默认空
   const [search, setSearch] = useState(() => searchParams.get(SEARCH_PARAM) ?? '');
   const [conditions, setConditions] = useState<FilterCondition[]>(() => paramsToConditions(searchParams));
-  const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [presetAssigneeId, setPresetAssigneeId] = useState<string | undefined>(undefined);
   // 派发上下文（P0-5）：issues 多于一条时 AiAssignDialog 进入批量模式
   const [dispatch, setDispatch] = useState<{ projectId: string; issues: AiAssignIssueRef[] } | null>(null);
   // 批量修改上下文（P1-12）：选中的工单进入批量改状态/优先级/负责人对话框
@@ -229,25 +228,10 @@ export function TasksPage() {
     }
   };
 
+  const openCreateDialog = useAppStore((s) => s.openCreateDialog);
   // 成员卡「派发任务」入口：/app/issues?state 携带 openCreate + presetAssignee。
-  // 渲染期间检测 state 变化调整弹窗状态，replaceState 副作用留在独立 effect。
-  const location = useLocation();
-  const [prevLocationState, setPrevLocationState] = useState(location.state);
-  if (prevLocationState !== location.state) {
-    setPrevLocationState(location.state);
-    const st = (location.state ?? {}) as { openCreate?: boolean; presetAssigneeId?: string };
-    if (st.openCreate) {
-      setPresetAssigneeId(st.presetAssigneeId);
-      setShowCreateDialog(true);
-    }
-  }
-  useEffect(() => {
-    const st = (location.state ?? {}) as { openCreate?: boolean };
-    if (st.openCreate) {
-      // 清掉 state 防止刷新重复打开
-      window.history.replaceState({}, '');
-    }
-  }, [location.state]);
+  // 深链检测已收敛为共享 hook（走 app-store 全局实例，页面不再本地挂载面板）。
+  useCreateDialogDeepLink({ type: 'task' });
 
   // 已保存视图：快照记忆当前页全部筛选 + 显示样式 + 分组
   const toolbar = useToolbarViews({
@@ -757,25 +741,13 @@ export function TasksPage() {
             <HeaderActionButton
               icon={Plus}
               label={t("task.create")}
-              onClick={() => setShowCreateDialog(true)}
+              onClick={() => openCreateDialog({ type: 'task' })}
               data-ai-component="task.tasks-list.new-button"
               data-ai-action="task.tasks-list.new-button.click"
               data-ai-role="submit"
             />
           </>
         }
-      />
-
-      {/* Unified Create Dialog */}
-      <UnifiedCreateDialog
-        open={showCreateDialog}
-        onOpenChange={setShowCreateDialog}
-        defaultType="task"
-        defaultAssigneeId={presetAssigneeId}
-        onSuccess={(type, id) => {
-          console.log(`Created ${type} with id: ${id}`);
-          refetch();
-        }}
       />
 
       {/* AI Dispatch Dialog（单条或批量，P0-5） */}
@@ -993,7 +965,7 @@ export function TasksPage() {
             title={t('task.empty.none', '暂无任务')}
             description={t('task.empty.noneDesc', '创建第一个任务，或从需求承接管道拆解生成')}
             action={
-              <Button size="sm" onClick={() => setShowCreateDialog(true)}>
+              <Button size="sm" onClick={() => openCreateDialog({ type: 'task' })}>
                 <Plus className="size-4" />
                 {t('task.create')}
               </Button>
@@ -1030,7 +1002,7 @@ export function TasksPage() {
               groupBy={groupBy}
               getProjectName={getProjectName}
               getAiExecution={getIssueExecution}
-              onGroupCreate={() => setShowCreateDialog(true)}
+              onGroupCreate={() => openCreateDialog({ type: 'task' })}
               selectionActions={buildSelectionActions}
             />
           ) : viewMode === 'board' ? (

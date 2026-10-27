@@ -5299,7 +5299,12 @@
     "groupSettings": "Settings",
     "groupCollaboration": "Collaboration & Tools",
     "noTabsOpen": "No tabs open",
-    "appName": "Ordo"
+    "appName": "Ordo",
+    "createTask": "Create Task",
+    "createBug": "Create Bug",
+    "createDoc": "Create Document",
+    "createProject": "Create Project",
+    "createMilestone": "Create Milestone"
   },
   "hotkeys": {
     "commandPalette": "Open command palette",
@@ -5315,7 +5320,9 @@
     "createPanelSwitch": "Switch create panel type",
     "createPanelSwitchDesc": "Inside the unified create dialog: Ctrl+1..5 switches between task/bug/document/project/milestone",
     "createPanelSubmit": "Submit create panel",
-    "createPanelSubmitDesc": "Inside the unified create dialog: Ctrl+Enter submits (AI agent mode generates/confirms the draft)"
+    "createPanelSubmitDesc": "Inside the unified create dialog: Ctrl+Enter submits (AI agent mode generates/confirms the draft)",
+    "createDialog": "Create Panel",
+    "createDialogDesc": "Open the unified create panel (task/bug/doc/project/milestone)"
   },
   "commandPalette": {
     "title": "Command Palette",

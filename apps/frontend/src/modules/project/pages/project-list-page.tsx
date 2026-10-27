@@ -10,7 +10,7 @@ import { ProjectTableView } from '../components/project-table-view';
 import type { ProjectListParams, ProjectWorkflowStatus } from '../api/project-api';
 import { useAppStore } from '@/infrastructure/store/app-store';
 import { Button } from '@/components/ui/button';
-import { IconStack } from '@/components/semantic/icon-stack';
+import { EmptyState } from '@/components/semantic/empty-state';
 import { SkeletonList } from '@/components/ui/skeleton';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PageShell } from '@/components/semantic/page-shell';
@@ -34,7 +34,7 @@ import { useMembers } from '@/modules/team-member/hooks';
 import type { Project } from '../api/project-api';
 import { ToolbarRow, useToolbarViews } from '@/components/semantic/toolbar-row';
 import { CORE_AI_PAGE_IDS } from '@/shared/ai/identifiers';
-import { UnifiedCreateDialog } from '@/shared/components/create-dialog';
+import { useCreateDialogDeepLink } from '@/shared/components/create-dialog';
 import { useActiveExecutionsMap } from '@/modules/execution/hooks/use-active-executions-map';
 import {
   Plus,
@@ -96,6 +96,8 @@ const getColumnOptions = (t: (key: string) => string): { key: ProjectListColumnK
 ];
 
 export function ProjectListPage() {
+  const openCreateDialog = useAppStore((s) => s.openCreateDialog);
+  useCreateDialogDeepLink({ type: 'project' });
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [filters, setFilters] = useState<ProjectListParams>({
@@ -105,7 +107,6 @@ export function ProjectListPage() {
     page: 1,
     pageSize: 20,
   });
-  const [showUnifiedCreate, setShowUnifiedCreate] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('list');
   const visibleColumns = useAppStore((state) => state.projectListVisibleColumns as ProjectListColumnKey[]);
   const setVisibleColumns = useAppStore((state) => state.setProjectListVisibleColumns);
@@ -248,7 +249,7 @@ export function ProjectListPage() {
           <HeaderActionButton
             icon={Plus}
             label={t("project.create")}
-            onClick={() => setShowUnifiedCreate(true)}
+            onClick={() => openCreateDialog({ type: 'project' })}
             data-ai-component="project.project-list.header.new-project"
             data-ai-action="project.project-list.header.new-project.click"
             data-ai-role="submit"
@@ -355,20 +356,17 @@ export function ProjectListPage() {
           </div>
         ) : projects.length === 0 ? (
           <div className="flex flex-1 items-center justify-center">
-            <div className="text-center">
-              <IconStack aria-hidden="true" className="mx-auto mb-3">
-                <PROJECT_ENTITY.icon className="size-4" />
-              </IconStack>
-              <p className="text-sm text-muted-foreground">{t('project.messages.noProjects')}</p>
-              <Button
-                size="sm"
-                className="mt-3"
-                onClick={() => setShowUnifiedCreate(true)}
-              >
-                <Plus size={14} />
-                {t('project.create')}
-              </Button>
-            </div>
+            <EmptyState
+              variant="card"
+              icon={PROJECT_ENTITY.icon}
+              title={t('project.messages.noProjects')}
+              action={
+                <Button size="sm" onClick={() => openCreateDialog({ type: 'project' })}>
+                  <Plus size={14} />
+                  {t('project.create')}
+                </Button>
+              }
+            />
           </div>
         ) : (
           <>
@@ -535,11 +533,6 @@ export function ProjectListPage() {
 
       </div>
 
-      <UnifiedCreateDialog
-        open={showUnifiedCreate}
-        onOpenChange={setShowUnifiedCreate}
-        defaultType="project"
-      />
     </PageShell>
   );
 }

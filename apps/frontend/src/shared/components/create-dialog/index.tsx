@@ -7,3 +7,4 @@ export {
   type CreateType,
   type UnifiedCreateDialogProps,
 } from './unified-create-dialog';
+export { useCreateDialogDeepLink } from './use-create-dialog-deep-link';
