@@ -4,9 +4,9 @@ description: 仓库统一 AI 指令入口（AGENTS.md 标准）——会话启�
 id: ROOT-001
 category: meta
 status: active
-version: 1.4.0
+version: 1.5.0
 created: '2026-09-07'
-modified: '2026-10-11'
+modified: '2026-10-28'
 scope: AI 会话（Claude Code / Codex / Cursor / opencode 等跨工具入口）
 ai-session-types: all
 ai-priority: critical
@@ -20,13 +20,13 @@ ordo_sync_mode: managed
 
 # AGENTS.md — 跨工具 AI 会话入口
 
-> **本文件 = 仓库统一 AI 指令入口**（跨工具 `AGENTS.md` 标准，Claude Code / Codex / Cursor / opencode 均原生读取），取代原根 `CLAUDE.md`（已合并入库）。v1.0.0（2026-09-07）随核心模型重构落地：数据模型已物理改名（`Task` 族 → `Issue` 族、`ExecutionRun` → `Execution`）。v1.1.0（2026-09-08）随需求治理收口更新：模块口径 40 目录、术语基线分支已合入、补契约知识域与需求入口闸门。v1.2.0（2026-09-17）随需求重审更新：能力卡口径 42 张、补重审三轴心与三批优先级指引。v1.3.0（2026-09-26）随 prompt 模块增量。v1.4.0（2026-10-11）工程体检对账：能力卡实测 67 张（42 张为 2026-09-17 重审逐卡范围）、后端 43 目录 / 49 个 @Module 声明、前端 42 模块目录；删除模块表中不存在的 `context`、`task-template`，补入 environment / search / workflow / ai-surface / release / tour。
+> **本文件 = 仓库统一 AI 指令入口**（跨工具 `AGENTS.md` 标准，Claude Code / Codex / Cursor / opencode 均原生读取），取代原根 `CLAUDE.md`（已合并入库）。v1.0.0（2026-09-07）随核心模型重构落地：数据模型已物理改名（`Task` 族 → `Issue` 族、`ExecutionRun` → `Execution`）。v1.1.0（2026-09-08）随需求治理收口更新：模块口径 40 目录、术语基线分支已合入、补契约知识域与需求入口闸门。v1.2.0（2026-09-17）随需求重审更新：能力卡口径 42 张、补重审三轴心与三批优先级指引。v1.3.0（2026-09-26）随 prompt 模块增量。v1.4.0（2026-10-11）工程体检对账：能力卡实测 67 张（42 张为 2026-09-17 重审逐卡范围）、后端 43 目录 / 49 个 @Module 声明、前端 42 模块目录；删除模块表中不存在的 `context`、`task-template`，补入 environment / search / workflow / ai-surface / release / tour。v1.5.0（2026-10-28）真相源入库：`docs/01-需求/`、`docs/02-架构设计/`、`docs/roadmap/` 根层 md 纳入版本控制，`check-doc-sync` 治理范围随之扩大。
 >
 > 三真相源：**代码实现** = 运行时真相；**docs/02-架构设计/** = 开发时真相；**PRD + 能力清单** = 需求真相。冲突时停止开发、人工裁决。
 >
-> **本文档自身受 `scripts/check-doc-sync.mjs` 管理**：必须保留 YAML frontmatter（`title`/`description`/`status`）；`docs/design/` 变更需与本文件或 `CHANGELOG.md` 同 PR 提交。
+> **本文档自身受 `scripts/check-doc-sync.mjs` 管理**：必须保留 YAML frontmatter（`title`/`description`/`status`）；`docs/design/`、`docs/01-需求/`、`docs/02-架构设计/`、`docs/roadmap/` 根层 md 的变更需与本文件或 `CHANGELOG.md` 同 PR 提交。
 >
-> **文档版本控制范围**：`docs/` 整体不入库（`.gitignore`），**唯一例外是 `docs/design/`**——设计宪法 `PRINCIPLES.md` 在那里，必须受版本控制（不进 git 的文档无评审、无历史、无法回滚，不能作为「最高真相源」）。
+> **文档版本控制范围（2026-10-28 起）**：`docs/` 不再整体排除，**真相子集必须入库受版本控制**——`docs/design/`（设计宪法）、`docs/01-需求/`（需求真相源：PRD、能力清单、测试矩阵、重审、需求入口）、`docs/02-架构设计/`（开发真相源：architecture、策略、决策日志）、`docs/roadmap/*.md`（管理与验收账，根层 md；报告/截图等子目录仍不入库）。其余 `docs/` 内容（reports、archive、diagrams、子目录资产）继续本地持有。理由：不进 git 的文档无评审、无历史、无法回滚，不能作为「真相源」。
 
 ## 一、会话启动清单
 

@@ -1,6 +1,7 @@
 {
   "schemaVersion": 1,
-  "description": "每个模块的本地文档同步状态。docs/ 不纳入版本控制，本清单是 CI 可验证的同步证据。",
+  "description": "每个模块的本地文档同步状态。docs/ 的真相子集（01-需求 / 02-架构设计 / roadmap 根层 md / design）已纳入版本控制；本清单保留为模块级文档同步的 CI 证据。",
+  "policyUpdated": "2026-10-28",
   "lastUpdated": "2026-08-16",
   "backendModules": {
     "acceptance": {

@@ -21,6 +21,10 @@ tags: "changelog,release"
 
 ## [Unreleased]
 
+| 模块 | 变更 | linked_fr | test_evidence | doc_impact |
+| --- | --- | --- | --- | --- |
+| governance | **需求/架构真相源入库 + 文档门禁事实化（2026-10-28 体检第一步）**：`.gitignore` 放开 `docs/01-需求/`（PRD、能力清单、测试矩阵、重审、需求入口、Feat 需求基线）、`docs/02-架构设计/`（architecture、策略、决策日志）、`docs/roadmap/` 根层 md（管理与验收账）；里程碑 CSV（2026-09-08 已裁决作废）与报告/截图子目录继续本地持有。82 篇真相文档入库，其中 34 篇补齐 frontmatter（16 篇新增、18 篇补 title）。`check-doc-sync` 新增 Check 0「真相源必须被 git 跟踪」，防止某次整理把 `docs/` 重新整体 ignore 后 frontmatter 检查静默变空集；AGENTS.md v1.5.0 同步文档版本控制范围 | GOV-2026-10-28-01 | `node scripts/check-doc-sync.mjs` 通过：truth-source check passed + 114 篇受管文档 frontmatter 通过；入库 82 篇 md（01-需求 25 / 02-架构设计 27 / roadmap 根层 30） | AGENTS.md §文档版本控制范围；docs-sync-manifest.json policyUpdated；docs/README.md 索引待下一步随计数刷新 |
+
 ## [0.8.0-beta.2] - 2026-10-25
 
 ### v0.8.0-beta.2 发版总览——工程可信热修 + 实机测试模式 + 移动端骨架 + 桌面单窗回归（v0.8.0-beta 后首个累计合流版）

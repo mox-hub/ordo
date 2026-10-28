@@ -131,10 +131,21 @@ apps/desktop/electron-resources/
 .zcode/
 
 # Local Documents (not version controlled)
-# 例外：docs/design/ 是设计宪法（PRINCIPLES.md）所在地，必须入库受版本控制
-# （宪法若不在 git 里，则无评审、无历史、无法回滚，无法作为「最高真相源」）
+# 例外（必须入库受版本控制，否则无评审、无历史、无法回滚，不能作为「真相源」）：
+#   docs/design/        设计宪法（PRINCIPLES.md）
+#   docs/01-需求/       需求真相源（PRD、能力清单、测试矩阵、重审、需求入口）
+#   docs/02-架构设计/   开发真相源（architecture、策略、决策日志）
+#   docs/roadmap/*.md   管理与验收账（根层 md；报告/截图等子目录仍不入库）
 docs/*
 !docs/design/
+!docs/01-需求/
+!docs/02-架构设计/
+!docs/roadmap/
+docs/roadmap/*
+!docs/roadmap/*.md
+# 里程碑 CSV 已于 2026-09-08 裁决作废（仅 md 保留）；gitkeep 无需入库
+docs/01-需求/*.csv
+docs/01-需求/.gitkeep
 
 # One-off integration diagnostics & log dumps
 linear-tasks.md
