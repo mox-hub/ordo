@@ -27,7 +27,7 @@ import {
   EXECUTION_AUTHOR_EMAIL,
   EXECUTION_AUTHOR_NAME,
 } from '@/modules/git/execution-worktree.service';
-import { ArtifactRegistryService } from '@/modules/artifact/artifact-registry.service';
+import { ArtifactRegistryService } from '@/modules/artifact';
 import * as fs from 'node:fs/promises';
 import * as path from 'path';
 

@@ -1,6 +1,7 @@
 {
-  "schemaVersion": 1,
-  "description": "每个模块的本地文档同步状态。docs/ 不纳入版本控制，本清单是 CI 可验证的同步证据。",
+  "schemaVersion": 2,
+  "description": "历史模块文档同步清单（最后核对 2026-08-16）。2026-10-28 起「模块目录 ↔ 架构文档」覆盖由 check:doc-coverage 机器校验，本文件不再作为门禁依据，仅保留历史记录；已删除目录不存在模块（context/task/task-template/command-palette）的陈旧条目。",
+  "policyUpdated": "2026-10-28",
   "lastUpdated": "2026-08-16",
   "backendModules": {
     "acceptance": {
@@ -19,9 +20,6 @@
       "synced": true
     },
     "config": {
-      "synced": true
-    },
-    "context": {
       "synced": true
     },
     "document": {
@@ -60,12 +58,6 @@
     "runtime": {
       "synced": true
     },
-    "task": {
-      "synced": true
-    },
-    "task-template": {
-      "synced": true
-    },
     "team": {
       "synced": true
     },
@@ -90,9 +82,6 @@
       "synced": true
     },
     "boot": {
-      "synced": true
-    },
-    "command-palette": {
       "synced": true
     },
     "config": {
@@ -152,14 +141,9 @@
     "settings": {
       "synced": true
     },
-    "task": {
-      "synced": true
-    },
-    "task-template": {
-      "synced": true
-    },
     "team-member": {
       "synced": true
     }
-  }
+  },
+  "supersededBy": "scripts/check-doc-coverage.mjs"
 }
