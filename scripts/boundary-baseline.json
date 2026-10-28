@@ -1,0 +1,829 @@
+{
+  "schemaVersion": 1,
+  "description": "模块边界违规基线（棘轮）。由 `pnpm boundaries:update` 生成；新增违规会让 check:boundaries 失败。测试文件不计入。",
+  "config": ".dependency-cruiser.cjs",
+  "updated": "2026-10-28",
+  "total": 136,
+  "byRule": {
+    "common-not-depend-on-modules": 1,
+    "modules-deep-import-between-modules": 135
+  },
+  "entries": [
+    {
+      "rule": "common-not-depend-on-modules",
+      "severity": "error",
+      "from": "apps/server/src/common/guards/jwt-auth.guard.ts",
+      "to": "apps/server/src/modules/auth/access-token.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/acceptance/acceptance-criteria.service.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/judge-scenarios.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/acceptance/acceptance-criteria.service.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/quick-judge.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/acceptance/acceptance-probability.service.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/quick-judge.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/acceptance/acceptance.module.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/quick-judge.module.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/acceptance/acceptance.service.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/judge-scenarios.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/acceptance/acceptance.service.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/quick-judge.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/acceptance/acceptance.service.ts",
+      "to": "apps/server/src/modules/cli-dispatch/adapters/test-report.schema.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/acceptance/acceptance.service.ts",
+      "to": "apps/server/src/modules/decision/proposal.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/acceptance/acceptance.service.ts",
+      "to": "apps/server/src/modules/execution/execution.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/acceptance/completeness-audit.service.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/judge-scenarios.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/acceptance/completeness-audit.service.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/quick-judge.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/admin/admin.service.ts",
+      "to": "apps/server/src/modules/auth/auth.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/admin/admin.service.ts",
+      "to": "apps/server/src/modules/mail/mail.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/assistant.service.ts",
+      "to": "apps/server/src/modules/execution/execution.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/assistant.service.ts",
+      "to": "apps/server/src/modules/memory/memory.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/assistant.service.ts",
+      "to": "apps/server/src/modules/profile/profile.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/assistant.service.ts",
+      "to": "apps/server/src/modules/runtime/runtime.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/assistant.service.ts",
+      "to": "apps/server/src/modules/team/member.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/services/ai-worker-coordinator.service.ts",
+      "to": "apps/server/src/modules/cli-dispatch/dispatch.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/services/ai-worker-coordinator.service.ts",
+      "to": "apps/server/src/modules/issue/issue.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/services/assistant-memory-digest.service.ts",
+      "to": "apps/server/src/modules/memory/memory.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/services/assistant-silent.service.ts",
+      "to": "apps/server/src/modules/workflow/workflow-actions.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/services/assistant-tools.service.ts",
+      "to": "apps/server/src/modules/acceptance/acceptance.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/services/assistant-tools.service.ts",
+      "to": "apps/server/src/modules/collaboration/collaboration.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/services/assistant-tools.service.ts",
+      "to": "apps/server/src/modules/document/document.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/services/assistant-tools.service.ts",
+      "to": "apps/server/src/modules/issue/issue.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/services/assistant-tools.service.ts",
+      "to": "apps/server/src/modules/memory/memory.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/services/assistant-tools.service.ts",
+      "to": "apps/server/src/modules/project/project.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/services/assistant-tools.service.ts",
+      "to": "apps/server/src/modules/search/search.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/services/assistant-tools.service.ts",
+      "to": "apps/server/src/modules/team/issue-assignee.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/services/assistant-tools.service.ts",
+      "to": "apps/server/src/modules/team/member.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/services/assistant-tools.service.ts",
+      "to": "apps/server/src/modules/team/team.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/services/assistant-tools.service.ts",
+      "to": "apps/server/src/modules/workflow/workflow.definition.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/services/context-builder.service.ts",
+      "to": "apps/server/src/modules/document/services/doc-registry.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/services/context-builder.service.ts",
+      "to": "apps/server/src/modules/execution/failure-classifier.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/ai-hub/services/context-builder.service.ts",
+      "to": "apps/server/src/modules/memory/memory.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/cli-dispatch/cli-dispatch.controller.ts",
+      "to": "apps/server/src/modules/execution/execution.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/cli-dispatch/cli-dispatch.controller.ts",
+      "to": "apps/server/src/modules/prompt/dto/prompt.dto.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/cli-dispatch/cli-dispatch.module.ts",
+      "to": "apps/server/src/modules/cli-provider/cli-asset-scanner.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/cli-dispatch/cli-executor.service.ts",
+      "to": "apps/server/src/modules/ai-hub/services/usage-pricing.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/cli-dispatch/cli-executor.service.ts",
+      "to": "apps/server/src/modules/execution/approval.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/cli-dispatch/cli-executor.service.ts",
+      "to": "apps/server/src/modules/execution/execution.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/cli-dispatch/dispatch.service.ts",
+      "to": "apps/server/src/modules/acceptance/acceptance.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/cli-dispatch/dispatch.service.ts",
+      "to": "apps/server/src/modules/ai-hub/services/context-builder.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/cli-dispatch/dispatch.service.ts",
+      "to": "apps/server/src/modules/ai-hub/services/context-enrichment.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/cli-dispatch/dispatch.service.ts",
+      "to": "apps/server/src/modules/cli-provider/cli-asset-scanner.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/cli-dispatch/dispatch.service.ts",
+      "to": "apps/server/src/modules/execution/execution.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/cli-dispatch/dispatch.service.ts",
+      "to": "apps/server/src/modules/git/execution-worktree.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/cli-dispatch/dispatch.service.ts",
+      "to": "apps/server/src/modules/prompt/prompt-shared.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/cli-dispatch/dispatch.service.ts",
+      "to": "apps/server/src/modules/runtime/runtime.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/cli-dispatch/dispatch.service.ts",
+      "to": "apps/server/src/modules/trust/trust.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/cli-provider/cli-provider.service.ts",
+      "to": "apps/server/src/modules/cli-dispatch/cli-provider.registry.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/collaboration/collaboration-event.subscriber.ts",
+      "to": "apps/server/src/modules/notification/notification.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/collaboration/collaboration.service.ts",
+      "to": "apps/server/src/modules/decision/proposal.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/contract/contract-binding.service.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/judge-scenarios.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/contract/contract-binding.service.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/quick-judge.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/contract/contract.module.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/quick-judge.module.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/dashboard/dashboard.service.ts",
+      "to": "apps/server/src/modules/playbook/dto/playbook.dto.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/decision/proposal.service.ts",
+      "to": "apps/server/src/modules/contract/contract-binding.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/decision/proposal.service.ts",
+      "to": "apps/server/src/modules/git/execution-worktree.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/decision/proposal.service.ts",
+      "to": "apps/server/src/modules/playbook/dto/playbook.dto.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/decision/proposal.service.ts",
+      "to": "apps/server/src/modules/playbook/playbook.registry.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/decision/proposal.service.ts",
+      "to": "apps/server/src/modules/workflow/workflow.definition.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/document/services/revision-impact.service.ts",
+      "to": "apps/server/src/modules/decision/proposal.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/environment/environment.service.ts",
+      "to": "apps/server/src/modules/cli-provider/cli-provider.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/execution/approval.service.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/judge-scenarios.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/execution/approval.service.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/quick-judge.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/execution/execution-reconcile.service.ts",
+      "to": "apps/server/src/modules/git/execution-worktree.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/execution/execution.module.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/quick-judge.module.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/execution/execution.service.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/judge-scenarios.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/execution/execution.service.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/quick-judge.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/execution/execution.service.ts",
+      "to": "apps/server/src/modules/cli-dispatch/adapters/test-report.schema.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/execution/execution.service.ts",
+      "to": "apps/server/src/modules/decision/proposal.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/execution/execution.service.ts",
+      "to": "apps/server/src/modules/git/execution-worktree.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/git/git.module.ts",
+      "to": "apps/server/src/modules/integration/providers/github/github.module.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/git/git.service.ts",
+      "to": "apps/server/src/modules/integration/providers/github/github-sdk.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/integration/providers/github/github-sync.service.ts",
+      "to": "apps/server/src/modules/trust/trust.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/integration/providers/linear/linear-sync.service.ts",
+      "to": "apps/server/src/modules/issue/services/issue-id.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/issue/issue.service.ts",
+      "to": "apps/server/src/modules/activity/activity.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/issue/issue.service.ts",
+      "to": "apps/server/src/modules/execution/execution.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/issue/issue.service.ts",
+      "to": "apps/server/src/modules/issue-type/issue-type.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/mcp-server/mcp-server.controller.ts",
+      "to": "apps/server/src/modules/auth/access-token.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/mcp-server/mcp-server.service.ts",
+      "to": "apps/server/src/modules/cli-dispatch/dispatch.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/mcp-server/mcp-server.service.ts",
+      "to": "apps/server/src/modules/cli-provider/cli-provider.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/mcp-server/mcp-server.service.ts",
+      "to": "apps/server/src/modules/execution/approval.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/mcp-server/mcp-server.service.ts",
+      "to": "apps/server/src/modules/execution/execution.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/mcp-server/mcp-server.service.ts",
+      "to": "apps/server/src/modules/search/search.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/memory/expertise.service.ts",
+      "to": "apps/server/src/modules/playbook/playbook.registry.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/notification/notification-event-subscriber.ts",
+      "to": "apps/server/src/modules/execution/failure-classifier.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/office/office.service.ts",
+      "to": "apps/server/src/modules/dashboard/dashboard.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/office/office.service.ts",
+      "to": "apps/server/src/modules/decision/proposal.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/office/office.service.ts",
+      "to": "apps/server/src/modules/execution/execution.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/playbook/playbook.service.ts",
+      "to": "apps/server/src/modules/decision/proposal.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/playbook/playbook.service.ts",
+      "to": "apps/server/src/modules/document/document.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/playbook/playbook.service.ts",
+      "to": "apps/server/src/modules/memory/memory.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/profile/archaeology.service.ts",
+      "to": "apps/server/src/modules/cli-dispatch/dispatch.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/profile/archaeology.service.ts",
+      "to": "apps/server/src/modules/issue/issue.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/project/dto/project-response.dto.ts",
+      "to": "apps/server/src/modules/issue/dto/issue-response.dto.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/project/project.controller.ts",
+      "to": "apps/server/src/modules/issue/dto/issue-query.dto.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/project/project.controller.ts",
+      "to": "apps/server/src/modules/issue/issue.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/project/project.controller.ts",
+      "to": "apps/server/src/modules/iteration/dto/create-iteration.dto.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/project/project.controller.ts",
+      "to": "apps/server/src/modules/iteration/iteration.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/project/project.service.ts",
+      "to": "apps/server/src/modules/activity/activity.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/prompt/prompt-agents-sync.service.ts",
+      "to": "apps/server/src/modules/contract/contract-engine.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/prompt/prompt-agents-sync.service.ts",
+      "to": "apps/server/src/modules/contract/contract-workspace-fs.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/release/release-publish.service.ts",
+      "to": "apps/server/src/modules/contract/contract-workspace-fs.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/release/release-publish.service.ts",
+      "to": "apps/server/src/modules/integration/providers/github/github-sdk.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/release/release-version.service.ts",
+      "to": "apps/server/src/modules/contract/contract-workspace-fs.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/release/release.module.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/quick-judge.module.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/release/release.module.ts",
+      "to": "apps/server/src/modules/integration/providers/github/github.module.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/release/release.service.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/quick-judge.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/release/release.service.ts",
+      "to": "apps/server/src/modules/contract/contract-binding.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/release/release.service.ts",
+      "to": "apps/server/src/modules/contract/contract-engine.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/release/release.service.ts",
+      "to": "apps/server/src/modules/contract/contract-workspace-fs.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/runtime/runtime.service.ts",
+      "to": "apps/server/src/modules/ai-hub/services/usage-pricing.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/subscription/subscription-event.subscriber.ts",
+      "to": "apps/server/src/modules/notification/notification.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/team/dto/member.dto.ts",
+      "to": "apps/server/src/modules/cli-provider/dto/configure-cli-provider.dto.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/team/dto/member.dto.ts",
+      "to": "apps/server/src/modules/role/project-role.dto.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/team/invite.service.ts",
+      "to": "apps/server/src/modules/auth/auth.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/team/issue-assignee.service.ts",
+      "to": "apps/server/src/modules/cli-dispatch/cli-resolution.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/team/issue-assignee.service.ts",
+      "to": "apps/server/src/modules/cli-dispatch/dispatch.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/team/member-tool-grant.service.ts",
+      "to": "apps/server/src/modules/cli-provider/cli-asset-scanner.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/team/team.module.ts",
+      "to": "apps/server/src/modules/cli-provider/cli-asset-scanner.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/team/team.service.ts",
+      "to": "apps/server/src/modules/mail/mail.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/trust/trust.module.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/quick-judge.module.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/trust/trust.service.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/judge-scenarios.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/trust/trust.service.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/quick-judge.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/trust/trust.service.ts",
+      "to": "apps/server/src/modules/integration/providers/github/github.constants.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/workflow/workflow-compiler.service.ts",
+      "to": "apps/server/src/modules/ai-hub/services/adapter-registry.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/workflow/workflow-compiler.service.ts",
+      "to": "apps/server/src/modules/ai-hub/services/usage-pricing.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/workflow/workflow-v2.engine.service.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/quick-judge.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/workflow/workflow-v2.engine.service.ts",
+      "to": "apps/server/src/modules/ai-hub/services/adapter-registry.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/workflow/workflow-v2.engine.service.ts",
+      "to": "apps/server/src/modules/ai-hub/services/usage-pricing.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/workflow/workflow-v2.engine.service.ts",
+      "to": "apps/server/src/modules/cli-dispatch/dispatch.service.ts"
+    },
+    {
+      "rule": "modules-deep-import-between-modules",
+      "severity": "warn",
+      "from": "apps/server/src/modules/workflow/workflow.module.ts",
+      "to": "apps/server/src/modules/ai-hub/quick-judge/quick-judge.module.ts"
+    }
+  ]
+}

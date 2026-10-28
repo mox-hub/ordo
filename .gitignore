@@ -136,7 +136,9 @@ apps/desktop/electron-resources/
 #   docs/01-需求/       需求真相源（PRD、能力清单、测试矩阵、重审、需求入口）
 #   docs/02-架构设计/   开发真相源（architecture、策略、决策日志）
 #   docs/roadmap/*.md   管理与验收账（根层 md；报告/截图等子目录仍不入库）
+#   docs/README.md      文档总索引与版本控制政策
 docs/*
+!docs/README.md
 !docs/design/
 !docs/01-需求/
 !docs/02-架构设计/

@@ -4,7 +4,7 @@ description: 仓库统一 AI 指令入口（AGENTS.md 标准）——会话启�
 id: ROOT-001
 category: meta
 status: active
-version: 1.5.0
+version: 1.6.0
 created: '2026-09-07'
 modified: '2026-10-28'
 scope: AI 会话（Claude Code / Codex / Cursor / opencode 等跨工具入口）
@@ -20,7 +20,7 @@ ordo_sync_mode: managed
 
 # AGENTS.md — 跨工具 AI 会话入口
 
-> **本文件 = 仓库统一 AI 指令入口**（跨工具 `AGENTS.md` 标准，Claude Code / Codex / Cursor / opencode 均原生读取），取代原根 `CLAUDE.md`（已合并入库）。v1.0.0（2026-09-07）随核心模型重构落地：数据模型已物理改名（`Task` 族 → `Issue` 族、`ExecutionRun` → `Execution`）。v1.1.0（2026-09-08）随需求治理收口更新：模块口径 40 目录、术语基线分支已合入、补契约知识域与需求入口闸门。v1.2.0（2026-09-17）随需求重审更新：能力卡口径 42 张、补重审三轴心与三批优先级指引。v1.3.0（2026-09-26）随 prompt 模块增量。v1.4.0（2026-10-11）工程体检对账：能力卡实测 67 张（42 张为 2026-09-17 重审逐卡范围）、后端 43 目录 / 49 个 @Module 声明、前端 42 模块目录；删除模块表中不存在的 `context`、`task-template`，补入 environment / search / workflow / ai-surface / release / tour。v1.5.0（2026-10-28）真相源入库：`docs/01-需求/`、`docs/02-架构设计/`、`docs/roadmap/` 根层 md 纳入版本控制，`check-doc-sync` 治理范围随之扩大。
+> **本文件 = 仓库统一 AI 指令入口**（跨工具 `AGENTS.md` 标准，Claude Code / Codex / Cursor / opencode 均原生读取），取代原根 `CLAUDE.md`（已合并入库）。v1.0.0（2026-09-07）随核心模型重构落地：数据模型已物理改名（`Task` 族 → `Issue` 族、`ExecutionRun` → `Execution`）。v1.1.0（2026-09-08）随需求治理收口更新：模块口径 40 目录、术语基线分支已合入、补契约知识域与需求入口闸门。v1.2.0（2026-09-17）随需求重审更新：能力卡口径 42 张、补重审三轴心与三批优先级指引。v1.3.0（2026-09-26）随 prompt 模块增量。v1.4.0（2026-10-11）工程体检对账：能力卡实测 67 张（42 张为 2026-09-17 重审逐卡范围）、后端 43 目录 / 49 个 @Module 声明、前端 42 模块目录；删除模块表中不存在的 `context`、`task-template`，补入 environment / search / workflow / ai-surface / release / tour。v1.5.0（2026-10-28）真相源入库：`docs/01-需求/`、`docs/02-架构设计/`、`docs/roadmap/` 根层 md 纳入版本控制，`check-doc-sync` 治理范围随之扩大。v1.6.0（2026-10-28）能力账本机器化：`scripts/gen-capability-ledger.mjs` 从能力清单解析 71 张卡生成 `能力账本-v1.json` + `摘要-v1.md`，`check:ledger` 入质量门禁；实测能力卡 71 张（A32/B10/C8/K3/X3/P1/S4/M10）、后端 43 目录 / 49 个模块内 @Module 声明、前端 43 模块目录。
 >
 > 三真相源：**代码实现** = 运行时真相；**docs/02-架构设计/** = 开发时真相；**PRD + 能力清单** = 需求真相。冲突时停止开发、人工裁决。
 >
@@ -33,7 +33,7 @@ ordo_sync_mode: managed
 1. 读本文件 — 治理铁律 + 技术栈 + 模块地图
 2. 读根 `architecture.md` — 主架构文档（v4，双表面/系统分层/主线对象/契约）
 3. 读 `docs/01-需求/产品需求文档-v3.md` — 需求真相源（范式与愿景）
-4. 读 `docs/01-需求/能力清单-v1.md` — 功能点总账（四条工作线 + 67 能力卡（42 张经 2026-09-17 重审）+ 候补区 + 重审三批优先级 §3.1；**新功能想法先走 `requirement-intake` skill**，开工登记附六问评审标准）
+4. 读 `docs/01-需求/能力清单-v1.md` — 功能点总账（四条工作线 + **71 能力卡**（A32/B10/C8/D3/桥3/P1/S4/M10；42 张经 2026-09-17 重审）+ 候补区 + 重审三批优先级 §3.1；**新功能想法先走 `requirement-intake` skill**，开工登记附六问评审标准）。机器可读状态见 `docs/01-需求/能力账本-摘要-v1.md`（`pnpm ledger:gen` 生成，勿手改）
 5. 涉及具体模块时读 `docs/02-架构设计/architecture/{backend,frontend}/modules.md`
 6. 确认工作目录与分支状态
 
@@ -107,6 +107,8 @@ pnpm build          # 全仓构建（turbo）
 pnpm lint           # Lint 所有包
 pnpm quality:gate   # 全链路质量门禁（见 §七）
 pnpm check:docs-sync
+pnpm ledger:gen     # 能力清单 → 能力账本重新生成（改状态后必跑）
+pnpm check:ledger   # 能力账本零漂移校验（门禁内）
 
 # 测试（Vitest 5 全仓：server / frontend / cli / shared）
 pnpm test           # 全仓单测（turbo run test）
@@ -125,7 +127,7 @@ pnpm build:template-db   # 重建工作区模板库
 
 > 前后端模块结构、真实目录与模块注册顺序见
 > `docs/02-架构设计/architecture/backend/modules.md`（43 目录 / 49 个 @Module 声明，v4.3.0）
-> 与 `frontend/modules.md`（42 模块目录，`intake` 2026-09-13、`prompt` 2026-09-26 增量）。下为高层地图。
+> 与 `frontend/modules.md`（43 模块目录，v4.2.0；`intake` 2026-09-13、`prompt` 2026-09-26、`test-mode` 2026-10-25 增量）。下为高层地图。
 
 **域分组（概念归类：同域名，目录不一一对应）**
 
@@ -141,9 +143,9 @@ pnpm build:template-db   # 重建工作区模板库
 | 协作与记忆 | `collaboration`·`memory`·`office`·`dashboard`·`profile`·`playbook` | `office`·`ai-surface`·`delivery`·`desktop`·`onboarding` |
 | 契约知识 | `contract`·`release` | `contract`·`release` |
 | 集成与能力 | `integration`·`git`·`mail`·`mcp-server`·`notification`·`plugins`·`admin` | `integration`·`github`·`linear`·`mcp-server`·`notification`·`git`·`admin` |
-| 系统/辅助 | `environment`·`search` | `analytics`·`boot`·`search`·`settings`·`help`·`design-system`·`tour` |
+| 系统/辅助 | `environment`·`search` | `analytics`·`boot`·`search`·`settings`·`help`·`design-system`·`tour`·`test-mode` |
 
-> 后端共 **43 目录 / 49 个 @Module 声明**（`auth` 拆 `access-token`、`document` 拆 `document-enhance`；`contract`/`release`/`profile`/`playbook`/`prompt` 为 2026-09 增量；`environment`/`search`/`workflow` 为实测补录）；前端共 **42 模块目录**（`intake` 2026-09-13、`prompt` 2026-09-26 增量；`ai-surface`/`release`/`tour`/`workflow` 为实测补录）。能力级归类与供血关系见 `docs/01-需求/能力清单-v1.md`。
+> 后端共 **43 目录 / 49 个模块内 @Module 声明**（`auth` 拆 `access-token`、`document` 拆 `document-enhance`；`contract`/`release`/`profile`/`playbook`/`prompt` 为 2026-09 增量；`environment`/`search`/`workflow` 为实测补录）；前端共 **43 模块目录**（`intake` 2026-09-13、`prompt` 2026-09-26、`test-mode` 2026-10-25 增量；`ai-surface`/`release`/`tour`/`workflow` 为实测补录）。能力级归类与供血关系见 `docs/01-需求/能力清单-v1.md`。
 
 **主线对象（数据模型）**
 
@@ -167,10 +169,10 @@ pnpm build:template-db   # 重建工作区模板库
 | API 契约（三件套）| 仓库根 `openapi.json` | server `contract:export` → 前端 + `@ordo/shared` 双份 `api-types.gen.ts` → `contract:check` 零漂移 |
 | CLI 运行时协议 | `packages/ordo-shared/src/runtime/protocol.ts` + server `modules/runtime/` | `check:cli-contract` |
 | 变更契约 | `CHANGELOG.md` | — |
-| 需求契约（功能点总账）| `docs/01-需求/能力清单-v1.md`（配套 `测试映射矩阵-v1.md` / `需求入口流程-v1.md`）| `requirement-intake` skill 闸门：未进清单不得开工 |
-| 文档契约 | 本文件 + README + docs/ | `check:docs-sync`（**本文件为 CI 治理对象**）|
+| 需求契约（功能点总账）| `docs/01-需求/能力清单-v1.md`（配套 `测试映射矩阵-v1.md` / `需求入口流程-v1.md`）| `requirement-intake` skill 闸门：未进清单不得开工；状态变更后 `pnpm ledger:gen`，`check:ledger` 校验账本零漂移 |
+| 文档契约 | 本文件 + `docs/README.md` + docs/ | `check:docs-sync`（**本文件为 CI 治理对象**）|
 
-**质量门禁（根 `quality:gate` 顺序）**：`type-check` → `lint` → `test`（全仓 Vitest）→ `contract:check` → server `test:e2e` → `api:audit --min=95` → `check:docs-sync`。CI = `quality-gate.yml`（七并行 job + pnpm 缓存）。**文档不同步 / 验收证据缺失 / api 覆盖率不达标不得合并。**
+**质量门禁（根 `quality:gate` 顺序）**：`type-check` → `lint` → `test`（全仓 Vitest）→ `contract:check` → server `test:e2e` → `api:audit --min=95` → `check:ledger` → `check:docs-sync`。CI = `quality-gate.yml`（七并行 job + pnpm 缓存）。**文档不同步 / 能力账本漂移 / 验收证据缺失 / api 覆盖率不达标不得合并。**
 
 **后端关键机制**：全局前缀 `/_api`；`x-workspace-id` 头 → `workspaceALS`（AsyncLocalStorage）→ 数据层按工作区路由到对应 SQLite 库（`default` = `DATABASE_URL`，新库以 `prisma/template.db` 复制初始化）；JWT + PAT + RuntimeSession 认证；Helmet/Throttler/CSRF/CORS 白名单。
 
@@ -193,6 +195,7 @@ hotfix/*（从 main 检出） · release/*（从 pre-prod 检出）
 - 行为/状态变更 → 同步 `docs/` 设计文档 + `CHANGELOG.md`（文档即契约）。
 - 定义完成：改完自查 `pnpm quality:gate`（或最小子集 type-check + test + lint），并在回复附变更摘要。
 - 需求入口：新功能想法 / 功能变更 / 功能废弃一律先走 `requirement-intake` skill（流程见 `docs/01-需求/需求入口流程-v1.md`）——**未进能力清单（`docs/01-需求/能力清单-v1.md`）的功能不得开工**；测试映射与缺口账见 `docs/01-需求/测试映射矩阵-v1.md`。
+- 能力状态变更（开工/交付/改判）→ 同一 PR 内更新能力清单卡内 `状态` 并跑 `pnpm ledger:gen` 重生账本；`check:ledger` 红 = 清单与账本不一致，禁止手改账本文件绕过。
 
 <!-- BEGIN ordo:managed:project-intro -->
 # Ordo

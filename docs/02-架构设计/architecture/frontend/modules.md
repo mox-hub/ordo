@@ -7,9 +7,9 @@ tags:
   - architecture
   - frontend
   - modules
-version: 4.2.0
+version: 4.3.1
 created: "2026-05-29 05:54:09"
-modified: "2026-10-11 00:00:00"
+modified: "2026-10-28 00:00:00"
 projects: "[[APM-项目中心]]"
 title: 前端模块结构
 id: ARCH-FRONTEND-MODULES-001
@@ -31,6 +31,8 @@ ai-audiences: "session:all"
 > **v4.2.0（2026-10-11）**：工程体检对账（台账 GOV-02）——模块目录口径 39 → **42**：删除不存在的 `task-template`；补录实测存在的 `ai-surface`、`release`、`tour`、`workflow`；`contract` 由「治理与验收」移入新增的「契约知识」域（与 `release` 同域）；shared 子目录口径 23 → **28**，组件根文件口径 103 → **81**（递归计数）。
 >
 > **v4.3.0（2026-10-27）**：模块目录口径 42 → **43**——新增 `artifact`（产物管理，CAP-A-32：产物列表/详情页 + 标准组件五件落 shared/components/artifact/ + semantic 件 file-type-icon/artifact-source-badge），进路由树、域表与模块详述。
+>
+> **v4.3.1（2026-10-28）**：补录 `test-mode`（实机测试模式，CAP-A-31：壳内抓现场建单）——2026-10-25 增量此前只记在 `AGENTS.md`，本模块文档漏记；由 `check:doc-coverage` 的「模块目录 → 架构文档」覆盖检查发现。
 
 ## 一、技术栈
 
@@ -165,7 +167,7 @@ apps/frontend/src/
 | 契约知识 | `contract`（2026-09-08 新增：契约绑定面板 ContractBindingsPanel，消费 /projects/:id/contract/*；init 页与设置页「契约文件」页签共用）、`release`（发版列表/详情，含 CAP-A-29 表格视图）|
 | 协作与办公 | `office`、`ai-surface`、`delivery`、`desktop`、`onboarding` |
 | 集成与能力 | `integration`、`github`、`linear`、`mcp-server`、`notification`、`git`、`admin` |
-| 系统/辅助 | `analytics`、`boot`、`search`、`settings`、`help`、`design-system`、`tour` |
+| 系统/辅助 | `analytics`、`boot`、`search`、`settings`、`help`、`design-system`、`tour`、`test-mode`（实机测试模式，2026-10-25 增量，CAP-A-31）|
 
 > 域分组口径与后端 §4.1 对齐（`git` = 仓库能力归「集成」）；前端特有 `assistant`（AI 同事）、`delivery`、`design-system` 按语义归位。
 
@@ -183,6 +185,7 @@ apps/frontend/src/
 | 纯页面 | help、design-system |
 | 页面 + 适配层（无 api）| ai-surface（components/hooks/pages/adapters/replay；`mock-data.ts` 残留 mock 种子，见台账 PROD-04）|
 | 单 store | tour（`use-tour-store.ts`）|
+| api/components/hooks + lib/store | test-mode（实机测试：元素拾取、截图标注、FAB/面板，`lib/element-picker.ts` + `store/test-mode-store.ts`）|
 | 特例（多 lib/services/constants）| boot（多 lib/）、document（多 services/）、integration（多 constants/）|
 
 ### 4.3 核心模块职责
@@ -223,6 +226,10 @@ api（office-api、collaboration-api）+ components/hooks/pages（`office-page`�
 #### `design-system/` — 设计系统页
 
 仅 pages——token / 组件展示与治理脚本的着陆页（配合 `components/` 与 `shared/theme`）。
+
+#### `test-mode/` — 实机测试模式（CAP-A-31，2026-10-25）
+
+api/components/hooks + `lib/element-picker.ts` + `store/test-mode-store.ts`。壳内浮动球（`test-mode-fab`）呼出面板（`test-mode-panel`），拾取页面元素并截图标注（`screenshot-annotator`），建单走既有 `POST /issues`（bug 专用字段零后端改动直映射）；截图分块经桌面 IPC 落盘，运行时产物不入 git。
 
 ## 五、shared 共享层（28 个子目录）
 
