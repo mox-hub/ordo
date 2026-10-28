@@ -61,30 +61,69 @@ export interface FilePreviewerProps {
 
 export function FilePreviewer({ artifact, version, className }: FilePreviewerProps) {
   const { t } = useTranslation();
-  const mode = useMemo(() => resolvePreviewMode(artifact), [artifact]);
+  const mode = useMemo(() => {
+    const resolved = resolvePreviewMode(artifact);
+    // execution 产物无受管本体：pdf 走源文件读取没有 iframe 通道，诚实降级
+    if (artifact.kind === 'execution' && resolved === 'pdf') return 'fallback' as const;
+    return resolved;
+  }, [artifact]);
   const [text, setText] = useState<string | null>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [unavailable, setUnavailable] = useState<string | null>(null);
   const [state, setState] = useState<'loading' | 'ready' | 'error'>('loading');
 
   useEffect(() => {
-    if (mode === 'fallback') {
-      setState('ready');
-      return;
-    }
     let revoked: string | null = null;
     let cancelled = false;
-    setState('loading');
-    artifactApi
-      .fetchBlob(artifact.id, version)
-      .then(async (blob) => {
+    // 置态一律走 microtask（react-hooks/set-state-in-effect：禁 effect 体内同步 setState）
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setUnavailable(null);
+      setBlobUrl(null);
+      setText(null);
+      setState(mode === 'fallback' ? 'ready' : 'loading');
+    });
+    if (mode === 'fallback') {
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const isExecution = artifact.kind === 'execution';
+    const load = isExecution
+      ? artifactApi.getExecutionSource(artifact.id, version)
+      : artifactApi
+          .fetchBlob(artifact.id, version)
+          .then(async (blob) => ({
+            kind: (mode === 'image' || mode === 'pdf' ? 'image' : 'text') as 'image' | 'text',
+            blob,
+          }));
+
+    void load
+      .then(async (result) => {
         if (cancelled) return;
-        if (mode === 'image' || mode === 'pdf') {
-          revoked = URL.createObjectURL(blob);
-          setBlobUrl(revoked);
-        } else {
-          setText(await blob.text());
+        if ('kind' in result && result.kind === 'unavailable') {
+          setUnavailable(result.message ?? null);
+          setState('ready');
+          return;
         }
-        setState('ready');
+        if (isExecution) {
+          const source = result as Awaited<ReturnType<typeof artifactApi.getExecutionSource>>;
+          if (source.kind === 'image' && source.dataUrl) {
+            setBlobUrl(source.dataUrl);
+          } else {
+            setText(source.content ?? '');
+          }
+        } else {
+          const blob = (result as { blob: Blob }).blob;
+          if (mode === 'image' || mode === 'pdf') {
+            revoked = URL.createObjectURL(blob);
+            setBlobUrl(revoked);
+          } else {
+            setText(await blob.text());
+          }
+        }
+        if (!cancelled) setState('ready');
       })
       .catch(() => {
         if (!cancelled) setState('error');
@@ -93,7 +132,7 @@ export function FilePreviewer({ artifact, version, className }: FilePreviewerPro
       cancelled = true;
       if (revoked) URL.revokeObjectURL(revoked);
     };
-  }, [artifact.id, version, mode]);
+  }, [artifact.id, artifact.kind, version, mode]);
 
   return (
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
@@ -106,6 +145,12 @@ export function FilePreviewer({ artifact, version, className }: FilePreviewerPro
         <div className="flex flex-1 flex-col items-center justify-center gap-2 text-sm text-muted-foreground">
           <FileWarning className="size-6" />
           {t('artifact.preview.error', '预览加载失败，请尝试下载后查看')}
+        </div>
+      )}
+      {state === 'ready' && unavailable !== null && (
+        <div className="flex flex-1 flex-col items-center justify-center gap-2 rounded-lg border border-dashed border-border p-10 text-center">
+          <FileWarning className="size-6 text-muted-foreground" />
+          <p className="max-w-sm text-sm text-muted-foreground">{unavailable}</p>
         </div>
       )}
       {state === 'ready' && mode === 'fallback' && (

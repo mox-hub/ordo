@@ -22,8 +22,10 @@ import {
 import type { Response } from 'express';
 import { ArtifactService } from './artifact.service';
 import { ArtifactStorageService } from './artifact-storage.service';
+import { ArtifactSourceService } from './artifact-source.service';
 import { ArtifactQueryDto } from './dto/artifact-query.dto';
 import { UpdateArtifactDto } from './dto/update-artifact.dto';
+import { ArtifactSourceResponseDto } from './dto/artifact-source-response.dto';
 import {
   ArtifactResponseDto,
   ArtifactPageResponseDto,
@@ -41,7 +43,9 @@ const INLINE_PREVIEW_TYPES = new Set([
   'application/pdf',
 ]);
 
-function resolveDisposition(mimeType: string | null): 'inline' | 'attachment' {
+export function resolveDisposition(
+  mimeType: string | null,
+): 'inline' | 'attachment' {
   if (!mimeType) return 'attachment';
   if (mimeType === 'image/svg+xml') return 'attachment';
   if (mimeType === 'text/html' || mimeType === 'application/xhtml+xml') {
@@ -59,6 +63,7 @@ export class ArtifactController {
   constructor(
     private readonly artifactService: ArtifactService,
     private readonly storage: ArtifactStorageService,
+    private readonly sourceService: ArtifactSourceService,
   ) {}
 
   @Get()
@@ -156,5 +161,36 @@ export class ArtifactController {
       'Cache-Control': 'private, max-age=300',
     });
     return new StreamableFile(buffer);
+  }
+
+  @Get(':id/source')
+  @ApiOperation({
+    summary:
+      'Read execution artifact source file (worktree or workspace, read-only)',
+  })
+  @ApiParam({ name: 'id', description: 'Artifact ID' })
+  @ApiQuery({
+    name: 'version',
+    required: false,
+    description: '版本序号，缺省最新',
+  })
+  @ApiStandardErrors()
+  @ApiOkResponse({
+    type: ArtifactSourceResponseDto,
+    description:
+      '源文件内容（text/image）或诚实降级（unavailable：worktree TTL 已清理且主区无此文件）',
+  })
+  async source(
+    @Param('id') id: string,
+    @Query('version') versionRaw?: string,
+  ): Promise<ArtifactSourceResponseDto> {
+    let version: number | undefined;
+    if (versionRaw !== undefined && versionRaw !== '') {
+      version = Number(versionRaw);
+      if (!Number.isInteger(version) || version < 1) {
+        throw new BadRequestException('version 必须为正整数');
+      }
+    }
+    return this.sourceService.readExecutionSource(id, version);
   }
 }

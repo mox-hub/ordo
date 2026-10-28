@@ -4,6 +4,7 @@ import { ArtifactUploadController } from './artifact-upload.controller';
 import { ArtifactService } from './artifact.service';
 import { ArtifactRegistryService } from './artifact-registry.service';
 import { ArtifactStorageService } from './artifact-storage.service';
+import { ArtifactSourceService } from './artifact-source.service';
 import { ArtifactDocumentSubscriber } from './artifact-document.subscriber';
 
 /**
@@ -16,8 +17,13 @@ import { ArtifactDocumentSubscriber } from './artifact-document.subscriber';
     ArtifactService,
     ArtifactRegistryService,
     ArtifactStorageService,
+    ArtifactSourceService,
     ArtifactDocumentSubscriber,
   ],
-  exports: [ArtifactRegistryService, ArtifactStorageService],
+  exports: [
+    ArtifactRegistryService,
+    ArtifactStorageService,
+    ArtifactSourceService,
+  ],
 })
 export class ArtifactModule {}

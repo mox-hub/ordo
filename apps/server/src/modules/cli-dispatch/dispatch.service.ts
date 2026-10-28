@@ -1288,9 +1288,12 @@ export class CliDispatchService {
         await this.executionService.completeExecution(
           executionRunId,
           result.output,
+          // storageRef 修复（CAP-A-32 批二）：daemon 上报的引用原样落库，
+          // 此前被丢弃导致产物只余 name（引用型产物 screenshot/report 的唯一线索）
           result.artifacts.map((a) => ({
             artifactType: a.type,
             name: a.name,
+            storageRef: a.storageRef,
           })),
         );
       } else {

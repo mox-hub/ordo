@@ -95,7 +95,8 @@ describe('FilePreviewer fallback 态', () => {
       />,
     );
 
-    expect(screen.getByText('报告.docx')).toBeTruthy();
+    // 置态走 microtask（set-state-in-effect 合规），fallback 卡片异步出现
+    expect(await screen.findByText('报告.docx')).toBeTruthy();
     fireEvent.click(screen.getByText('下载'));
     // 下载走 fetchBlob（fallback 态唯一取数点），但绝不渲染 image/pdf/markdown/code 分支
     await vi.waitFor(() => expect(fetchBlob).toHaveBeenCalledTimes(1));

@@ -23,9 +23,13 @@ import {
   CommitAuthor,
   ExecutionIsolationMetadata,
   ExecutionWorktreeService,
+  WorktreeChangeSet,
   EXECUTION_AUTHOR_EMAIL,
   EXECUTION_AUTHOR_NAME,
 } from '@/modules/git/execution-worktree.service';
+import { ArtifactRegistryService } from '@/modules/artifact/artifact-registry.service';
+import * as fs from 'node:fs/promises';
+import * as path from 'path';
 
 export interface CreateExecutionRunDto {
   projectId: string;
@@ -127,6 +131,7 @@ export class ExecutionService {
     private readonly approvalService: ApprovalService,
     private readonly worktree: ExecutionWorktreeService,
     private readonly quickJudge: QuickJudgeService,
+    private readonly artifactRegistry: ArtifactRegistryService,
   ) {
     this.logger.setContext('ExecutionService');
   }
@@ -749,6 +754,10 @@ export class ExecutionService {
         `integration proposal ${proposal.id} created for ${executionId} ` +
           `(${changes.files.length} files, +${changes.insertions} −${changes.deletions})`,
       );
+
+      // 产物登记（CAP-A-32 批二，旁路语义）：变更文件自动进产物视图，
+      // 同 (projectId, logicalPath, 'execution') 追加版本不裂行；失败不阻断完成主流程。
+      await this.registerExecutionArtifacts(run, isolation, changes);
     } catch (err) {
       // 旁路语义：成果收集失败不阻断完成主流程，落 error 留痕（reconcile 不清此场）
       this.logger.warn(
@@ -766,6 +775,55 @@ export class ExecutionService {
         });
       } catch {
         // 记账也失败则只能依赖日志
+      }
+    }
+  }
+
+  /**
+   * 产物登记（CAP-A-32 批二）：把 collectChanges 的变更文件清单逐个登记为
+   * execution 产物（合并键幂等 + 版本追加）。checksum 只对 ≤5MB 文件实算
+   * （读 worktree 现场，登记绝不修改现场）。登记失败仅留日志——产物缺失
+   * 可由后续执行重登记，绝不阻断完成/发卡主链。
+   */
+  private async registerExecutionArtifacts(
+    run: { id: string; projectId: string; issueId: string | null },
+    isolation: Extract<ExecutionIsolationMetadata, { mode: 'worktree' }>,
+    changes: WorktreeChangeSet,
+  ): Promise<void> {
+    const diffStat = {
+      insertions: changes.insertions,
+      deletions: changes.deletions,
+      filesTotal: changes.files.length,
+    };
+    for (const file of changes.files) {
+      try {
+        const absolute = path.posix.join(
+          (isolation.worktreePath ?? '').replace(/\\/g, '/'),
+          file,
+        );
+        let sizeBytes: number | null = null;
+        try {
+          sizeBytes = (await fs.stat(absolute)).size;
+        } catch {
+          // 文件可能已被后续操作移除——sizeBytes 诚实置空，仍登记清单
+        }
+        await this.artifactRegistry.upsertExecutionArtifact({
+          projectId: run.projectId,
+          issueId: run.issueId,
+          logicalPath: file,
+          fileName: file.split('/').pop() ?? file,
+          executionId: run.id,
+          commitSha: changes.headRef,
+          diffStat,
+          sizeBytes,
+          contentProvider: () => fs.readFile(absolute),
+        });
+      } catch (err) {
+        this.logger.warn(
+          `artifact registration failed for ${file} @ ${run.id}: ${
+            err instanceof Error ? err.message : String(err)
+          }`,
+        );
       }
     }
   }

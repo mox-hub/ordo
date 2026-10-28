@@ -31,6 +31,17 @@ export type UploadArtifactRequest = {
   issueId?: string;
 };
 
+/** 执行产物源文件读取响应（kind=unavailable 为诚实降级，非传输错误） */
+export type ExecutionSourceResult = {
+  kind: 'text' | 'image' | 'unavailable';
+  content?: string;
+  dataUrl?: string;
+  truncated?: boolean;
+  readFrom?: 'worktree' | 'workspace';
+  integrationStatus?: string | null;
+  message?: string;
+};
+
 export const artifactApi = {
   getList: async (query?: ArtifactListQuery): Promise<ArtifactPage> => {
     return api.get<ArtifactPage>('/artifacts', query);
@@ -79,5 +90,15 @@ export const artifactApi = {
       params: version ? { version } : undefined,
     });
     return res.data;
+  },
+
+  /** 执行产物源文件读取（worktree/workspace 只读；unavailable=现场已清理诚实降级） */
+  getExecutionSource: async (
+    artifactId: string,
+    version?: number,
+  ): Promise<ExecutionSourceResult> => {
+    return api.get<ExecutionSourceResult>(`/artifacts/${artifactId}/source`, {
+      version,
+    });
   },
 };

@@ -43,6 +43,7 @@ import {
 } from './run-details-format';
 import { RunEventList } from './run-event-list';
 import { RunDiagnosisSection } from './run-diagnosis-section';
+import { RunArtifactsSection } from './run-artifacts-section';
 import { RunApprovalsSection } from './run-approvals-section';
 import { RunInfoPanel } from './run-info-panel';
 import { RunIsolationBadgeFromMetadata } from './run-isolation-badge';
@@ -365,6 +366,9 @@ export function RunDetailsDialog({
               root={runToTreeNode(data, subjectLabel)}
               className="shrink-0 border-b px-4 py-3"
             />
+
+            {/* 产出区块（CAP-A-32 批二）：执行自动登记的变更文件产物，读现场源文件预览 */}
+            <RunArtifactsSection executionId={data.id} metadata={data.metadata} />
 
             {hasTimeline && windowStart && windowEnd ? (
               <div className="shrink-0 border-b px-4 py-3">

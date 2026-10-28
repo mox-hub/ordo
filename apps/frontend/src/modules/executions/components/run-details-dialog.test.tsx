@@ -21,6 +21,22 @@ vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => {} },
 }));
 
+// 产出区块（CAP-A-32）经项目封装 useTranslation + artifact hooks——同口径桩
+vi.mock('@/hooks/useTranslation', () => ({
+  useTranslation: () => ({
+    t: (key: string, opts?: { defaultValue?: string }) => opts?.defaultValue ?? key,
+  }),
+}));
+vi.mock('@/modules/artifact/hooks/use-artifacts', () => ({
+  useArtifacts: () => ({ data: { data: [], meta: { page: 1, pageSize: 50, total: 0, totalPages: 0 } }, isLoading: false }),
+  useUploadArtifacts: () => ({ mutateAsync: vi.fn().mockResolvedValue({}) }),
+  useUploadArtifactVersion: () => ({ mutateAsync: vi.fn().mockResolvedValue({}) }),
+  useArtifactVersions: () => ({ data: [] }),
+  useArtifactDetail: () => ({ data: undefined }),
+  useUpdateArtifact: () => ({ mutateAsync: vi.fn().mockResolvedValue({}) }),
+  useDeleteArtifact: () => ({ mutateAsync: vi.fn().mockResolvedValue({}) }),
+}));
+
 const mockState = vi.hoisted(() => ({
   detail: undefined as ExecutionRunDetail | undefined,
   isLoading: false,

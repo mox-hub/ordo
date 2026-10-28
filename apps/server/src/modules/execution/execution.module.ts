@@ -6,9 +6,15 @@ import { ExecutionController } from './execution.controller';
 import { DecisionModule } from '@/modules/decision/decision.module';
 import { ExecutionWorktreeModule } from '@/modules/git/execution-worktree.module';
 import { QuickJudgeModule } from '@/modules/ai-hub/quick-judge/quick-judge.module';
+import { ArtifactModule } from '@/modules/artifact/artifact.module';
 
 @Module({
-  imports: [DecisionModule, ExecutionWorktreeModule, QuickJudgeModule],
+  imports: [
+    DecisionModule,
+    ExecutionWorktreeModule,
+    QuickJudgeModule,
+    ArtifactModule,
+  ],
   providers: [ExecutionService, ExecutionReconcileService, ApprovalService],
   controllers: [ExecutionController],
   exports: [ExecutionService, ApprovalService],
