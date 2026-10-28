@@ -204,7 +204,12 @@ export function ArtifactsPage() {
             )}
             emptyIcon={Package}
             renderLeading={(item) => (
-              <FileTypeIcon name={item.name} mimeType={item.mimeType} />
+              <span className="flex min-w-0 items-center gap-2">
+                <FileTypeIcon name={item.name} mimeType={item.mimeType} />
+                <span className="truncate text-sm font-medium text-foreground">
+                  {item.name}
+                </span>
+              </span>
             )}
             renderTrailing={(item) => (
               <span className="flex items-center gap-3">

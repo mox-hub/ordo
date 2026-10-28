@@ -66,20 +66,30 @@ export const artifactApi = {
     return api.get<ArtifactVersion[]>(`/artifacts/${artifactId}/versions`);
   },
 
-  /** multipart 上传（axios 原生 FormData 序列化，走统一拦截器带认证与工作区头） */
+  /**
+   * multipart 上传（走统一拦截器带认证与工作区头）。
+   * Content-Type 必须显式声明 multipart：apiClient 全局默认 application/json，
+   * axios 1.x 对「声明为 JSON 的 FormData」会整体 formDataToJSON 序列化（File 变 `{}`），
+   * 服务端 whitelist 即报 "property file should not exist"。声明后走 FormData 原样分支，
+   * 边界由浏览器适配器补齐。
+   */
   upload: async ({ file, projectId, issueId }: UploadArtifactRequest): Promise<Artifact> => {
     const form = new FormData();
     form.append('file', file);
     form.append('projectId', projectId);
     if (issueId) form.append('issueId', issueId);
-    const res = await apiClient.post<unknown>('/artifacts/upload', form);
+    const res = await apiClient.post<unknown>('/artifacts/upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return res.data as Artifact;
   },
 
   uploadVersion: async (artifactId: string, file: File): Promise<ArtifactVersion> => {
     const form = new FormData();
     form.append('file', file);
-    const res = await apiClient.post<unknown>(`/artifacts/${artifactId}/versions`, form);
+    const res = await apiClient.post<unknown>(`/artifacts/${artifactId}/versions`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
     return res.data as ArtifactVersion;
   },
 
