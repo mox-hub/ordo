@@ -235,7 +235,7 @@ export function ScreenshotAnnotator({
           <Trash2 className="size-3.5" />
         </Button>
         {annotated && (
-          <span className="flex items-center gap-1 text-xs text-text-secondary">
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
             <FlaskConical className="size-3" />
             {t('testMode.annotator.annotated')}
           </span>

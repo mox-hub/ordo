@@ -20,7 +20,9 @@
     "sync:skills": "node scripts/sync-skills.mjs",
     "check:skills-sync": "node scripts/sync-skills.mjs --check",
     "check:doc-coverage": "node scripts/check-doc-coverage.mjs",
-    "quality:gate": "pnpm type-check && pnpm lint && turbo run test && pnpm contract:check && pnpm --filter \"./apps/server\" run test:e2e && pnpm api:audit --min=95 && pnpm check:docs-sync",
+    "ledger:gen": "node scripts/gen-capability-ledger.mjs",
+    "check:ledger": "node scripts/gen-capability-ledger.mjs --check",
+    "quality:gate": "pnpm type-check && pnpm lint && turbo run test && pnpm contract:check && pnpm --filter \"./apps/server\" run test:e2e && pnpm api:audit --min=95 && pnpm check:boundaries && pnpm check:ledger && pnpm check:docs-sync",
     "gate:quick": "node scripts/gate.mjs",
     "gate:full": "pnpm quality:gate",
     "wt:check": "node scripts/worktree-deps.mjs check",
@@ -35,7 +37,8 @@
     "api:audit": "node scripts/api-audit.mjs",
     "knip": "knip",
     "check:i18n-sync": "node scripts/check-i18n-sync.mjs",
-    "check:boundaries": "pnpm --filter server exec depcruise src --config ../../.dependency-cruiser.cjs"
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "boundaries:update": "node scripts/check-boundaries.mjs --update"
   },
   "devDependencies": {
     "dependency-cruiser": "^18.2.0",

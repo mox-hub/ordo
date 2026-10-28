@@ -1,199 +1,112 @@
+#!/usr/bin/env node
+// ── 文档覆盖率门禁（2026-10-28 重写）──────────────────────────────────────────
+// 旧实现（2026-04 遗物）检查的是 `docs/meta/requirements/feature-*.md`、
+// `docs/reports/traceability-matrix.md`、`docs/INDEX.md`——这三个路径在仓库里都不存在；
+// 且 CI 里 `isCI` 分支无条件 `exit 0`。两个因素叠加，这道门禁**从未检查过任何东西**
+// （绿得毫无信息量）。2026-10-28 真相源入库后，重写为两条真实可执行的检查：
+//
+//   A. 模块 ↔ 架构文档覆盖：`apps/{server,frontend}/src/modules/*` 的每个真实目录，
+//      必须在 `docs/02-架构设计/architecture/<side>/modules.md` 中出现；
+//      未出现 = 新增模块没进开发真相源（模块地图失真的直接原因）。
+//      方向刻意单向（目录 → 文档）：文档可以先于代码合入（如分支较旧时），
+//      反向检查会把「文档已写好、代码在另一条已推送分支」误判为缺口。
+//   B. `docs/README.md` 的本地链接可达：真相子集已入库，索引里的每个链接都应能打开。
+//      指向本地保留目录（reports/archive/diagrams/stability-reports）的链接跳过。
+//
+// 运行：pnpm check:doc-coverage（CI quality-gate 的 docs job 内执行）
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-// Force non-interactive mode for CI/sandbox environments
-process.stdin.isTTY = process.stdin.isTTY || false;
+const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
+const MODULE_DOCS = [
+  { side: 'backend', dir: 'apps/server/src/modules', doc: 'docs/02-架构设计/architecture/backend/modules.md' },
+  { side: 'frontend', dir: 'apps/frontend/src/modules', doc: 'docs/02-架构设计/architecture/frontend/modules.md' },
+];
+// 不入库的本地目录：README 里可以提，但链接目标不要求在干净 checkout 中存在。
+const LOCAL_ONLY_PREFIXES = ['reports/', 'archive/', 'diagrams/', 'roadmap/stability-reports/'];
 
-const ROOT = process.cwd();
 let errors = 0;
-
-// CI（干净 checkout）不包含本地 docs/ 目录。docs/ 不纳入版本控制（见 .gitignore），
-// 因此存在性检查只在本地工作区执行；CI 中跳过并给出提示，避免门禁永远失败。
-// 文档同步纪律在 CI 中由 check:docs-sync（docs-sync-manifest.json）强制。
-const isCI = process.env.CI === 'true';
-const docsPresent = existsSync(join(ROOT, 'docs'));
 
 function logError(msg) {
   console.error(`[doc-coverage] ❌ ${msg}`);
-  errors++;
+  errors += 1;
 }
 
 function logOk(msg) {
   console.log(`[doc-coverage] ✅ ${msg}`);
 }
 
-/**
- * Check 1: Every backend module has a requirements doc
- */
-function checkBackendModuleCoverage() {
-  const modulesDir = join(ROOT, 'apps/server/src/modules');
-  if (!existsSync(modulesDir)) {
-    logError('apps/server/src/modules/ not found');
+function checkModuleDocCoverage() {
+  for (const { side, dir, doc } of MODULE_DOCS) {
+    const absDir = resolve(ROOT, dir);
+    const absDoc = resolve(ROOT, doc);
+    if (!existsSync(absDir)) {
+      logError(`${dir}/ not found`);
+      continue;
+    }
+    if (!existsSync(absDoc)) {
+      logError(`${doc} not found (module map is a truth source and must be versioned)`);
+      continue;
+    }
+
+    const modules = readdirSync(absDir, { withFileTypes: true })
+      .filter((entry) => entry.isDirectory())
+      .map((entry) => entry.name);
+    const content = readFileSync(absDoc, 'utf8');
+
+    const missing = modules.filter((name) => {
+      const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      // 接受 `` `name` `` 或独立单词两种写法；词边界避免 `task` 命中 `task-template`。
+      return !new RegExp(`\`${escaped}\`|(?<![\\w-])${escaped}(?![\\w-])`).test(content);
+    });
+
+    if (missing.length > 0) {
+      logError(
+        `${side}: ${missing.length} module dir(s) missing from ${doc}: ${missing.join(', ')}`,
+      );
+    } else {
+      logOk(`${side}: all ${modules.length} module dirs documented in ${doc}`);
+    }
+  }
+}
+
+function checkReadmeLinks() {
+  const readme = resolve(ROOT, 'docs/README.md');
+  if (!existsSync(readme)) {
+    logError('docs/README.md not found (document index must be versioned)');
     return;
   }
 
-  const modules = readdirSync(modulesDir, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name);
+  const content = readFileSync(readme, 'utf8');
+  const links = [...content.matchAll(/\]\(([^)]+)\)/g)]
+    .map((match) => match[1].trim())
+    .filter((href) => !href.startsWith('http') && !href.startsWith('#'))
+    .map((href) => href.split('#')[0])
+    .filter(Boolean);
 
-  // Known exceptions: modules that are internal/sub-modules
-  const exceptions = ['document-enhance'];
-
-  for (const mod of modules) {
-    if (exceptions.includes(mod)) continue;
-
-    const reqPath = join(ROOT, 'docs/meta/requirements', `feature-${mod}.md`);
-    if (!existsSync(reqPath)) {
-      logError(`backend module "${mod}" has no requirements doc (expected: docs/meta/requirements/feature-${mod}.md)`);
+  const checked = new Set();
+  let broken = 0;
+  for (const href of links) {
+    if (LOCAL_ONLY_PREFIXES.some((prefix) => href.startsWith(prefix))) continue;
+    if (checked.has(href)) continue;
+    checked.add(href);
+    if (!existsSync(resolve(ROOT, 'docs', href))) {
+      logError(`docs/README.md links to missing file: docs/${href}`);
+      broken += 1;
     }
   }
 
-  logOk(`checked ${modules.length} backend modules for requirements docs`);
-}
-
-/**
- * Check 2: Every frontend module has a traceability matrix entry
- */
-function checkFrontendModuleCoverage() {
-  const modulesDir = join(ROOT, 'apps/frontend/src/modules');
-  if (!existsSync(modulesDir)) {
-    logError('apps/frontend/src/modules/ not found');
-    return;
-  }
-
-  const modules = readdirSync(modulesDir, { withFileTypes: true })
-    .filter((d) => d.isDirectory())
-    .map((d) => d.name);
-
-  // Read traceability matrix
-  const matrixPath = join(ROOT, 'docs/reports/traceability-matrix.md');
-  if (!existsSync(matrixPath)) {
-    logError('docs/reports/traceability-matrix.md not found');
-    return;
-  }
-
-  const matrixContent = readFileSync(matrixPath, 'utf8');
-
-  // Modules that are purely frontend and don't need separate backend FR entries
-  const frontendOnly = ['command-palette', 'settings', 'analytics', 'document'];
-
-  for (const mod of modules) {
-    // Check if any mention in the traceability matrix
-    const modVariants = [
-      mod,
-      mod.replace(/-/g, ' '),
-      mod.replace(/-/g, '-'),
-    ];
-
-    const mentioned = modVariants.some((v) =>
-      matrixContent.toLowerCase().includes(v.toLowerCase()),
-    );
-
-    if (!mentioned && !frontendOnly.includes(mod)) {
-      logError(`frontend module "${mod}" not mentioned in traceability matrix`);
-    }
-  }
-
-  logOk(`checked ${modules.length} frontend modules for traceability coverage`);
-}
-
-/**
- * Check 3: Backend modules with contracts should have API docs
- */
-function checkContractApiMapping() {
-  const contractsDir = join(ROOT, 'docs/meta/contracts');
-  const apiDir = join(ROOT, 'docs/api');
-
-  if (!existsSync(contractsDir) || !existsSync(apiDir)) return;
-
-  const contracts = readdirSync(contractsDir)
-    .filter((f) => f.endsWith('.md') && f !== 'README.md');
-
-  for (const contract of contracts) {
-    const moduleName = contract.replace('.md', '');
-    const apiPath = join(apiDir, `api-${moduleName}.md`);
-    if (!existsSync(apiPath)) {
-      // Not all contracts need API docs (e.g., command-palette is frontend-only)
-      logOk(`contract "${moduleName}" has no API doc (may be frontend-only)`);
-    }
-  }
-
-  logOk(`checked ${contracts.length} contracts for API doc mapping`);
-}
-
-/**
- * Check 4: INDEX.md references match actual files
- */
-function checkIndexReferences() {
-  const indexPath = join(ROOT, 'docs/INDEX.md');
-  if (!existsSync(indexPath)) return;
-
-  const content = readFileSync(indexPath, 'utf8');
-  const refs = [...content.matchAll(/\]\(([^)]+)\)/g)].map((m) => m[1]);
-
-  let brokenRefs = 0;
-  for (const ref of refs) {
-    // Skip external links
-    if (ref.startsWith('http')) continue;
-
-    // Clean up anchor links
-    const cleanRef = ref.split('#')[0];
-    if (!cleanRef) continue;
-
-    const fullPath = join(ROOT, 'docs', cleanRef);
-    if (!existsSync(fullPath)) {
-      logError(`INDEX.md references non-existent file: docs/${cleanRef}`);
-      brokenRefs++;
-    }
-  }
-
-  if (brokenRefs === 0) {
-    logOk(`all INDEX.md references are valid (${refs.length} references checked)`);
+  if (broken === 0) {
+    logOk(`docs/README.md: ${checked.size} local link(s) resolved`);
   }
 }
 
-/**
- * Check 5: New doc files have proper frontmatter
- */
-function checkFrontmatter() {
-  const dirs = [
-    join(ROOT, 'docs/meta/requirements'),
-    join(ROOT, 'docs/meta/contracts'),
-    join(ROOT, 'docs/api'),
-  ];
-
-  let checked = 0;
-  for (const dir of dirs) {
-    if (!existsSync(dir)) continue;
-
-    const files = readdirSync(dir).filter((f) => f.endsWith('.md') && f !== 'README.md');
-    for (const file of files) {
-      const content = readFileSync(join(dir, file), 'utf8');
-      if (!content.startsWith('---')) {
-        logError(`${file}: missing frontmatter`);
-      }
-      checked++;
-    }
-  }
-
-  logOk(`checked ${checked} doc files for frontmatter`);
-}
-
-// Run all checks
 console.log('[doc-coverage] checking documentation coverage...\n');
+checkModuleDocCoverage();
+checkReadmeLinks();
 
-if (isCI || !docsPresent) {
-  console.log('[doc-coverage] local docs/ not present (CI or clean checkout); skipping coverage check.');
-  console.log('[doc-coverage] run `pnpm docs:sync --all` locally to generate docs and update the manifest.');
-  console.log('[doc-coverage] skipped (docs are local-only; CI enforces sync via docs-sync-manifest.json).');
-  process.exit(0);
-}
-
-checkBackendModuleCoverage();
-checkFrontendModuleCoverage();
-checkContractApiMapping();
-checkIndexReferences();
-checkFrontmatter();
-
-console.log(`\n[doc-coverage] ${errors === 0 ? 'all checks passed ✅' : `${errors} issue(s) found ❌`}`);
+console.log(
+  `\n[doc-coverage] ${errors === 0 ? 'all checks passed ✅' : `${errors} issue(s) found ❌`}`,
+);
 process.exit(errors > 0 ? 1 : 0);

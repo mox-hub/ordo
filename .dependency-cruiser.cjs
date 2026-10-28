@@ -1,6 +1,8 @@
 /**
- * 模块边界巡检（report-only，暂不入 quality gate）。
- * 运行：pnpm check:boundaries
+ * 模块边界门禁（2026-10-28 起入 quality:gate，棘轮模式）。
+ * 运行：pnpm check:boundaries（新增违规即红）/ pnpm boundaries:update（重写基线）
+ * 存量：136 条冻结在 `scripts/boundary-baseline.json`（去测试文件），只许减少不许新增；
+ *       `scripts/check-boundaries.mjs` 负责比对、报新增、提示可收缩条数。
  * 规则意图：
  *  - core/* 是地基，禁止反向依赖 modules/*（依赖方向必须 modules → core）
  *  - common/* 同理，只许被依赖不许依赖业务模块

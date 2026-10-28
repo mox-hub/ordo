@@ -66,7 +66,7 @@ export function TestModeFab() {
           title={t('testMode.fabTitle')}
           aria-label={t('testMode.fabTitle')}
           data-ordo-test-mode-ui
-          className="fixed right-6 bottom-44 z-toast flex size-10 items-center justify-center rounded-full border border-border bg-background/95 text-text-secondary shadow-xs backdrop-blur-xs transition-colors hover:bg-muted hover:text-text-primary"
+          className="fixed right-6 bottom-44 z-toast flex size-10 items-center justify-center rounded-full border border-border bg-background/95 text-muted-foreground shadow-xs backdrop-blur-xs transition-colors hover:bg-muted hover:text-foreground"
         >
           <FlaskConical className="size-4.5" />
         </button>

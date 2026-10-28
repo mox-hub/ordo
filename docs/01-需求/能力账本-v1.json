@@ -1,0 +1,594 @@
+{
+  "schemaVersion": 1,
+  "source": "docs/01-需求/能力清单-v1.md",
+  "sourceSha256": "81c6518c551f11422200e4391ade10d5019b468b9ccdb26fe18bcfb63621614c",
+  "total": 71,
+  "statusTotals": {
+    "done": 14,
+    "doing": 43,
+    "planned": 11,
+    "gap": 0,
+    "structure": 3
+  },
+  "areas": [
+    {
+      "key": "A",
+      "label": "A 底盘线",
+      "total": 32,
+      "done": 10,
+      "doing": 22,
+      "planned": 0,
+      "gap": 0,
+      "structure": 0
+    },
+    {
+      "key": "B",
+      "label": "B 治理线",
+      "total": 10,
+      "done": 3,
+      "doing": 7,
+      "planned": 0,
+      "gap": 0,
+      "structure": 0
+    },
+    {
+      "key": "C",
+      "label": "C 同事线",
+      "total": 8,
+      "done": 1,
+      "doing": 7,
+      "planned": 0,
+      "gap": 0,
+      "structure": 0
+    },
+    {
+      "key": "K",
+      "label": "D 契约知识线",
+      "total": 3,
+      "done": 0,
+      "doing": 3,
+      "planned": 0,
+      "gap": 0,
+      "structure": 0
+    },
+    {
+      "key": "X",
+      "label": "跨线桥",
+      "total": 3,
+      "done": 0,
+      "doing": 0,
+      "planned": 0,
+      "gap": 0,
+      "structure": 3
+    },
+    {
+      "key": "P",
+      "label": "规划卡",
+      "total": 1,
+      "done": 0,
+      "doing": 1,
+      "planned": 0,
+      "gap": 0,
+      "structure": 0
+    },
+    {
+      "key": "S",
+      "label": "S 自举线",
+      "total": 4,
+      "done": 0,
+      "doing": 3,
+      "planned": 1,
+      "gap": 0,
+      "structure": 0
+    },
+    {
+      "key": "M",
+      "label": "M 移动线",
+      "total": 10,
+      "done": 0,
+      "doing": 0,
+      "planned": 10,
+      "gap": 0,
+      "structure": 0
+    }
+  ],
+  "cards": [
+    {
+      "id": "CAP-A-01",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "认证与访问",
+      "status": "done"
+    },
+    {
+      "id": "CAP-A-02",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "用户 / 团队 / 成员",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-03",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "项目与工作区",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-04",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "工单族（Issue）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-05",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "元数据与业务配置",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-06",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "文档管理（基础面）",
+      "status": "done"
+    },
+    {
+      "id": "CAP-A-07",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "动态 / 通知 / 订阅 / 邮件",
+      "status": "done"
+    },
+    {
+      "id": "CAP-A-08",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "Git 集成",
+      "status": "done"
+    },
+    {
+      "id": "CAP-A-09",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "外部集成",
+      "status": "done"
+    },
+    {
+      "id": "CAP-A-10",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "运维管理",
+      "status": "done"
+    },
+    {
+      "id": "CAP-A-11",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "workflow 执行引擎基座 †供血 C 线 AI 同事（候补「AI 自编排工作流」的升格前置）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-12",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "工作流节点画布与产品动作节点 †供血 C 线 AI 同事（流程域的「代写→确认→把关」载体）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-13",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "控制面壳层：底部协同交互面（Dock）与外观自定义 †供血 C 线 AI 同事可达性（常驻入口让决策/验收入口随手可达）",
+      "status": "done"
+    },
+    {
+      "id": "CAP-A-14",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "桌面壳发布级打包与运作（桌面安装包：装上即用；壳技术栈 Electron 定版，ADR-014；Tauri 遗产已剔除）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-15",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "控制面导航信息架构：研发生命周期对齐主轴管道",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-16",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "里程碑与发布：计划-交付轴整合",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-17",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "快捷键体系：全局键位注册表与用户自定义",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-18",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "统一创建面板双界面：手动 × AI 代理平行",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-19",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "执行侧兜底改造：失败感知+悬挂对账+验收供给侧四批+重试血缘（批 5）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-20",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "AI 管理页概览配置面与供应商模型真实查询",
+      "status": "done"
+    },
+    {
+      "id": "CAP-A-21",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "模型价目参考源（models.dev 外部数据源）",
+      "status": "done"
+    },
+    {
+      "id": "CAP-A-22",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "认证面改版：左文右图分栏 + 注册欢迎身份工牌",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-23",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "全局 Markdown 实体引用系统（/ 命令插入胶囊 + hover 预览）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-24",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "提示词治理：系统内置提示词 + 分层提示词编辑 + 注入开关 + 执行完整 Prompt 透出",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-25",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "工作区主体落地（跨工作区身份初始化）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-26",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "登录前工作区选择 + 未认证工作区发现",
+      "status": "done"
+    },
+    {
+      "id": "CAP-A-27",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "AI 快速判断通道（quick-judge）与治理初审接入 †供血 B-03/B-01（审批风险定级供血审批链、证据预审供血验收门禁）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-28",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "路径选择语义组件与目录保障（path-input）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-29",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "视图形态完整性：清单页表格视图补齐",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-30",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "环境自足：git/node 随包与 AI CLI 首用按需装（开箱即用二期，2026-10-17 新立）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-31",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "实机测试模式：壳内抓现场建单（in-app bug reporter，2026-10-25 新立）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-A-32",
+      "area": "A",
+      "areaLabel": "A 底盘线",
+      "title": "产物管理（统一产物层：上传文件/执行产物/文档，2026-10-27 新立）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-B-01",
+      "area": "B",
+      "areaLabel": "B 治理线",
+      "title": "验收契约",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-B-02",
+      "area": "B",
+      "areaLabel": "B 治理线",
+      "title": "完整性审计与完备性清单 ★",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-B-03",
+      "area": "B",
+      "areaLabel": "B 治理线",
+      "title": "执行与审批",
+      "status": "done"
+    },
+    {
+      "id": "CAP-B-04",
+      "area": "B",
+      "areaLabel": "B 治理线",
+      "title": "本地运行时",
+      "status": "done"
+    },
+    {
+      "id": "CAP-B-05",
+      "area": "B",
+      "areaLabel": "B 治理线",
+      "title": "CLI 派发与 Provider",
+      "status": "done"
+    },
+    {
+      "id": "CAP-B-06",
+      "area": "B",
+      "areaLabel": "B 治理线",
+      "title": "上下文策展",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-B-07",
+      "area": "B",
+      "areaLabel": "B 治理线",
+      "title": "信任与扩展",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-B-08",
+      "area": "B",
+      "areaLabel": "B 治理线",
+      "title": "验收证据回流（规划卡）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-B-09",
+      "area": "B",
+      "areaLabel": "B 治理线",
+      "title": "设计系统三层分层解耦（原语目录 + 语义组件层）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-B-10",
+      "area": "B",
+      "areaLabel": "B 治理线",
+      "title": "列表清单渲染性能标准（考核点入宪法 + DataList 系统阀门）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-C-01",
+      "area": "C",
+      "areaLabel": "C 同事线",
+      "title": "AI 助手 / 同事会话 †供血 B 全线（②拆解的执行载体）",
+      "status": "done"
+    },
+    {
+      "id": "CAP-C-02",
+      "area": "C",
+      "areaLabel": "C 同事线",
+      "title": "项目档案与考古导入 †供血 B-01/B-02（档案=治理条件的素材库）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-C-03",
+      "area": "C",
+      "areaLabel": "C 同事线",
+      "title": "剧本（Playbook） †供血 B-02（访谈向导=需求→标准的转化器，主线①②的雏形）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-C-04",
+      "area": "C",
+      "areaLabel": "C 同事线",
+      "title": "决策卡 †供血 B-03（审批的人类决策界面）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-C-05",
+      "area": "C",
+      "areaLabel": "C 同事线",
+      "title": "记忆与专长度 †供血 B-02（记忆=审计的经验底料）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-C-06",
+      "area": "C",
+      "areaLabel": "C 同事线",
+      "title": "简报与健康分析 †供血 B 全线（管家简报=治理状态的每日触达）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-C-07",
+      "area": "C",
+      "areaLabel": "C 同事线",
+      "title": "局部侵入问答（AISlot） †供血 B-01/B-02（治理条件与审计结果的就地可解释性）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-C-08",
+      "area": "C",
+      "areaLabel": "C 同事线",
+      "title": "AI 表面（实时盯盘 · 代理 · 叙述 · 演示） †供血 B 全线（治理状态的实时可观察性与可理解性）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-K-01",
+      "area": "K",
+      "areaLabel": "D 契约知识线",
+      "title": "契约绑定",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-K-02",
+      "area": "K",
+      "areaLabel": "D 契约知识线",
+      "title": "文档知识层",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-K-03",
+      "area": "K",
+      "areaLabel": "D 契约知识线",
+      "title": "发版",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-X-01",
+      "area": "X",
+      "areaLabel": "跨线桥",
+      "title": "文档桥（A ↔ D）",
+      "status": "structure"
+    },
+    {
+      "id": "CAP-X-02",
+      "area": "X",
+      "areaLabel": "跨线桥",
+      "title": "Git 桥（A ↔ B）",
+      "status": "structure"
+    },
+    {
+      "id": "CAP-X-03",
+      "area": "X",
+      "areaLabel": "跨线桥",
+      "title": "集成桥（A ↔ 需求源）",
+      "status": "structure"
+    },
+    {
+      "id": "CAP-P-01",
+      "area": "P",
+      "areaLabel": "规划卡",
+      "title": "需求承接与拆解管道（主线）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-S-01",
+      "area": "S",
+      "areaLabel": "S 自举线",
+      "title": "记账自举：需求/任务/发版/质量账本入 APM 系统",
+      "status": "planned"
+    },
+    {
+      "id": "CAP-S-02",
+      "area": "S",
+      "areaLabel": "S 自举线",
+      "title": "执行面接入：外部 agent 工具双向接入（headless 派发 + MCP 会话回联）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-S-03",
+      "area": "S",
+      "areaLabel": "S 自举线",
+      "title": "workflow v2 引擎重构（声明式节点树 + 确定性引擎，参照 ZCode 动态工作流设计）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-S-04",
+      "area": "S",
+      "areaLabel": "S 自举线",
+      "title": "ZCode 官方插件：工单可视化 · 双向同步 · 自动化联动（2026-10-27 新立）",
+      "status": "doing"
+    },
+    {
+      "id": "CAP-M-01",
+      "area": "M",
+      "areaLabel": "M 移动线",
+      "title": "工程底座与认证",
+      "status": "planned"
+    },
+    {
+      "id": "CAP-M-02",
+      "area": "M",
+      "areaLabel": "M 移动线",
+      "title": "通知收件箱与推送",
+      "status": "planned"
+    },
+    {
+      "id": "CAP-M-03",
+      "area": "M",
+      "areaLabel": "M 移动线",
+      "title": "决策卡拍板 ★楔子",
+      "status": "planned"
+    },
+    {
+      "id": "CAP-M-04",
+      "area": "M",
+      "areaLabel": "M 移动线",
+      "title": "执行盯盘",
+      "status": "planned"
+    },
+    {
+      "id": "CAP-M-05",
+      "area": "M",
+      "areaLabel": "M 移动线",
+      "title": "验收与证据查看",
+      "status": "planned"
+    },
+    {
+      "id": "CAP-M-06",
+      "area": "M",
+      "areaLabel": "M 移动线",
+      "title": "工单详情·评论·@AI",
+      "status": "planned"
+    },
+    {
+      "id": "CAP-M-07",
+      "area": "M",
+      "areaLabel": "M 移动线",
+      "title": "发起需求",
+      "status": "planned"
+    },
+    {
+      "id": "CAP-M-08",
+      "area": "M",
+      "areaLabel": "M 移动线",
+      "title": "实时通道·深链·徽标",
+      "status": "planned"
+    },
+    {
+      "id": "CAP-M-09",
+      "area": "M",
+      "areaLabel": "M 移动线",
+      "title": "移动设计系统·无障碍·离线降级",
+      "status": "planned"
+    },
+    {
+      "id": "CAP-M-10",
+      "area": "M",
+      "areaLabel": "M 移动线",
+      "title": "发布与分发",
+      "status": "planned"
+    }
+  ]
+}

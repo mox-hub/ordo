@@ -118,6 +118,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm lint
+      - run: pnpm check:boundaries
 
   test-frontend:
     needs: changes
@@ -316,5 +317,6 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm check:docs-sync
+      - run: pnpm check:ledger
       - run: pnpm check:doc-coverage
       - run: pnpm check:i18n-sync

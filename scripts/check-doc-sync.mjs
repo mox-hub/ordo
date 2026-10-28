@@ -110,8 +110,8 @@ function listTrackedDocs() {
  * 现口径：不经过 diff，直接枚举受管文档——无论本次改了什么、甚至什么都没改，
  * frontmatter 契约都被完整校验一次，本地与 CI 结果一致。
  *
- * 范围只收**已入库**的文档，不收工作区里的未跟踪文件：`docs/` 下绝大多数文件不入库
- * （AGENTS.md：不进 git 的文档无评审、无历史、无法回滚），对它们强制元数据要求，
+ * 范围只收**已入库**的文档，不收工作区里的未跟踪文件：`docs/` 只有真相子集入库
+ * （AGENTS.md：不进 git 的文档无评审、无历史、无法回滚），对未入库文件强制元数据要求，
  * 只会得到「本地永远红、CI 永远绿」的分歧——那比没有检查更坏。
  */
 function checkAllDocsHaveFrontmatter() {
@@ -194,9 +194,40 @@ function checkNoTauriMainPath(changed) {
 // 且「文档生命周期追踪」应由 Ordo 自身的文档模块承担（自举原则），
 // 不该由 CI 脚本硬编码一份 2026-04 的过期清单路径。
 
+// ── Check 0：真相源必须在 git 里 ─────────────────────────────────────────────
+// 2026-10-28 政策变更：docs/ 的真相子集纳入版本控制。此检查防的是「某次整理顺手把
+// docs/ 重新整体 ignore 掉」——那种回归会让 frontmatter 检查静默变成空集，CI 仍绿。
+const REQUIRED_TRUTH_SOURCES = [
+  { dir: 'docs/design/', min: 5, label: '设计宪法' },
+  { dir: 'docs/01-需求/', min: 10, label: '需求真相源' },
+  { dir: 'docs/02-架构设计/', min: 10, label: '开发真相源' },
+  { dir: 'docs/roadmap/', min: 10, label: '管理与验收账' },
+];
+
+function checkTruthSourcesVersioned() {
+  const docs = listTrackedDocs();
+  const issues = [];
+  for (const { dir, min, label } of REQUIRED_TRUTH_SOURCES) {
+    const count = docs.filter((f) => f.startsWith(dir)).length;
+    if (count < min) {
+      issues.push(
+        `  - ${label} ${dir}: only ${count} tracked .md (expected >= ${min}) — truth sources must be versioned`,
+      );
+    }
+  }
+  if (issues.length > 0) {
+    console.error('[docs-sync] truth-source versioning check failed:');
+    issues.forEach((msg) => console.error(msg));
+    console.error('[docs-sync] restore the .gitignore exception / add the missing docs to git.');
+    process.exit(1);
+  }
+  console.log('[docs-sync] truth-source check passed.');
+}
+
 // Check 2 是全量扫描，与「本次改了什么」无关，必须在早退之前执行——
 // 否则在无变更上下文（CI 首次克隆、单独执行 check:docs-sync）下会被一并跳过，
 // 重蹈「检查存在但永不生效」的覆辙。
+checkTruthSourcesVersioned();
 checkAllDocsHaveFrontmatter();
 
 const changed = getChangedFiles();
