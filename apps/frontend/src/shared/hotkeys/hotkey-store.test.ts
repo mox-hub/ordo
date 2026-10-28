@@ -10,9 +10,11 @@ beforeAll(() => {
 });
 
 describe('hotkey-definitions 注册表单一真相源', () => {
-  it('global 组恰为三个壳层动作（命令面板/全局搜索/AI 助理），均非 readonly', () => {
+  it('global 组恰为四个壳层动作（命令面板/全局搜索/AI 助理/创建面板），均非 readonly', () => {
     const globals = HOTKEY_DEFINITIONS.filter((d) => d.group === 'global');
-    expect(globals.map((d) => d.id)).toEqual(['command-palette', 'global-search', 'ai-assistant']);
+    expect(globals.map((d) => d.id)).toEqual([
+      'command-palette', 'global-search', 'ai-assistant', 'create-dialog',
+    ]);
     expect(globals.every((d) => !d.readonly)).toBe(true);
   });
 

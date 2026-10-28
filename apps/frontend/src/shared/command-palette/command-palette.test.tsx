@@ -172,8 +172,8 @@ describe('command palette registry (commands.ts)', () => {
       expect(validGroups.has(entry.group)).toBe(true);
       // 外观改造后每条命令必须有图标：实体命令走 entity（注册表解析），动作/非实体页面给 icon
       expect(entry.entity || entry.icon).toBeTruthy();
-      // 路由跳转与运行时动作至少有其一
-      expect(entry.to || entry.action).toBeTruthy();
+      // 路由跳转/运行时动作/创建类（openCreateDialog）至少有其一
+      expect(entry.to || entry.action || entry.createType).toBeTruthy();
     }
   });
 
