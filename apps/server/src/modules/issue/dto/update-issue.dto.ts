@@ -147,13 +147,14 @@ export class UpdateIssueDto {
   startDate?: string;
 
   @ApiProperty({
-    description: 'Due date (ISO 8601)',
+    description: 'Due date (ISO 8601)；传 null 清除',
     example: '2024-12-31T23:59:59Z',
     required: false,
+    nullable: true,
   })
   @IsDateString()
   @IsOptional()
-  dueDate?: string;
+  dueDate?: string | null;
 
   @ApiProperty({
     description: 'Estimated hours',

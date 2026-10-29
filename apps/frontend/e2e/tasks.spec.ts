@@ -650,3 +650,42 @@ test('T22 项目任务页-创建与改状态', async ({ page, api }) => {
       await expect.poll(async () => String((await api.getTask(task!.id)).status), { timeout: 12_000 }).toBe('in_review')
     })
 })
+
+// ---------------------------------------------------------------------------
+// T24 详情页清除截止日期（PG-ISSUE-CTRL-61，GAP-T-01 交互矩阵）——
+// 日期弹层 footer「清除截止日期」→ PATCH dueDate 置空。
+// ---------------------------------------------------------------------------
+test('T24 详情页清除截止日期', async ({ page, api }) => {
+  const p = await newProject(api, '清日期项目')
+  const t = await newTask(api, uniq('清日期任务'), p.id, { dueDate: '2026-12-15' })
+  await gotoDetail(page, t.id)
+  const sidebar = page.locator('aside').filter({ hasText: '负责人' }).last()
+
+  await expect
+    .poll(async () => String((await api.getTask(t.id)).dueDate ?? ''), { timeout: 15_000 })
+    .toContain('2026-12-15')
+
+  await capsuleByRowLabel(sidebar, /^截止日期$/).click()
+  await page.getByRole('button', { name: '清除截止日期' }).click()
+  await expect
+    .poll(async () => String((await api.getTask(t.id)).dueDate ?? ''), { timeout: 15_000 })
+    .toBe('')
+})
+
+// ---------------------------------------------------------------------------
+// T25 详情页 Previous/Next 项目内翻页（PG-ISSUE-CTRL-04/05，GAP-T-01）——
+// 按创建顺序定位下一条；末条 Next 禁用。
+// ---------------------------------------------------------------------------
+test('T25 详情页Previous与Next翻页', async ({ page, api }) => {
+  const p = await newProject(api, '翻页项目')
+  const first = await newTask(api, uniq('翻页任务甲'), p.id)
+  const second = await newTask(api, uniq('翻页任务乙'), p.id)
+  // 列表默认 createdAt desc（新在前）：second 在头部、first 在末位
+  await gotoDetail(page, second.id)
+
+  await page.getByRole('button', { name: 'Next', exact: true }).click()
+  await page.waitForURL(new RegExp(first.id), { timeout: 15_000 })
+  await expect(page.getByRole('button', { name: 'Next', exact: true })).toBeDisabled()
+  await page.getByRole('button', { name: 'Previous', exact: true }).click()
+  await page.waitForURL(new RegExp(second.id), { timeout: 15_000 })
+})

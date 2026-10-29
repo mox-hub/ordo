@@ -67793,9 +67793,10 @@
             "example": "2024-12-01T00:00:00Z"
           },
           "dueDate": {
-            "type": "string",
-            "description": "Due date (ISO 8601)",
-            "example": "2024-12-31T23:59:59Z"
+            "type": "object",
+            "description": "Due date (ISO 8601)；传 null 清除",
+            "example": "2024-12-31T23:59:59Z",
+            "nullable": true
           },
           "estimate": {
             "type": "number",

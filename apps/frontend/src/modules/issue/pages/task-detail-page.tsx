@@ -770,7 +770,7 @@ export function TaskDetailPage() {
                 value={dueDate}
                 placeholder={t('common.none')}
                 clearLabel={t('taskDetail.clearDueDate')}
-                onChange={(v) => updateField({ dueDate: v || undefined })}
+                onChange={(v) => updateField({ dueDate: v || null })}
               />
             </PropertyRow>
           </PropsCard>

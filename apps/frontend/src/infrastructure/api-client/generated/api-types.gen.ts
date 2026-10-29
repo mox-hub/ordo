@@ -9314,10 +9314,10 @@ export interface components {
              */
             startDate?: string;
             /**
-             * @description Due date (ISO 8601)
+             * @description Due date (ISO 8601)；传 null 清除
              * @example 2024-12-31T23:59:59Z
              */
-            dueDate?: string;
+            dueDate?: Record<string, never> | null;
             /**
              * @description Estimated hours
              * @example 8

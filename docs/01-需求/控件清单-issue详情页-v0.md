@@ -18,6 +18,8 @@ ai-audiences: "session:all"
 # 控件清单 v0 —— PG-ISSUE-DETAIL（issue 详情页）
 
 > 配套 [[测试映射矩阵-v1]] §五模板的**首个试点**。
+>
+> **用例名回填（2026-10-30，GAP-T-01 交互矩阵清偿）**：`tasks.spec.ts` T03~T25 与 `bugs.spec.ts` B06~B08（bug 详情页同构）对照本清单逐项回填——28 项 covered（含本批新增 T24 清除截止日期【随行修复「清除截止日期不生效」缺陷：dueDate 置空传 undefined 被 JSON 序列化丢弃，改传 null + DTO nullable】与 T25 Previous/Next 翻页）。剩余 todo 主要为：执行项面板（15~26）、问 AI 线程（42~48）、自定义字段卡（62~65，待 IssueType 字段管理面配套）、右栏各折叠开关、条件渲染的 Linear/GitHub 区（70~83）与 issue 详情页内验收卡操作（85~89，验收中心页已有 AC02/AC03 同链路覆盖）。
 > **口径：代码级静态盘点**（基线 commit `c37d571`，2026-09-09 夜航），未实机校验——各弹层开合、防抖节奏、流式展示均为静态推断，**实机校验待用户**。
 > 盘点范围：`task-detail-page.tsx` 及其直接渲染子组件；**不含**看板/列表/抽屉/甘特图（待后续盘点）。用例名一律留空（待支线二排期补测）。
 
@@ -28,10 +30,10 @@ ai-audiences: "session:all"
 | PG-ISSUE-CTRL-01 | 返回（ArrowLeft） | button | `navigate(-1)` | 工具条最左 | | | todo |
 | PG-ISSUE-CTRL-02 | 面包屑「任务」 | link | 跳 `/app/issues` | 工具条左 | | | todo |
 | PG-ISSUE-CTRL-03 | 面包屑「{项目名}」 | link | 跳 `/app/projects/:id`（无项目不渲染） | 工具条左 | | | todo |
-| PG-ISSUE-CTRL-04 | Previous（硬编码英文） | button | 项目内上一任务；首条禁用 | 翻页器 | | | todo |
-| PG-ISSUE-CTRL-05 | Next（硬编码英文） | button | 项目内下一任务；末条禁用 | 翻页器 | | | todo |
-| PG-ISSUE-CTRL-06 | 收藏星标 | switch 型 button | zustand 本地持久化，无 API | actions | | | todo |
-| PG-ISSUE-CTRL-07 | 订阅按钮（头像栈/UserRoundPlus） | popover 触发 | 打开订阅者浮层，拉全量成员 | actions | | | todo |
+| PG-ISSUE-CTRL-04 | Previous（硬编码英文） | button | 项目内上一任务；首条禁用 | 翻页器 | | T25 | covered |
+| PG-ISSUE-CTRL-05 | Next（硬编码英文） | button | 项目内下一任务；末条禁用 | 翻页器 | | T25 | covered |
+| PG-ISSUE-CTRL-06 | 收藏星标 | switch 型 button | zustand 本地持久化，无 API | actions | | T21 | covered |
+| PG-ISSUE-CTRL-07 | 订阅按钮（头像栈/UserRoundPlus） | popover 触发 | 打开订阅者浮层，拉全量成员 | actions | | T21 | covered |
 | PG-ISSUE-CTRL-07.1 | └ 更改订阅者搜索框 | input | 前端过滤成员 | 浮层内 | | | todo |
 | PG-ISSUE-CTRL-07.2 | └ 成员/智能体勾选行 | checkbox | 勾选即全量替换 `PUT /subscriptions` | 浮层内 | | | todo |
 | PG-ISSUE-CTRL-08 | Hide/Show sidebar（硬编码英文） | button | 本地 state 收展右侧栏 | 工具条最右 | | | todo |
@@ -40,7 +42,7 @@ ai-audiences: "session:all"
 
 | ID | 控件 | 类型 | 预期行为/API | 位置 | 覆盖①-⑤ | 用例名 | 状态 |
 |----|------|------|--------------|------|----------|--------|------|
-| PG-ISSUE-CTRL-09 | 标题输入框 | textarea | 1500ms 防抖 `PATCH /issues/:id {title}`；失败横幅 | 标题行 | | | todo |
+| PG-ISSUE-CTRL-09 | 标题输入框 | textarea | 1500ms 防抖 `PATCH /issues/:id {title}`；失败横幅 | 标题行 | | T03 | covered |
 | PG-ISSUE-CTRL-10 | 父任务标题链接 | link+预览卡 | 跳父任务；hover 400ms 弹预览卡（仅子任务） | 来源行 | | | todo |
 | PG-ISSUE-CTRL-11 | Linear 外部标识徽章 | link | 新窗口开 externalUrl；无 URL 禁点 | 元信息行 | | | todo |
 
@@ -49,8 +51,8 @@ ai-audiences: "session:all"
 | ID | 控件 | 类型 | 预期行为/API | 位置 | 覆盖①-⑤ | 用例名 | 状态 |
 |----|------|------|--------------|------|----------|--------|------|
 | PG-ISSUE-CTRL-12 | 编辑（Pencil，hover 显形） | button | 进 MarkdownEditor 编辑态 | 区标题右 | | | todo |
-| PG-ISSUE-CTRL-13 | 描述正文/「添加描述…」 | button | 点击进编辑态 | 描述区 | | | todo |
-| PG-ISSUE-CTRL-14 | 描述编辑器（live 双栏+@补全） | textarea | 1500ms 防抖 `PATCH {description}`；@ 触发成员+文档补全 | 编辑态 | | | todo |
+| PG-ISSUE-CTRL-13 | 描述正文/「添加描述…」 | button | 点击进编辑态 | 描述区 | | T04 | covered |
+| PG-ISSUE-CTRL-14 | 描述编辑器（live 双栏+@补全） | textarea | 1500ms 防抖 `PATCH {description}`；@ 触发成员+文档补全 | 编辑态 | | T04 | covered |
 
 ## 四、主栏·执行项区（ExecutionItemsPanel）
 
@@ -75,12 +77,12 @@ ai-audiences: "session:all"
 
 | ID | 控件 | 类型 | 预期行为/API | 位置 | 覆盖①-⑤ | 用例名 | 状态 |
 |----|------|------|--------------|------|----------|--------|------|
-| PG-ISSUE-CTRL-27 | 「+」添加子任务 | button | 展开创建卡 | 区标题右 | | | todo |
-| PG-ISSUE-CTRL-28 | 子任务行 | link | 跳 `/app/issues/:subId` | 列表 | | | todo |
-| PG-ISSUE-CTRL-29 | 子任务标题（必填校验） | textarea | 本地 state | 创建卡 | | | todo |
-| PG-ISSUE-CTRL-30 | 添加描述… | textarea | 本地 state | 创建卡 | | | todo |
-| PG-ISSUE-CTRL-31 | 取消 | button | 关表单清草稿 | 创建卡底 | | | todo |
-| PG-ISSUE-CTRL-32 | 保存子任务 | button | `POST /issues`（带 parentIssueId），toast | 创建卡底 | | | todo |
+| PG-ISSUE-CTRL-27 | 「+」添加子任务 | button | 展开创建卡 | 区标题右 | | T09 | covered |
+| PG-ISSUE-CTRL-28 | 子任务行 | link | 跳 `/app/issues/:subId` | 列表 | | T09 | covered |
+| PG-ISSUE-CTRL-29 | 子任务标题（必填校验） | textarea | 本地 state | 创建卡 | | T09 | covered |
+| PG-ISSUE-CTRL-30 | 添加描述… | textarea | 本地 state | 创建卡 | | T09 | covered |
+| PG-ISSUE-CTRL-31 | 取消 | button | 关表单清草稿 | 创建卡底 | | T09 | covered |
+| PG-ISSUE-CTRL-32 | 保存子任务 | button | `POST /issues`（带 parentIssueId），toast | 创建卡底 | | T09 | covered |
 
 ## 六、主栏·动态/评论区（ActivityFeed）
 
@@ -89,13 +91,13 @@ ai-audiences: "session:all"
 | PG-ISSUE-CTRL-33 | 回复（hover 显形） | button | 评论框插 `@作者名` 聚焦 | 评论卡头 | | | todo |
 | PG-ISSUE-CTRL-34 | 编辑（仅本人） | button | 行内编辑态 | 评论卡头 | | | todo |
 | PG-ISSUE-CTRL-35 | └ 取消/保存 | button | `PATCH /activities/comments/:id` | 编辑态 | | | todo |
-| PG-ISSUE-CTRL-36 | 删除（仅本人，**无二次确认**） | button | `DELETE /activities/comments/:id` | 评论卡头 | | | todo |
+| PG-ISSUE-CTRL-36 | 删除（仅本人，**无二次确认**） | button | `DELETE /activities/comments/:id` | 评论卡头 | | T10 | covered |
 | PG-ISSUE-CTRL-37 | 表情回应 chip | button | toggle `POST /activities/:id/reactions` | ReactionBar | | | todo |
 | PG-ISSUE-CTRL-38 | 添加表情回应 | popover | EmojiPicker，选中即 toggle | ReactionBar 尾 | | | todo |
-| PG-ISSUE-CTRL-39 | 评论输入框 | textarea | `Ctrl/⌘+Enter` 发送 | 动态底部 | | | todo |
+| PG-ISSUE-CTRL-39 | 评论输入框 | textarea | `Ctrl/⌘+Enter` 发送 | 动态底部 | | T10 | covered |
 | PG-ISSUE-CTRL-39.1 | └ 编写/预览切换 | tab 对 | 切编辑/渲染 | 评论框底栏 | | | todo |
 | PG-ISSUE-CTRL-40 | 插入表情 | popover | 插入光标处 | 评论框底栏 | | | todo |
-| PG-ISSUE-CTRL-41 | 发送评论 | button | `POST /activities/comments` | 评论框底栏 | | | todo |
+| PG-ISSUE-CTRL-41 | 发送评论 | button | `POST /activities/comments` | 评论框底栏 | | T10 | covered |
 
 ## 七、右栏·操作条 + 行内问 AI
 
@@ -108,27 +110,27 @@ ai-audiences: "session:all"
 | PG-ISSUE-CTRL-46 | 答案动作按钮（白名单 status/priority/dueDate） | button | `PATCH /issues/:id`；用后变「已应用」 | 答案下方 | | | todo |
 | PG-ISSUE-CTRL-47 | 让我细聊 | button | 携草稿开助手侧板 | 线程底部 | | | todo |
 | PG-ISSUE-CTRL-48 | 进办公室 | link | 跳 `/app/office` | 线程底部 | | | todo |
-| PG-ISSUE-CTRL-49 | 指派 AI/重新派发 AI | dialog 触发 | 打开 AiAssignDialog | 按钮组 | | | todo |
+| PG-ISSUE-CTRL-49 | 指派 AI/重新派发 AI | dialog 触发 | 打开 AiAssignDialog | 按钮组 | | T11 | covered |
 | PG-ISSUE-CTRL-49.1 | └ AI 员工选择卡 | select 型 button | 本地选中态 | 弹窗 | | | todo |
-| PG-ISSUE-CTRL-49.2 | └ 取消/派发并执行 | button | `POST /ai/assign-issue`；警告 toast | 弹窗 | | | todo |
-| PG-ISSUE-CTRL-50 | 删除（红色圆形） | dialog 触发 | 删除确认弹窗 | 按钮组 | | | todo |
-| PG-ISSUE-CTRL-50.1 | └ 取消/删除 | button | `DELETE /issues/:id` → 跳列表 | 弹窗 | | | todo |
+| PG-ISSUE-CTRL-49.2 | └ 取消/派发并执行 | button | `POST /ai/assign-issue`；警告 toast | 弹窗 | | T11 | covered |
+| PG-ISSUE-CTRL-50 | 删除（红色圆形） | dialog 触发 | 删除确认弹窗 | 按钮组 | | T12 | covered |
+| PG-ISSUE-CTRL-50.1 | └ 取消/删除 | button | `DELETE /issues/:id` → 跳列表 | 弹窗 | | T12 | covered |
 
 ## 八、右栏·属性卡
 
 | ID | 控件 | 类型 | 预期行为/API | 位置 | 覆盖①-⑤ | 用例名 | 状态 |
 |----|------|------|--------------|------|----------|--------|------|
 | PG-ISSUE-CTRL-51 | 属性卡折叠开关 | button | 受控折叠 | 卡标题行 | | | todo |
-| PG-ISSUE-CTRL-52 | 状态 CapsuleSelect | select | `PATCH {status}`；⚠️ 选「无」实落 `todo` | 属性行 | | | todo |
+| PG-ISSUE-CTRL-52 | 状态 CapsuleSelect | select | `PATCH {status}`；⚠️ 选「无」实落 `todo` | 属性行 | | T05 | covered |
 | PG-ISSUE-CTRL-53 | 强制关闭（拦截条内） | button | 二次确认 → `PATCH {status, force:true}` | 状态下方 | | | todo |
 | PG-ISSUE-CTRL-54 | 执行项信号徽标 | 静态展示 | 非交互 | 状态下方 | — | — | — |
-| PG-ISSUE-CTRL-55 | 优先级 CapsuleSelect | select | `PATCH {priority}`；⚠️ 「无」实落 `medium` | 属性行 | | | todo |
-| PG-ISSUE-CTRL-56 | 负责人 CapsuleSelect | select | `POST /issue-assignees` + DELETE（不走 PATCH assigneeId）；选 AI 员工自动派发 | 属性行 | | | todo |
-| PG-ISSUE-CTRL-57 | 项目 CapsuleSelect | select | `PATCH {projectId}`（空=收件箱） | 属性行 | | | todo |
-| PG-ISSUE-CTRL-58 | 里程碑 CapsuleSelect | select | `PATCH {milestoneId}` | 属性行 | | | todo |
-| PG-ISSUE-CTRL-59 | 标签 CapsuleSelect | select | `PATCH {tags}`；⚠️ 展示多选提交单选 | 属性行 | | | todo |
-| PG-ISSUE-CTRL-60 | 截止日期 DateCapsuleField | date picker | `PATCH {dueDate}` | 属性行 | | | todo |
-| PG-ISSUE-CTRL-61 | 清除截止日期 | button | `PATCH {dueDate: undefined}` | 日期弹层底 | | | todo |
+| PG-ISSUE-CTRL-55 | 优先级 CapsuleSelect | select | `PATCH {priority}`；⚠️ 「无」实落 `medium` | 属性行 | | T05 | covered |
+| PG-ISSUE-CTRL-56 | 负责人 CapsuleSelect | select | `POST /issue-assignees` + DELETE（不走 PATCH assigneeId）；选 AI 员工自动派发 | 属性行 | | T06 | covered |
+| PG-ISSUE-CTRL-57 | 项目 CapsuleSelect | select | `PATCH {projectId}`（空=收件箱） | 属性行 | | T07 | covered |
+| PG-ISSUE-CTRL-58 | 里程碑 CapsuleSelect | select | `PATCH {milestoneId}` | 属性行 | | T08 | covered |
+| PG-ISSUE-CTRL-59 | 标签 CapsuleSelect | select | `PATCH {tags}`；⚠️ 展示多选提交单选 | 属性行 | | T05b（结构性） | covered |
+| PG-ISSUE-CTRL-60 | 截止日期 DateCapsuleField | date picker | `PATCH {dueDate}` | 属性行 | | T05 | covered |
+| PG-ISSUE-CTRL-61 | 清除截止日期 | button | `PATCH {dueDate: undefined}` | 日期弹层底 | | T24 | covered |
 
 ## 九、右栏·自定义字段卡
 
