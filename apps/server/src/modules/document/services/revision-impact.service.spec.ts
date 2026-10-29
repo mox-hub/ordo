@@ -290,10 +290,47 @@ describe('RevisionImpactService.getStatus（确认后动作收敛）', () => {
     expect(prisma.acceptanceCriteria.updateMany).toHaveBeenCalledWith({
       where: {
         id: { in: ['cri-1', 'cri-2'] },
-        status: { in: ['draft', 'in_review'] },
+        status: { in: ['draft', 'pending', 'in_review'] },
       },
-      data: { status: 'pending' },
+      data: { status: 'pending', revision: { increment: 1 } },
     });
+  });
+
+  it('已确认 mark_pending → 同步推进 revision（旧证据转待复核，B-01 版本化咬合）', async () => {
+    const prisma = makePrisma({
+      decisionProposal: {
+        findMany: proposalFindMany({
+          accepted: [
+            {
+              id: 'prop-1',
+              status: 'accepted',
+              resolution: {
+                action: 'accept',
+                answer: REVISION_IMPACT_CHOICE_MARK,
+              },
+              createdAt: new Date(),
+              payload: {
+                revisionImpact: {
+                  documentId: 'doc-1',
+                  criteriaIds: ['cri-1'],
+                  issues: [],
+                  analyzedAt: '2026-10-29T00:00:00.000Z',
+                },
+              },
+            },
+          ],
+        }),
+      },
+    });
+    const { svc } = makeService(prisma);
+    await svc.getStatus('doc-1');
+    // revision 必须随「标记待复核」推进：否则 evidence.criteriaRevision
+    // 仍等于旧 revision，isEvidenceCurrent 会把修订前证据判为有效。
+    expect(prisma.acceptanceCriteria.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { status: 'pending', revision: { increment: 1 } },
+      }),
+    );
   });
 
   it('已确认 dismiss（知悉不处理）→ dismissed 不动标准', async () => {

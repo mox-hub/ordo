@@ -18,8 +18,10 @@ import { ProposalService } from '../../decision/proposal.service';
  * - 影响面口径保守（宁可漏报不误报）：只报 DocumentTaskLink 显式关联的任务、
  *   且只报仍处活跃态（draft | pending | in_review）的验收标准；
  * - 确认后动作在本域内经 PrismaService 直写 acceptanceCriteria（对齐决策模块
- *   applyPlan 直写先例，规避 acceptance 模块反向依赖成环）；
- *   已知余留：直改不触发标准版本化机制（B-01 分支另行实现）。
+ *   applyPlan 直写先例，规避 acceptance 模块反向依赖成环），并**同步推进
+ *   criteria.revision**——需求修订导致的待复核同样属于标准版本变化，
+ *   旧 revision 的证据随之失效（B-01 isEvidenceCurrent 口径），
+ *   避免用修订前的证据给修订后的标准背书（2026-10-29 收口 P-01 余留）。
  */
 
 /** 需求类文档 category 词表（schema.prisma Document.category 注释口径） */
@@ -33,8 +35,14 @@ export const REVISION_IMPACT_CHOICE_DISMISS = 'dismiss';
 /** 参与影响扫描的验收标准活跃态（passed/failed/waived 不上报不回退） */
 const ACTIVE_CRITERIA_STATUSES = ['draft', 'pending', 'in_review'];
 
-/** 应用「标记待复核」时允许拉回 pending 的当前态（pending 已是目标态无需动） */
-const RECHECKABLE_STATUSES = ['draft', 'in_review'];
+/**
+ * 应用「标记待复核」时参与推进版本的当前态。
+ *
+ * 含 pending：它虽然已是目标状态，但需求修订同样改变其依据——若只跳过
+ * pending，旧 revision 的证据仍会被 isEvidenceCurrent 判为有效，完成门禁
+ * 可被旧证据蒙混通过。故 active 三态一律 revision+1。
+ */
+const RECHECKABLE_STATUSES = ['draft', 'pending', 'in_review'];
 
 export interface RevisionImpactCriteriaItem {
   id: string;
@@ -378,7 +386,7 @@ export class RevisionImpactService {
     return { issues: result, criteriaIds };
   }
 
-  /** 确认后动作：受影响活跃标准置 pending（幂等；经 Prisma 直写，跨模块约定） */
+  /** 确认后动作：受影响活跃标准置 pending 并推进 revision（幂等；跨模块约定） */
   private async applyMarkPending(
     impact: RevisionImpactPayload,
   ): Promise<number> {
@@ -388,10 +396,15 @@ export class RevisionImpactService {
         id: { in: impact.criteriaIds },
         status: { in: RECHECKABLE_STATUSES },
       },
-      data: { status: 'pending' },
+      data: {
+        status: 'pending',
+        // CAP-B-01 版本化：revision 推进后，旧 revision 的证据被
+        // isEvidenceCurrent 判为「待复核」，必须按新版本重新举证。
+        revision: { increment: 1 },
+      },
     });
     this.logger.log(
-      `修订影响确认应用: ${result.count}/${impact.criteriaIds.length} 条标准已置待复核`,
+      `修订影响确认应用: ${result.count}/${impact.criteriaIds.length} 条标准已置待复核（revision+1）`,
     );
     return result.count;
   }
