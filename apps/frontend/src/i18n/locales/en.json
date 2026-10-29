@@ -5943,6 +5943,8 @@
       "toggleHint": "Click icon to cycle: pending → passed → failed",
       "deleteConfirm": "Delete this criterion?",
       "evidenceStale": "Criterion revised, evidence needs re-review",
+      "evidenceInsufficient": "Key criterion needs verifiable evidence",
+      "evidenceInsufficientHint": "Critical/high criteria cannot be accepted on human judgement or AI opinion alone. Attach a CI/test/PR record, or a log/screenshot with a storage reference.",
       "severityBlocked": "Acceptance gate: all critical/high criteria must pass"
     },
     "audit": {
@@ -6027,7 +6029,9 @@
         "syncedAt": "synced at {{time}}"
       },
       "list": {
-        "toggle": "Toggle evidence details"
+        "toggle": "Toggle evidence details",
+        "stale": "stale",
+        "staleHint": "Submitted before criterion v{{revision}}; it no longer backs the current criterion. Submit fresh evidence."
       },
       "aiPrecheckTitle": "AI evidence precheck (advisory, for reference only)",
       "lowConfidence": "low confidence"
@@ -6039,7 +6043,8 @@
       "human_approval": "Human approval",
       "screenshot": "Screenshot",
       "log": "Log",
-      "test_result": "Test result"
+      "test_result": "Test result",
+      "test_report": "Test report"
     },
     "delete": {
       "title": "Delete Acceptance",

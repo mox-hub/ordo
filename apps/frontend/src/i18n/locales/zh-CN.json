@@ -5952,6 +5952,8 @@
       "toggleHint": "点击图标切换判定：待判定 → 已通过 → 未通过",
       "deleteConfirm": "删除该验收标准？",
       "evidenceStale": "标准已修订，证据待复核",
+      "evidenceInsufficient": "关键标准需可核验证据",
+      "evidenceInsufficientHint": "critical/high 标准不能只靠人工判定或 AI 意见放行；请补充 CI/测试/PR 记录，或带存储引用的日志/截图",
       "severityBlocked": "接收门禁：critical/high 级标准须全部通过"
     },
     "audit": {
@@ -6036,7 +6038,9 @@
         "syncedAt": "回流于 {{time}}"
       },
       "list": {
-        "toggle": "展开/收起证据明细"
+        "toggle": "展开/收起证据明细",
+        "stale": "旧版",
+        "staleHint": "证据提交于标准 v{{revision}} 之前，不再为当前标准背书；请按当前版本重新举证"
       },
       "aiPrecheckTitle": "AI 证据预审（advisory，仅供决策参考）",
       "lowConfidence": "低置信"
@@ -6048,7 +6052,8 @@
       "human_approval": "人工确认",
       "screenshot": "截图",
       "log": "日志",
-      "test_result": "测试结果"
+      "test_result": "测试结果",
+      "test_report": "测试报告"
     },
     "delete": {
       "title": "删除验收契约",

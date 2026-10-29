@@ -90,6 +90,11 @@ import {
   type CompletionType,
   type CriterionStatus,
 } from '../api/acceptance-api';
+import {
+  hasInsufficientEvidence,
+  hasStaleEvidenceOnly,
+  isStaleEvidence,
+} from '../lib/evidence';
 
 const STATUS_TONE: Record<AcceptanceStatus, string> = {
   draft: 'text-muted-foreground border-border',
@@ -136,20 +141,6 @@ function nextCriterionStatus(s: CriterionStatus): CriterionStatus {
   return 'pending';
 }
 
-/**
- * CAP-B-01 证据有效性（与服务端 isEvidenceCurrent 同口径）：
- * 证据快照 revision 与标准当前 revision 一致即有效；无快照（null）按 1（初版）处理。
- */
-function hasCurrentEvidence(c: AcceptanceCriterion): boolean {
-  return (c.evidences ?? []).some(
-    (ev) => (ev.criteriaRevision ?? 1) === (c.revision ?? 1),
-  );
-}
-
-/** 待复核：已有证据但全部落后于当前标准版本（标准修订后未重新提交证据） */
-function hasStaleEvidenceOnly(c: AcceptanceCriterion): boolean {
-  return (c.evidences ?? []).length > 0 && !hasCurrentEvidence(c);
-}
 
 export function AcceptanceDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -423,6 +414,16 @@ export function AcceptanceDetailPage() {
                         {t('acceptanceDetail.criteria.evidenceStale')}
                       </Badge>
                     )}
+                    {hasInsufficientEvidence(c) && (
+                      <Badge
+                        variant="outline"
+                        className="border-accent-yellow/50 py-0 text-3xs text-accent-yellow"
+                        title={t('acceptanceDetail.criteria.evidenceInsufficientHint')}
+                      >
+                        <AlertTriangle className="mr-0.5 size-2.5" />
+                        {t('acceptanceDetail.criteria.evidenceInsufficient')}
+                      </Badge>
+                    )}
                     {(() => {
                       const aiP = readCriteriaProbability(c);
                       return aiP ? (
@@ -457,6 +458,17 @@ export function AcceptanceDetailPage() {
                             <Badge variant="outline" className="text-3xs py-0">
                               {t(`acceptanceDetail.evidenceType.${ev.evidenceType}`, ev.evidenceType)}
                             </Badge>
+                            {isStaleEvidence(ev, c) && (
+                              <Badge
+                                variant="outline"
+                                className="py-0 text-3xs text-muted-foreground"
+                                title={t('acceptanceDetail.evidence.list.staleHint', {
+                                  revision: c.revision ?? 1,
+                                })}
+                              >
+                                {t('acceptanceDetail.evidence.list.stale')}
+                              </Badge>
+                            )}
                             <span className="truncate">{ev.content ?? ev.evidenceType}</span>
                             {aiConfidence !== null && (
                               <span
