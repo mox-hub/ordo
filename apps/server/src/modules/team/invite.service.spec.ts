@@ -13,6 +13,10 @@ describe('InviteService', () => {
   let service: InviteService;
 
   const mockPrisma = {
+    /** 事务：测试里直接把自身当 tx 客户端（与真实 workspace 代理同形） */
+    $transaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) =>
+      fn(mockPrisma),
+    ),
     teamInvite: {
       findUnique: vi.fn(),
       update: vi.fn(),
@@ -167,6 +171,77 @@ describe('InviteService', () => {
     expect(mockPrisma.teamInvite.update).toHaveBeenCalled();
   });
 
+  it('事务内写失败 → 400 INVITE_ACCEPT_FAILED（邀请保持 pending，不暴露 500）', async () => {
+    mockPrisma.teamInvite.findUnique.mockResolvedValue({
+      id: 'i1',
+      teamId: 't1',
+      email: 'a@x.com',
+      role: 'member',
+      status: 'pending',
+      expiresAt: future,
+    });
+    mockPrisma.user.findUnique.mockResolvedValue({
+      id: 'u1',
+      email: 'A@X.com',
+      displayName: 'Alice',
+    });
+    mockAuth.ensureMemberForUser.mockResolvedValue({ id: 'm1' });
+    mockPrisma.teamMember.findFirst.mockResolvedValue(null);
+    mockPrisma.teamMember.create.mockRejectedValue(
+      new Error('FOREIGN KEY constraint failed'),
+    );
+
+    const err = await service.accept('tok', 'u1').catch((e) => e);
+    expect(err).toBeInstanceOf(BadRequestException);
+    expect((err.getResponse() as { code?: string }).code).toBe(
+      'INVITE_ACCEPT_FAILED',
+    );
+    // 核销必须在事务内失败后不再执行（真实库由事务回滚兜底）
+    expect(mockPrisma.teamInvite.update).not.toHaveBeenCalled();
+  });
+
+  it('主体落地/入队/核销全部走同一事务客户端（② 事务化接线）', async () => {
+    mockPrisma.teamInvite.findUnique.mockResolvedValue({
+      id: 'i1',
+      teamId: 't1',
+      email: 'a@x.com',
+      role: 'member',
+      status: 'pending',
+      expiresAt: future,
+    });
+    // 身份来源库查询走调用方上下文；事务内查询走 tx（spy 独立记录）
+    mockPrisma.user.findUnique.mockResolvedValue(actor);
+    mockAuth.ensureMemberForUser.mockResolvedValue({ id: 'm1' });
+
+    const tx = {
+      user: { findUnique: vi.fn(async () => actor) },
+      roleAssignment: { create: vi.fn() },
+      teamMember: {
+        findFirst: vi.fn(async () => null),
+        create: vi.fn(async () => ({ id: 'tm1' })),
+      },
+      teamInvite: { update: vi.fn(async () => ({})) },
+    };
+    mockPrisma.$transaction.mockImplementationOnce(
+      async (fn: (client: unknown) => Promise<unknown>) => fn(tx),
+    );
+
+    await service.accept('tok', 'u1');
+
+    expect(mockAuth.ensureMemberForUser).toHaveBeenCalledWith(
+      actor.id,
+      expect.anything(),
+      tx,
+    );
+    expect(tx.teamMember.create).toHaveBeenCalledWith({
+      data: { teamId: 't1', memberId: 'm1', role: 'member' },
+    });
+    expect(tx.teamInvite.update).toHaveBeenCalled();
+    // 关键：写操作不得落在事务外的默认客户端上
+    expect(mockPrisma.teamMember.create).not.toHaveBeenCalled();
+    expect(mockPrisma.teamInvite.update).not.toHaveBeenCalled();
+  });
+
   it('directAdd 已在团队时拒绝', async () => {
     mockPrisma.team.findUnique.mockResolvedValue({ id: 't1' });
     mockPrisma.user.findUnique.mockResolvedValue({
@@ -301,6 +376,8 @@ describe('InviteService', () => {
     // 入队用的是既有行对应的 Member，而不是新建的
     expect(mockAuth.ensureMemberForUser).toHaveBeenCalledWith(
       'u-other',
+      expect.anything(),
+      // 第三个参数是事务客户端：主体落地必须与入队/核销同事务
       expect.anything(),
     );
   });

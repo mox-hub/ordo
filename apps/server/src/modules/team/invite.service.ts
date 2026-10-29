@@ -1,9 +1,10 @@
 import {
   BadRequestException,
+  HttpException,
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import type { User } from '@prisma/client';
+import type { Prisma, User } from '@prisma/client';
 
 import { PrismaService } from '@/core/database/prisma.service';
 import {
@@ -107,35 +108,56 @@ export class InviteService {
       );
     }
 
-    // 目标工作区库内：镜像主体 → 建 Member → 入队 → 核销邀请，全部同库。
-    // 顺序写而非事务：任一步失败则邀请保持 pending，可原样重试（幂等）。
+    // 目标工作区库内：镜像主体 → 建 Member → 入队 → 核销邀请。
+    // 全部写入在**同一事务**内（CAP-A-25 ②，2026-10-29 裁决）：任一步失败全部回滚，
+    // 邀请保持 pending 可原样重试——不会留下「有 User 没队友」的半成品。
     return runInWorkspace(hit.workspaceId, async () => {
-      const subject = await this.provisionSubject(actor);
+      try {
+        return await this.prisma.$transaction(async (tx) => {
+          const subject = await this.provisionSubject(actor, tx);
 
-      const member = await this.authService.ensureMemberForUser(subject.id, {
-        email: subject.email ?? invite.email,
-        displayName: subject.displayName,
-      });
+          const member = await this.authService.ensureMemberForUser(
+            subject.id,
+            {
+              email: subject.email ?? invite.email,
+              displayName: subject.displayName,
+            },
+            tx,
+          );
 
-      const existing = await this.prisma.teamMember.findFirst({
-        where: { teamId: invite.teamId, memberId: member.id },
-      });
-      if (!existing) {
-        await this.prisma.teamMember.create({
-          data: {
+          const existing = await tx.teamMember.findFirst({
+            where: { teamId: invite.teamId, memberId: member.id },
+          });
+          if (!existing) {
+            await tx.teamMember.create({
+              data: {
+                teamId: invite.teamId,
+                memberId: member.id,
+                role: invite.role,
+              },
+            });
+          }
+
+          await tx.teamInvite.update({
+            where: { id: invite.id },
+            data: { status: 'accepted', acceptedAt: new Date() },
+          });
+
+          return {
             teamId: invite.teamId,
             memberId: member.id,
             role: invite.role,
-          },
+          };
+        });
+      } catch (err) {
+        // 事务内的已知业务异常（4xx）原样上抛；底层写失败降级为可读 400，
+        // 不把 Prisma 错误暴露成 500（GAP-T-57 ②）。
+        if (err instanceof HttpException) throw err;
+        throw new BadRequestException({
+          code: 'INVITE_ACCEPT_FAILED',
+          message: '加入团队失败，邀请仍然有效，请稍后重试',
         });
       }
-
-      await this.prisma.teamInvite.update({
-        where: { id: invite.id },
-        data: { status: 'accepted', acceptedAt: new Date() },
-      });
-
-      return { teamId: invite.teamId, memberId: member.id, role: invite.role };
     });
   }
 
@@ -153,23 +175,26 @@ export class InviteService {
    *
    * 复制 passwordHash 是必需的：否则用户无法在目标工作区登录，本能力等于没落地。
    */
-  private async provisionSubject(actor: User): Promise<User> {
-    const byId = await this.prisma.user.findUnique({ where: { id: actor.id } });
+  private async provisionSubject(
+    actor: User,
+    db: Prisma.TransactionClient = this.prisma,
+  ): Promise<User> {
+    const byId = await db.user.findUnique({ where: { id: actor.id } });
     if (byId) return byId;
 
     if (actor.email) {
-      const byEmail = await this.prisma.user.findUnique({
+      const byEmail = await db.user.findUnique({
         where: { email: actor.email },
       });
       if (byEmail) return byEmail;
     }
 
-    const byUsername = await this.prisma.user.findUnique({
+    const byUsername = await db.user.findUnique({
       where: { username: actor.username },
     });
     if (byUsername) return byUsername;
 
-    const created = await this.prisma.user.create({
+    const created = await db.user.create({
       data: {
         id: actor.id,
         username: actor.username,
@@ -184,7 +209,7 @@ export class InviteService {
     });
 
     // 与 register 口径对齐：新建主体补全局 user 角色（仅对新建行做，不触碰既有行）。
-    await this.prisma.roleAssignment.create({
+    await db.roleAssignment.create({
       data: { userId: created.id, scopeType: 'global', role: 'user' },
     });
 

@@ -31,6 +31,9 @@ import { getCurrentWorkspaceId } from '../../core/database/workspace-context';
 
 export type IdentitySource =
   'local' | 'oauth2' | 'cli' | 'mcp' | 'api' | 'plugin';
+
+/** 成员写入所需的最小数据面：普通 PrismaService 与事务客户端都满足 */
+type MemberWriteDb = Pick<Prisma.TransactionClient, 'member'>;
 type RoleSummary = {
   scopeType: string;
   projectId: string | null;
@@ -444,11 +447,14 @@ export class AuthService {
     return `${seed}${Date.now()}`;
   }
 
-  private async deriveUniqueHandle(base: string): Promise<string> {
+  private async deriveUniqueHandle(
+    base: string,
+    db: MemberWriteDb = this.prisma,
+  ): Promise<string> {
     const seed = base.toLowerCase().replace(/[^a-z0-9_.-]/g, '') || 'member';
     let candidate = seed;
     for (let i = 0; i < 20; i += 1) {
-      const dup = await this.prisma.member.findUnique({
+      const dup = await db.member.findUnique({
         where: { handle: candidate },
       });
       if (!dup) return candidate;
@@ -457,17 +463,21 @@ export class AuthService {
     return `${seed}${Date.now()}`;
   }
 
-  /** 确保 User 有关联的 human Member（注册/邀请接受/本地直邀共用） */
+  /**
+   * 确保 User 有关联的 human Member（注册/邀请接受/本地直邀共用）。
+   * `db` 允许传入事务客户端（CAP-A-25 接受邀请要求主体落地全有或全无）。
+   */
   async ensureMemberForUser(
     userId: string,
     profile: { email?: string; displayName: string; handle?: string },
+    db: MemberWriteDb = this.prisma,
   ) {
-    const existing = await this.prisma.member.findUnique({ where: { userId } });
+    const existing = await db.member.findUnique({ where: { userId } });
     if (existing) return existing;
 
     let shortId = generateMemberShortId();
     for (let i = 0; i < 5; i += 1) {
-      const dup = await this.prisma.member.findUnique({ where: { shortId } });
+      const dup = await db.member.findUnique({ where: { shortId } });
       if (!dup) break;
       shortId = generateMemberShortId();
     }
@@ -476,9 +486,10 @@ export class AuthService {
       profile.handle ??
       (await this.deriveUniqueHandle(
         (profile.email ?? profile.displayName).split('@')[0],
+        db,
       ));
 
-    return this.prisma.member.create({
+    return db.member.create({
       data: {
         type: 'human',
         shortId,
