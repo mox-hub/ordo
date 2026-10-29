@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
   "source": "docs/01-需求/能力清单-v1.md",
-  "sourceSha256": "792fbb17e8ac7cb4388c30b45eabb1cf427abc9fcdcd906d1e9e56a03b61d004",
+  "sourceSha256": "7bc185675b6798fbf84ef2fbf2fe0bfbd35d9d4935c009e49012882385dbb165",
   "total": 71,
   "statusTotals": {
-    "done": 14,
-    "doing": 43,
-    "planned": 11,
+    "done": 23,
+    "doing": 30,
+    "planned": 15,
     "gap": 0,
     "structure": 3
   },
@@ -15,9 +15,9 @@
       "key": "A",
       "label": "A 底盘线",
       "total": 32,
-      "done": 10,
-      "doing": 22,
-      "planned": 0,
+      "done": 15,
+      "doing": 16,
+      "planned": 1,
       "gap": 0,
       "structure": 0
     },
@@ -25,8 +25,8 @@
       "key": "B",
       "label": "B 治理线",
       "total": 10,
-      "done": 3,
-      "doing": 7,
+      "done": 6,
+      "doing": 4,
       "planned": 0,
       "gap": 0,
       "structure": 0
@@ -36,8 +36,8 @@
       "label": "C 同事线",
       "total": 8,
       "done": 1,
-      "doing": 7,
-      "planned": 0,
+      "doing": 5,
+      "planned": 2,
       "gap": 0,
       "structure": 0
     },
@@ -75,9 +75,9 @@
       "key": "S",
       "label": "S 自举线",
       "total": 4,
-      "done": 0,
-      "doing": 3,
-      "planned": 1,
+      "done": 1,
+      "doing": 1,
+      "planned": 2,
       "gap": 0,
       "structure": 0
     },
@@ -175,7 +175,7 @@
       "area": "A",
       "areaLabel": "A 底盘线",
       "title": "工作流节点画布与产品动作节点 †供血 C 线 AI 同事（流程域的「代写→确认→把关」载体）",
-      "status": "doing"
+      "status": "planned"
     },
     {
       "id": "CAP-A-13",
@@ -245,28 +245,28 @@
       "area": "A",
       "areaLabel": "A 底盘线",
       "title": "认证面改版：左文右图分栏 + 注册欢迎身份工牌",
-      "status": "doing"
+      "status": "done"
     },
     {
       "id": "CAP-A-23",
       "area": "A",
       "areaLabel": "A 底盘线",
       "title": "全局 Markdown 实体引用系统（/ 命令插入胶囊 + hover 预览）",
-      "status": "doing"
+      "status": "done"
     },
     {
       "id": "CAP-A-24",
       "area": "A",
       "areaLabel": "A 底盘线",
       "title": "提示词治理：系统内置提示词 + 分层提示词编辑 + 注入开关 + 执行完整 Prompt 透出",
-      "status": "doing"
+      "status": "done"
     },
     {
       "id": "CAP-A-25",
       "area": "A",
       "areaLabel": "A 底盘线",
       "title": "工作区主体落地（跨工作区身份初始化）",
-      "status": "doing"
+      "status": "done"
     },
     {
       "id": "CAP-A-26",
@@ -315,14 +315,14 @@
       "area": "A",
       "areaLabel": "A 底盘线",
       "title": "产物管理（统一产物层：上传文件/执行产物/文档，2026-10-27 新立）",
-      "status": "doing"
+      "status": "done"
     },
     {
       "id": "CAP-B-01",
       "area": "B",
       "areaLabel": "B 治理线",
       "title": "验收契约",
-      "status": "doing"
+      "status": "done"
     },
     {
       "id": "CAP-B-02",
@@ -378,14 +378,14 @@
       "area": "B",
       "areaLabel": "B 治理线",
       "title": "设计系统三层分层解耦（原语目录 + 语义组件层）",
-      "status": "doing"
+      "status": "done"
     },
     {
       "id": "CAP-B-10",
       "area": "B",
       "areaLabel": "B 治理线",
       "title": "列表清单渲染性能标准（考核点入宪法 + DataList 系统阀门）",
-      "status": "doing"
+      "status": "done"
     },
     {
       "id": "CAP-C-01",
@@ -399,7 +399,7 @@
       "area": "C",
       "areaLabel": "C 同事线",
       "title": "项目档案与考古导入 †供血 B-01/B-02（档案=治理条件的素材库）",
-      "status": "doing"
+      "status": "planned"
     },
     {
       "id": "CAP-C-03",
@@ -420,7 +420,7 @@
       "area": "C",
       "areaLabel": "C 同事线",
       "title": "记忆与专长度 †供血 B-02（记忆=审计的经验底料）",
-      "status": "doing"
+      "status": "planned"
     },
     {
       "id": "CAP-C-06",
@@ -511,14 +511,14 @@
       "area": "S",
       "areaLabel": "S 自举线",
       "title": "workflow v2 引擎重构（声明式节点树 + 确定性引擎，参照 ZCode 动态工作流设计）",
-      "status": "doing"
+      "status": "done"
     },
     {
       "id": "CAP-S-04",
       "area": "S",
       "areaLabel": "S 自举线",
       "title": "ZCode 官方插件：工单可视化 · 双向同步 · 自动化联动（2026-10-27 新立）",
-      "status": "doing"
+      "status": "planned"
     },
     {
       "id": "CAP-M-01",
