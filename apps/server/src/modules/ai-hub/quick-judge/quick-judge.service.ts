@@ -244,11 +244,16 @@ export class QuickJudgeService {
       100,
       Math.max(1, Math.floor(opts.pageSize) || 20),
     );
-    // SQLite 走 json_extract 单键 equals（对象 path 数组过滤不受支持，勿用索引 path）
+    // SQLite 走 json_extract 单键 equals；Prisma 6.19 起 path 须用点分字符串
+    // （数组形式被 Prisma 校验拒绝——判定流水端点因此 400，e2e 实证 2026-10-30）
     const metaFilters = [
-      { responseMetadata: { path: ['kind'], equals: 'judge' } },
+      { responseMetadata: { path: 'kind', equals: 'judge' } },
       ...(opts.scenario
-        ? [{ responseMetadata: { path: ['scenario'], equals: opts.scenario } }]
+        ? [
+            {
+              responseMetadata: { path: 'scenario', equals: opts.scenario },
+            },
+          ]
         : []),
     ];
     const where = { AND: metaFilters };

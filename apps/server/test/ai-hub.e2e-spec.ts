@@ -287,4 +287,55 @@ describe('AI Hub (e2e, local-only paths)', () => {
         });
     });
   });
+
+  describe('quick-judge 设置与判定记录（CAP-A-27，收敛计划补证）', () => {
+    it('GET settings：默认形状（enabled 布尔 + 通道字段）', () => {
+      return wsHttp
+        .get('/_api/ai/quick-judge/settings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200)
+        .expect((res: Response) => {
+          const s = res.body.data;
+          expect(typeof s.enabled).toBe('boolean');
+          expect(s).toHaveProperty('provider');
+          expect(s).toHaveProperty('model');
+          expect(s).toHaveProperty('timeoutMs');
+        });
+    });
+
+    it('PUT settings：admin 开启总开关 → 回读生效；场景开关增量合并', async () => {
+      const putRes = await wsHttp
+        .put('/_api/ai/quick-judge/settings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ enabled: true, scenarios: { approval_risk: false } });
+      expect(putRes.status).toBe(200);
+      expect(putRes.body.data.enabled).toBe(true);
+      expect(putRes.body.data.scenarios.approval_risk).toBe(false);
+
+      const getRes = await wsHttp
+        .get('/_api/ai/quick-judge/settings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+      expect(getRes.body.data.enabled).toBe(true);
+
+      // 还原默认关，避免影响同库后续判定路径
+      await wsHttp
+        .put('/_api/ai/quick-judge/settings')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ enabled: false })
+        .expect(200);
+    });
+
+    it('GET logs：判定记录流水结构（空库也有分页形状）', () => {
+      return wsHttp
+        .get('/_api/ai/quick-judge/logs')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200)
+        .expect((res: Response) => {
+          const d = res.body.data;
+          expect(Array.isArray(d.items)).toBe(true);
+          expect(typeof d.total).toBe('number');
+        });
+    });
+  });
 });

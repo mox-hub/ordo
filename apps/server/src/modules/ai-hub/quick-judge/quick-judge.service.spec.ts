@@ -181,7 +181,8 @@ describe('QuickJudgeService（CAP-A-27 通道）', () => {
           rows.filter((r) => {
             const conds = where?.AND ?? [];
             return conds.every((c: any) => {
-              const key = c.responseMetadata.path[0];
+              // Prisma 6.19 SQLite JSON path 为点分字符串（数组形式已被校验拒绝）
+              const key = c.responseMetadata.path;
               return c.responseMetadata.equals === r.responseMetadata[key];
             });
           }),
