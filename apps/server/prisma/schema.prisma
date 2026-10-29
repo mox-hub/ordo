@@ -1065,6 +1065,7 @@ model RemotePullRequest {
   @@index([projectId], name: "idx_remote_pull_requests_project_id")
   @@index([executionRunId], name: "idx_remote_pull_requests_execution_run_id")
   @@index([state], name: "idx_remote_pull_requests_state")
+  @@index([headBranch], name: "idx_remote_pull_requests_head_branch")
 }
 
 /// PR Review 记录（用于 changes_requested 审查驱动信任评分）

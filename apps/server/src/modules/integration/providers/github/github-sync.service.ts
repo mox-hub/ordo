@@ -392,11 +392,55 @@ export class GitHubSyncService {
     return this.prisma.remotePullRequest.create({ data });
   }
 
-  // 全局单 GitHub 集成口径，repo 维度过滤待多集成配置落工作区后启用
-  private async findIntegrationByRepo(_fullName: string) {
-    return this.prisma.integrationConfig.findFirst({
+  /**
+   * 多 repo 集成解析（CAP-B-08 二期余留清偿，2026-10-30）：
+   * 单 enabled 配置时维持既有口径（该配置收所有 repo 的 webhook）；
+   * 多 enabled 配置时优先精确匹配 configJson/metadata.repos 名单含该
+   * fullName 的配置，无任何配置声明该 repo 才回落首个（未声明名单的
+   * 配置不抢已声明配置的 repo）。
+   */
+  private async findIntegrationByRepo(fullName: string) {
+    const configs = await this.prisma.integrationConfig.findMany({
       where: { provider: 'github', enabled: true },
     });
+    if (configs.length <= 1) return configs[0] ?? null;
+    const declared = configs.filter(
+      (c) => this.readReposFromConfig(c).length > 0,
+    );
+    const exact = declared.find((c) =>
+      this.readReposFromConfig(c).includes(fullName),
+    );
+    if (exact) return exact;
+    // 未声明该 repo 的 webhook 归属：回落首个未声明名单的配置（声明过
+    // 名单的配置显式圈定了边界，不越界收别人的 repo）
+    return (
+      configs.find((c) => this.readReposFromConfig(c).length === 0) ??
+      configs[0]
+    );
+  }
+
+  /** 读取配置声明的 repo 名单：configJson（对象或加密串）或 metadata 的 repos 数组 */
+  private readReposFromConfig(config: {
+    configJson: unknown;
+    metadata: unknown;
+  }): string[] {
+    const read = (obj: unknown): string[] => {
+      if (!obj || typeof obj !== 'object') return [];
+      const repos = (obj as { repos?: unknown }).repos;
+      return Array.isArray(repos)
+        ? repos.filter((r): r is string => typeof r === 'string')
+        : [];
+    };
+    const direct = read(config.configJson);
+    if (direct.length > 0) return direct;
+    if (typeof config.configJson === 'string') {
+      try {
+        return read(this.encryption.decryptJson(config.configJson));
+      } catch {
+        // 解密失败按未声明处理
+      }
+    }
+    return read(config.metadata);
   }
 
   private mapPrState(state: 'open' | 'closed', merged: boolean): GitHubPrState {
