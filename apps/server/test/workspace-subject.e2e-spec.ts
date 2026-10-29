@@ -28,6 +28,10 @@ describe('Workspace subject provisioning (e2e) — CAP-A-25', () => {
   let adminBToken = '';
   let teamId = '';
   let inviteToken = '';
+  let registerInA: (
+    email: string,
+    displayName: string,
+  ) => Promise<{ token: string; id: string }>;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -58,29 +62,41 @@ describe('Workspace subject provisioning (e2e) — CAP-A-25', () => {
     // 只在 A 工作区注册：此时 B 库中不存在该主体
     const cfg = await httpA.get('/_api/auth/public-config');
     const mode = cfg.body.data?.registrationMode ?? 'open';
-    let registrationInvite: string | undefined;
+    let adminAToken = '';
     if (mode !== 'open') {
       const adminA = await httpA.post('/_api/auth/login').send({
         username: 'admin',
         password: 'password123',
       });
-      const inviteA = await httpA
-        .post('/_api/admin/invites')
-        .set('Authorization', `Bearer ${adminA.body.data.accessToken}`)
-        .send({ email: userEmail });
-      expect(inviteA.status).toBe(201);
-      registrationInvite = inviteA.body.data.token;
+      adminAToken = adminA.body.data.accessToken;
     }
 
-    const registered = await httpA.post('/_api/auth/register').send({
-      email: userEmail,
-      password: userPassword,
-      displayName: '跨库用户',
-      ...(registrationInvite ? { inviteToken: registrationInvite } : {}),
-    });
-    expect(registered.status).toBe(201);
-    userToken = registered.body.data.accessToken;
-    userId = registered.body.data.user.id;
+    registerInA = async (email, displayName) => {
+      let registrationInvite: string | undefined;
+      if (mode !== 'open') {
+        const inviteA = await httpA
+          .post('/_api/admin/invites')
+          .set('Authorization', `Bearer ${adminAToken}`)
+          .send({ email });
+        expect(inviteA.status).toBe(201);
+        registrationInvite = inviteA.body.data.token;
+      }
+      const registered = await httpA.post('/_api/auth/register').send({
+        email,
+        password: userPassword,
+        displayName,
+        ...(registrationInvite ? { inviteToken: registrationInvite } : {}),
+      });
+      expect(registered.status).toBe(201);
+      return {
+        token: registered.body.data.accessToken as string,
+        id: registered.body.data.user.id as string,
+      };
+    };
+
+    const registered = await registerInA(userEmail, '跨库用户');
+    userToken = registered.token;
+    userId = registered.id;
   });
 
   afterAll(async () => {
