@@ -61,6 +61,9 @@ function makePrisma(overrides: Record<string, unknown> = {}) {
     decisionProposal: {
       findMany: vi.fn(async () => []),
     },
+    contractFileBinding: {
+      findMany: vi.fn(async () => []),
+    },
     ...overrides,
   };
   return store;
@@ -467,5 +470,85 @@ describe('payload/resolution 提取工具', () => {
     expect(extractAnswer(null)).toBeUndefined();
     expect(extractAnswer({ answer: 1 })).toBeUndefined();
     expect(extractAnswer({ answer: 'mark_pending' })).toBe('mark_pending');
+  });
+});
+
+describe('RevisionImpactService 契约绑定完整性校验（CAP-P-01 × K 线咬合）', () => {
+  it('项目存在 conflicted / detached 绑定 → 决策卡影响面带 contractAlerts 提示', async () => {
+    const prisma = makePrisma({
+      contractFileBinding: {
+        findMany: vi.fn(async () => [
+          {
+            fileType: 'agents',
+            syncMode: 'managed',
+            conflictState: 'conflicted',
+          },
+          { fileType: 'changelog', syncMode: 'detached', conflictState: null },
+          { fileType: 'readme', syncMode: 'synced', conflictState: null },
+        ]),
+      },
+    });
+    const { svc, proposalService } = makeService(prisma);
+
+    const result = await svc.analyze('doc-1');
+
+    expect(result.status).toBe('created');
+    const payload = proposalService.create.mock.calls[0][0].payload as Record<
+      string,
+      any
+    >;
+    expect(payload.revisionImpact.contractAlerts).toEqual([
+      { fileType: 'agents', syncMode: 'managed', conflictState: 'conflicted' },
+      { fileType: 'changelog', syncMode: 'detached', conflictState: null },
+    ]);
+    expect(payload.question).toContain('2 项契约绑定未对齐');
+    expect(payload.question).toContain('agents、changelog');
+  });
+
+  it('绑定全部对齐（无 conflicted/detached）→ 影响面零提示（行为不变）', async () => {
+    const prisma = makePrisma({
+      contractFileBinding: {
+        findMany: vi.fn(async () => [
+          { fileType: 'agents', syncMode: 'managed', conflictState: null },
+          { fileType: 'readme', syncMode: 'synced', conflictState: null },
+        ]),
+      },
+    });
+    const { svc, proposalService } = makeService(prisma);
+
+    const result = await svc.analyze('doc-1');
+
+    expect(result.status).toBe('created');
+    const payload = proposalService.create.mock.calls[0][0].payload as Record<
+      string,
+      any
+    >;
+    expect(payload.revisionImpact.contractAlerts).toBeUndefined();
+    expect(payload.question).not.toContain('契约绑定');
+  });
+
+  it('无项目文档（projectId null）→ 不查绑定不提示', async () => {
+    const prisma = makePrisma({
+      document: {
+        findFirst: vi.fn(async () => ({
+          id: 'doc-2',
+          title: '游离需求',
+          category: 'requirement',
+          projectId: null,
+          content: '# x',
+        })),
+      },
+    });
+    const { svc, proposalService } = makeService(prisma);
+
+    const result = await svc.analyze('doc-2');
+
+    expect(result.status).toBe('created');
+    expect(prisma.contractFileBinding.findMany).not.toHaveBeenCalled();
+    const payload = proposalService.create.mock.calls[0][0].payload as Record<
+      string,
+      any
+    >;
+    expect(payload.revisionImpact.contractAlerts).toBeUndefined();
   });
 });

@@ -65,6 +65,17 @@ export interface RevisionImpactPayload {
   analyzedAt: string;
   issues: RevisionImpactIssueItem[];
   criteriaIds: string[];
+  /**
+   * 契约绑定完整性校验（CAP-P-01 × K 线咬合，advisory）：
+   * 该文档所属项目存在「未对齐信号」的 ContractFileBinding——
+   * conflicted（内容漂移未对齐）或 detached（游离于系统外）。
+   * 提示决策者「修订所依据的治理文件真相可能漂移」，不扩门禁。
+   */
+  contractAlerts?: Array<{
+    fileType: string;
+    syncMode: string;
+    conflictState: string | null;
+  }>;
 }
 
 export interface RevisionImpactCardPayload {
@@ -178,7 +189,14 @@ export class RevisionImpactService {
     const issueLine = impact.issues
       .map((i) => `「${i.issueTitle}」${i.criteria.length} 条`)
       .join('、');
-    const question = `需求文档《${document.title}》已修订，${impact.issues.length} 个关联任务、共 ${impact.criteriaIds.length} 条验收标准可能受影响（${issueLine}）。是否将受影响标准标记为待复核？`;
+    const contractAlerts = await this.collectContractAlerts(document.projectId);
+    const contractLine =
+      contractAlerts.length > 0
+        ? `；另有 ${contractAlerts.length} 项契约绑定未对齐（${contractAlerts
+            .map((a) => a.fileType)
+            .join('、')}）`
+        : '';
+    const question = `需求文档《${document.title}》已修订，${impact.issues.length} 个关联任务、共 ${impact.criteriaIds.length} 条验收标准可能受影响（${issueLine}）${contractLine}。是否将受影响标准标记为待复核？`;
 
     const cardPayload: RevisionImpactCardPayload = {
       question,
@@ -188,6 +206,7 @@ export class RevisionImpactService {
         analyzedAt: new Date().toISOString(),
         issues: impact.issues,
         criteriaIds: impact.criteriaIds,
+        ...(contractAlerts.length > 0 ? { contractAlerts } : {}),
       },
       choices: [
         {
@@ -384,6 +403,27 @@ export class RevisionImpactService {
     // 参数 documentTitle 供调用方组装文案，此处保留签名稳定性
     void documentTitle;
     return { issues: result, criteriaIds };
+  }
+
+  /**
+   * 契约绑定完整性校验（CAP-P-01 × K 线咬合）：项目治理文件的绑定状态里，
+   * conflicted（漂移未对齐）与 detached（游离系统外）构成「修订所依据的
+   * 真相可能漂移」信号；aligned/aligned_with_drift（benign 已降级）不提示。
+   * advisory：只进决策卡影响面，不阻断文档更新与标准流转。
+   */
+  private async collectContractAlerts(
+    projectId: string | null | undefined,
+  ): Promise<
+    Array<{ fileType: string; syncMode: string; conflictState: string | null }>
+  > {
+    if (!projectId) return [];
+    const bindings = await this.prisma.contractFileBinding.findMany({
+      where: { projectId },
+      select: { fileType: true, syncMode: true, conflictState: true },
+    });
+    return bindings.filter(
+      (b) => b.conflictState === 'conflicted' || b.syncMode === 'detached',
+    );
   }
 
   /** 确认后动作：受影响活跃标准置 pending 并推进 revision（幂等；跨模块约定） */
