@@ -20,6 +20,53 @@ export function isEvidenceCurrent(
   return (evidence.criteriaRevision ?? 1) === criteriaRevision;
 }
 
+/**
+ * 证据充分性判定（CAP-B-01，唯一真相）：
+ * 「证据存在且是当版」不等于「证据能证明」。critical/high 标准必须至少有一条
+ * **可核验**当版证据，否则仅凭人工判定/AI 意见即可放行关键标准，违背
+ * 「AI 不自称合格、人也不能一句话过关」的治理底线。
+ *
+ * 可核验口径：
+ * - 机器产出：`ci_result` / `test_result` / `test_report` / `pr_review`
+ *   （有可追溯的执行或评审记录）；
+ * - 附件证据：`screenshot` / `log` 必须带 `storageRef`（有物可查）；
+ * - `human_approval` / `model_evaluation` 属判定/意见类，可作补充但不足以单独支撑。
+ */
+const MACHINE_VERIFIABLE_EVIDENCE_TYPES = new Set([
+  'ci_result',
+  'test_result',
+  'test_report',
+  'pr_review',
+]);
+const ARTIFACT_EVIDENCE_TYPES = new Set(['screenshot', 'log']);
+const STRICT_SEVERITIES = new Set(['critical', 'high']);
+
+export function isVerifiableEvidence(evidence: {
+  evidenceType?: string | null;
+  storageRef?: string | null;
+}): boolean {
+  const type = evidence.evidenceType ?? '';
+  if (MACHINE_VERIFIABLE_EVIDENCE_TYPES.has(type)) return true;
+  return ARTIFACT_EVIDENCE_TYPES.has(type) && !!evidence.storageRef?.trim();
+}
+
+/** 标准是否已有「充分」的当版证据（medium/low 当版即可，critical/high 需可核验） */
+export function hasSufficientEvidence(
+  criteria: { severity: string; revision?: number | null },
+  evidences: Array<{
+    criteriaRevision?: number | null;
+    evidenceType?: string | null;
+    storageRef?: string | null;
+  }>,
+): boolean {
+  const current = evidences.filter((e) =>
+    isEvidenceCurrent(e, criteria.revision ?? 1),
+  );
+  if (current.length === 0) return false;
+  if (!STRICT_SEVERITIES.has(criteria.severity)) return true;
+  return current.some((e) => isVerifiableEvidence(e));
+}
+
 @Injectable()
 export class AcceptanceCriteriaService {
   constructor(

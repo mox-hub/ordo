@@ -408,6 +408,89 @@ describe('Acceptance (e2e)', () => {
     });
   });
 
+  describe('CAP-B-01 证据充分性门禁（critical/high 不得仅凭判定类证据）', () => {
+    let strictAcceptanceId: string;
+    let criticalCriteriaId: string;
+
+    const completionEvidence = {
+      evidence: {
+        summary: 'e2e 充分性验收',
+        artifacts: [{ name: 'e2e-strict.md', path: 'docs/e2e-strict.md' }],
+      },
+    };
+
+    beforeAll(async () => {
+      const created = await wsHttp
+        .post('/_api/acceptance')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ issueId, type: 'mixed', title: 'E2E 充分性验收' });
+      expect(created.status).toBe(201);
+      strictAcceptanceId = created.body.data.id;
+
+      const criteria = await wsHttp
+        .post(`/_api/acceptance/${strictAcceptanceId}/criteria`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          criteriaType: 'functional',
+          content: 'e2e 关键标准：导出失败必须返回可读错误码',
+          severity: 'critical',
+        });
+      expect(criteria.status).toBe(201);
+      criticalCriteriaId = criteria.body.data.id;
+
+      // 人工判定为 passed（落一条 human_approval 证据），验收推进到待接收
+      const patched = await wsHttp
+        .patch(`/_api/acceptance/criteria/${criticalCriteriaId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ status: 'passed' });
+      expect(patched.status).toBe(200);
+
+      const inReview = await wsHttp
+        .patch(`/_api/acceptance/${strictAcceptanceId}`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ status: 'in_review' });
+      expect([200, 201]).toContain(inReview.status);
+    });
+
+    it('仅有 human_approval 当版证据 → 400 criteriaEvidenceSufficiency', () => {
+      return wsHttp
+        .post(`/_api/acceptance/${strictAcceptanceId}/accept-completion`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send(completionEvidence)
+        .expect(400)
+        .expect((res: Response) => {
+          expect(res.body.error?.code).toBe('ACCEPT_BLOCKED');
+          const failures: Array<{ check: string; reason: string }> =
+            res.body.error?.details ?? [];
+          const blocked = failures.find(
+            (f) => f.check === 'criteriaEvidenceSufficiency',
+          );
+          expect(blocked).toBeDefined();
+          expect(blocked?.reason).toContain('[critical]');
+        });
+    });
+
+    it('补当版 test_report 可核验证据 → 接收通过', async () => {
+      const ev = await wsHttp
+        .post(`/_api/acceptance/criteria/${criticalCriteriaId}/evidence`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          evidenceType: 'test_report',
+          content: 'e2e 关键标准测试报告（当前版本）',
+        });
+      expect(ev.status).toBe(201);
+
+      return wsHttp
+        .post(`/_api/acceptance/${strictAcceptanceId}/accept-completion`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send(completionEvidence)
+        .expect((res: Response) => {
+          expect([200, 201]).toContain(res.status);
+          expect(res.body.data.status).toBe('passed');
+        });
+    });
+  });
+
   describe('POST /_api/acceptance/:id/waive (second acceptance)', () => {
     it('should waive a fresh acceptance', async () => {
       const created = await wsHttp

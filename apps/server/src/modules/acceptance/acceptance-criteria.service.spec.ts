@@ -1,7 +1,9 @@
 import { NotFoundException } from '@nestjs/common';
 import {
   AcceptanceCriteriaService,
+  hasSufficientEvidence,
   isEvidenceCurrent,
+  isVerifiableEvidence,
 } from './acceptance-criteria.service';
 
 /** CAP-B-01 验收标准版本化：修订即失效 + 证据 revision 快照 + 有效性判定 */
@@ -191,6 +193,70 @@ describe('isEvidenceCurrent 有效性判定口径（CAP-B-01）', () => {
   it('快照与当前 revision 一致 → 有效；落后 → 待复核', () => {
     expect(isEvidenceCurrent({ criteriaRevision: 2 }, 2)).toBe(true);
     expect(isEvidenceCurrent({ criteriaRevision: 1 }, 2)).toBe(false);
+  });
+});
+
+describe('证据充分性判定（CAP-B-01）', () => {
+  it('可核验类型：机器产出直接可核验；附件类必须有 storageRef', () => {
+    expect(isVerifiableEvidence({ evidenceType: 'ci_result' })).toBe(true);
+    expect(isVerifiableEvidence({ evidenceType: 'test_result' })).toBe(true);
+    expect(isVerifiableEvidence({ evidenceType: 'pr_review' })).toBe(true);
+    expect(isVerifiableEvidence({ evidenceType: 'screenshot' })).toBe(false);
+    expect(
+      isVerifiableEvidence({
+        evidenceType: 'screenshot',
+        storageRef: 's3://shot.png',
+      }),
+    ).toBe(true);
+    expect(
+      isVerifiableEvidence({ evidenceType: 'log', storageRef: '   ' }),
+    ).toBe(false);
+    expect(isVerifiableEvidence({ evidenceType: 'human_approval' })).toBe(
+      false,
+    );
+    expect(isVerifiableEvidence({ evidenceType: 'model_evaluation' })).toBe(
+      false,
+    );
+  });
+
+  it('critical/high：仅判定类证据不充分，需可核验当版证据', () => {
+    const criteria = { severity: 'critical', revision: 1 };
+    expect(
+      hasSufficientEvidence(criteria, [
+        { criteriaRevision: 1, evidenceType: 'human_approval' },
+        { criteriaRevision: 1, evidenceType: 'model_evaluation' },
+      ]),
+    ).toBe(false);
+    expect(
+      hasSufficientEvidence(criteria, [
+        { criteriaRevision: 1, evidenceType: 'human_approval' },
+        { criteriaRevision: 1, evidenceType: 'test_result' },
+      ]),
+    ).toBe(true);
+  });
+
+  it('严格等级只认当版可核验证据：旧版 CI 结果不算充分', () => {
+    expect(
+      hasSufficientEvidence({ severity: 'high', revision: 2 }, [
+        { criteriaRevision: 1, evidenceType: 'ci_result' },
+      ]),
+    ).toBe(false);
+    expect(
+      hasSufficientEvidence({ severity: 'high', revision: 2 }, [
+        { criteriaRevision: 2, evidenceType: 'ci_result' },
+      ]),
+    ).toBe(true);
+  });
+
+  it('medium/low：当版任意证据即充分（人工判定可放行非关键标准）', () => {
+    expect(
+      hasSufficientEvidence({ severity: 'medium', revision: 1 }, [
+        { criteriaRevision: 1, evidenceType: 'human_approval' },
+      ]),
+    ).toBe(true);
+    expect(hasSufficientEvidence({ severity: 'low', revision: 1 }, [])).toBe(
+      false,
+    );
   });
 });
 

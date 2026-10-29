@@ -9,7 +9,10 @@ import { MessageBusService } from '@/core/message-bus/message-bus.service';
 import { ExecutionService } from '@/modules/execution/execution.service';
 import { ProposalService } from '@/modules/decision/proposal.service';
 import { CreateAcceptanceDto, UpdateAcceptanceDto } from './dto/acceptance.dto';
-import { isEvidenceCurrent } from './acceptance-criteria.service';
+import {
+  hasSufficientEvidence,
+  isEvidenceCurrent,
+} from './acceptance-criteria.service';
 import { evaluateAuditStaleness } from './completeness-audit.service';
 import {
   CompletionType,
@@ -696,6 +699,15 @@ export class AcceptanceService {
             c.revision > 1
               ? `标准已修订至 v${c.revision}，原证据待复核：${c.content}`
               : `标准缺少有效验收证据：${c.content}`,
+        });
+        continue;
+      }
+      // 3.2 CAP-B-01 证据充分性：critical/high 不能只靠人工判定/AI 意见放行，
+      // 必须有可核验当版证据（CI/测试/PR 记录，或带 storageRef 的日志/截图）。
+      if (!hasSufficientEvidence(c, c.evidences ?? [])) {
+        failures.push({
+          check: 'criteriaEvidenceSufficiency',
+          reason: `[${c.severity}] 标准仅有判定类证据，需补充 CI/测试/PR 结果或带存储引用的日志/截图：${c.content}`,
         });
       }
     }

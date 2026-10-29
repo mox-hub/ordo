@@ -135,6 +135,136 @@ describe('AcceptanceService.acceptCompletion 证据版本门禁（CAP-B-01）', 
   });
 });
 
+/** CAP-B-01 证据充分性：critical/high 不得仅凭人工判定/AI 意见放行 */
+describe('AcceptanceService.acceptCompletion 证据充分性门禁（CAP-B-01）', () => {
+  function criteria(overrides: Record<string, unknown>) {
+    return {
+      id: 'c1',
+      content: '导出接口失败时返回可读错误码',
+      severity: 'critical',
+      status: 'passed',
+      revision: 1,
+      ...overrides,
+    };
+  }
+
+  async function run(c: Record<string, unknown>) {
+    const acceptance = makeAcceptance([c]);
+    const prisma = buildPrisma(acceptance);
+    const { service } = buildDeps(prisma);
+    const err = await service
+      .acceptCompletion('acc1', undefined, 'u1')
+      .catch((e) => e);
+    return err;
+  }
+
+  it('critical 标准仅有当版 human_approval → ACCEPT_BLOCKED（criteriaEvidenceSufficiency）', async () => {
+    const err = await run(
+      criteria({
+        evidences: [
+          {
+            id: 'e1',
+            criteriaRevision: 1,
+            evidenceType: 'human_approval',
+          },
+        ],
+      }),
+    );
+    expect(err).toBeInstanceOf(BadRequestException);
+    const failure = (err.response?.failures ?? []).find(
+      (f: any) => f.check === 'criteriaEvidenceSufficiency',
+    );
+    expect(failure).toBeDefined();
+    expect(failure.reason).toContain('[critical]');
+  });
+
+  it('high 标准仅 model_evaluation 与无 storageRef 的截图 → ACCEPT_BLOCKED', async () => {
+    const err = await run(
+      criteria({
+        severity: 'high',
+        evidences: [
+          {
+            id: 'e1',
+            criteriaRevision: 1,
+            evidenceType: 'model_evaluation',
+          },
+          { id: 'e2', criteriaRevision: 1, evidenceType: 'screenshot' },
+        ],
+      }),
+    );
+    expect(err).toBeInstanceOf(BadRequestException);
+    expect(
+      (err.response?.failures ?? []).some(
+        (f: any) => f.check === 'criteriaEvidenceSufficiency',
+      ),
+    ).toBe(true);
+  });
+
+  it('critical 标准有当版 test_result（判定类证据并存）→ 接收通过', async () => {
+    const acceptance = makeAcceptance([
+      criteria({
+        evidences: [
+          {
+            id: 'e1',
+            criteriaRevision: 1,
+            evidenceType: 'human_approval',
+          },
+          { id: 'e2', criteriaRevision: 1, evidenceType: 'test_result' },
+        ],
+      }),
+    ]);
+    const prisma = buildPrisma(acceptance);
+    const { service } = buildDeps(prisma);
+
+    const updated = await service.acceptCompletion('acc1', undefined, 'u1');
+
+    expect(updated.status).toBe('passed');
+  });
+
+  it('high 标准有带 storageRef 的 log → 接收通过', async () => {
+    const acceptance = makeAcceptance([
+      criteria({
+        severity: 'high',
+        evidences: [
+          {
+            id: 'e1',
+            criteriaRevision: 1,
+            evidenceType: 'log',
+            storageRef: 's3://logs/run-1.txt',
+          },
+        ],
+      }),
+    ]);
+    const prisma = buildPrisma(acceptance);
+    const { service } = buildDeps(prisma);
+
+    const updated = await service.acceptCompletion('acc1', undefined, 'u1');
+
+    expect(updated.status).toBe('passed');
+  });
+
+  it('medium 标准仅人工判定 → 仍可接收（非关键标准不受充分性约束）', async () => {
+    const acceptance = makeAcceptance([
+      criteria({
+        severity: 'medium',
+        evidences: [
+          {
+            id: 'e1',
+            criteriaRevision: 1,
+            evidenceType: 'human_approval',
+          },
+        ],
+      }),
+    ]);
+    const prisma = buildPrisma(acceptance);
+    const { service } = buildDeps(prisma);
+
+    const updated = await service.acceptCompletion('acc1', undefined, 'u1');
+
+    expect(updated.status).toBe('passed');
+  });
+});
+
 /** P0-9 同款修复：AI 代写标准落库（applyCriteriaForIssue）非法项显式 400，不再静默过滤 */
 describe('AcceptanceService.applyCriteriaForIssue 非法项显式拒绝', () => {
   function buildApplyPrisma(existingContents: string[] = []) {
