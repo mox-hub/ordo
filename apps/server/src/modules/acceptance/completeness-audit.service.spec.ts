@@ -687,3 +687,127 @@ describe('CompletenessAuditService 审计结论绑定标准版本（CAP-B-02）'
     expect(gate.allowed).toBe(true);
   });
 });
+
+describe('CompletenessAuditService 证据充分性联动（CAP-B-02 × CAP-B-01）', () => {
+  const makeCriteria = (overrides: Record<string, unknown> = {}) => ({
+    id: 'c1',
+    acceptanceId: 'acc1',
+    criteriaType: 'functional',
+    content: '导出功能端到端可用',
+    source: 'manual',
+    status: 'pending',
+    severity: 'critical',
+    revision: 1,
+    evidences: [] as Array<Record<string, unknown>>,
+    ...overrides,
+  });
+
+  it('critical 标准仅有 human_approval 当版证据 → suggested 含 evidence 项（severity=medium 不改 riskLevel）', async () => {
+    const { prisma, state } = buildPrisma();
+    state.acceptances.push(
+      makeAcceptance({
+        criteria: [
+          makeCriteria({
+            evidences: [
+              { evidenceType: 'human_approval', criteriaRevision: 1 },
+            ],
+          }),
+        ],
+      }),
+    );
+    const service = buildService(prisma);
+
+    const { result } = await service.auditAcceptance('acc1');
+
+    expect(result.riskLevel).toBe('yellow');
+    const ev = result.suggestedItems.filter((i) => i.type === 'evidence');
+    expect(ev).toHaveLength(1);
+    expect(ev[0].id).toBe('ev-c1');
+    expect(ev[0].severity).toBe('medium');
+    expect(ev[0].source).toContain('不可核验');
+    expect(ev[0].suggestion).toContain('可核验证据');
+  });
+
+  it('critical 标准补 test_result 当版证据 → 充分，不再报 evidence 项', async () => {
+    const { prisma, state } = buildPrisma();
+    state.acceptances.push(
+      makeAcceptance({
+        criteria: [
+          makeCriteria({
+            evidences: [
+              { evidenceType: 'human_approval', criteriaRevision: 1 },
+              { evidenceType: 'test_result', criteriaRevision: 1 },
+            ],
+          }),
+        ],
+      }),
+    );
+    const service = buildService(prisma);
+
+    const { result } = await service.auditAcceptance('acc1');
+
+    expect(
+      result.suggestedItems.filter((i) => i.type === 'evidence'),
+    ).toHaveLength(0);
+    expect(result.riskLevel).toBe('green');
+  });
+
+  it('零证据标准（执行前常态）→ 不报 evidence 项', async () => {
+    const { prisma, state } = buildPrisma();
+    state.acceptances.push(makeAcceptance({ criteria: [makeCriteria()] }));
+    const service = buildService(prisma);
+
+    const { result } = await service.auditAcceptance('acc1');
+
+    expect(
+      result.suggestedItems.filter((i) => i.type === 'evidence'),
+    ).toHaveLength(0);
+    expect(result.riskLevel).toBe('green');
+  });
+
+  it('标准修订 revision=2 而证据全为旧版 → 报「证据版本过期」', async () => {
+    const { prisma, state } = buildPrisma();
+    state.acceptances.push(
+      makeAcceptance({
+        criteria: [
+          makeCriteria({
+            severity: 'medium',
+            revision: 2,
+            evidences: [{ evidenceType: 'test_result', criteriaRevision: 1 }],
+          }),
+        ],
+      }),
+    );
+    const service = buildService(prisma);
+
+    const { result } = await service.auditAcceptance('acc1');
+
+    const ev = result.suggestedItems.filter((i) => i.type === 'evidence');
+    expect(ev).toHaveLength(1);
+    expect(ev[0].source).toContain('证据版本过期');
+    expect(ev[0].content).toContain('v2');
+  });
+
+  it('medium 标准有当版 human_approval → 当版即充分，不报', async () => {
+    const { prisma, state } = buildPrisma();
+    state.acceptances.push(
+      makeAcceptance({
+        criteria: [
+          makeCriteria({
+            severity: 'medium',
+            evidences: [
+              { evidenceType: 'human_approval', criteriaRevision: 1 },
+            ],
+          }),
+        ],
+      }),
+    );
+    const service = buildService(prisma);
+
+    const { result } = await service.auditAcceptance('acc1');
+
+    expect(
+      result.suggestedItems.filter((i) => i.type === 'evidence'),
+    ).toHaveLength(0);
+  });
+});

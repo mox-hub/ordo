@@ -1,18 +1,16 @@
 import { QuickJudgeService } from '@/modules/ai-hub/quick-judge/quick-judge.service';
-import {
-  auditCoverageQuestions,
-  extractAuditCoverage,
-} from '@/modules/ai-hub/quick-judge/judge-scenarios';
+import { extractAuditCoverage } from '@/modules/ai-hub/quick-judge/judge-scenarios';
 import {
   Injectable,
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '@/core/database/prisma.service';
+import { hasSufficientEvidence } from './acceptance-criteria.service';
 import { CompletenessChecklistService } from './completeness-checklist.service';
 
 export interface AuditItem {
-  type: 'dependency' | 'engineering';
+  type: 'dependency' | 'engineering' | 'evidence';
   id: string;
   content: string;
   category?: string;
@@ -89,7 +87,7 @@ export class CompletenessAuditService {
             },
           },
         },
-        criteria: true,
+        criteria: { include: { evidences: true } },
       },
     });
 
@@ -152,6 +150,12 @@ export class CompletenessAuditService {
         ),
       );
     }
+
+    // 2.5 证据充分性检查（CAP-B-02 × CAP-B-01 联动）：标准已积累证据但不足以
+    // 支撑其等级时前移提示——执行前零证据是常态不报；「有凭据但证明不了」的
+    // 误导态报黄牌建议，硬拦截仍归 acceptCompletion 充分性门禁（B-01）。
+    const evidenceFindings = this.checkEvidenceSufficiency(acceptance.criteria);
+    result.suggestedItems.push(...evidenceFindings);
 
     // 3. 已通过项
     result.passedItems = acceptance.criteria
@@ -264,6 +268,57 @@ export class CompletenessAuditService {
       // 判定层任何异常不影响审计主流程（ hints 保持空对象）
     }
     return hints;
+  }
+
+  /**
+   * 证据充分性检查（CAP-B-02 × CAP-B-01 联动）：
+   * 复用 B-01 唯一口径 hasSufficientEvidence，只报「有证据但不充分」——
+   * ① critical/high 标准仅有判定类（human_approval/model_evaluation）当版证据；
+   * ② 标准修订后证据全部转为旧版（当版零证据）。
+   * 零证据标准（尚未举证，执行前常态）不报，避免新鲜契约全黄牌。
+   * severity=medium 进建议桶：提示可见、不改 riskLevel、不拦执行。
+   */
+  private checkEvidenceSufficiency(
+    criteria: Array<{
+      id: string;
+      content: string;
+      severity: string;
+      revision?: number | null;
+      evidences?: Array<{
+        criteriaRevision?: number | null;
+        evidenceType?: string | null;
+        storageRef?: string | null;
+      }>;
+    }>,
+  ): AuditItem[] {
+    const findings: AuditItem[] = [];
+    for (const c of criteria) {
+      const evidences = c.evidences ?? [];
+      if (evidences.length === 0) continue;
+      if (hasSufficientEvidence(c, evidences)) continue;
+
+      const strict = c.severity === 'critical' || c.severity === 'high';
+      const hasCurrent = evidences.some(
+        (e) => (e.criteriaRevision ?? 1) === (c.revision ?? 1),
+      );
+      findings.push({
+        type: 'evidence',
+        id: `ev-${c.id}`,
+        content: strict
+          ? `关键标准（${c.severity}）现有证据不可核验或已过期，不足以支撑放行：${c.content}`
+          : `标准已修订（v${c.revision ?? 1}），既有证据均属旧版：${c.content}`,
+        category: '证据充分性',
+        severity: 'medium',
+        source: hasCurrent
+          ? 'Evidence Sufficiency: 不可核验证据类型'
+          : 'Evidence Sufficiency: 证据版本过期',
+        suggestion: strict
+          ? '补一条可核验证据（CI/测试/PR，或带存储引用的日志/截图）后再申请完成'
+          : '按修订后标准重新举证（旧版证据不再有效）',
+        autoFixable: false,
+      });
+    }
+    return findings;
   }
 
   /**

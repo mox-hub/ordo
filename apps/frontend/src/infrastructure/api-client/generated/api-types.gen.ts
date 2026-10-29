@@ -11686,7 +11686,7 @@ export interface components {
             checklistId?: string;
         };
         AuditItemDto: {
-            /** @description 项类型：dependency | engineering | engineering */
+            /** @description 项类型：dependency（依赖完备性）| engineering（工程完备性）| evidence（证据充分性，CAP-B-02 × B-01 联动） */
             type: string;
             /** @description 关联标准/依赖 ID */
             id?: string;

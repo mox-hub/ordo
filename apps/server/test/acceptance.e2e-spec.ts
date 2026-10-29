@@ -650,4 +650,92 @@ describe('Acceptance (e2e)', () => {
         .expect(404);
     });
   });
+
+  describe('POST /_api/acceptance/:id/audit × 证据充分性联动（CAP-B-02 × CAP-B-01）', () => {
+    // 独立契约：避免与共享 fixture 的判定类证据串扰
+    let evAcceptanceId: string;
+    let evCriteriaId: string;
+
+    it('setup：建契约 + critical 标准（暂无证据）→ 审计不报 evidence 项（执行前零证据是常态）', async () => {
+      const accRes = await wsHttp
+        .post('/_api/acceptance')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          issueId,
+          type: 'mixed',
+          priority: 'high',
+          title: 'E2E 充分性联动',
+        });
+      expect(accRes.status).toBe(201);
+      evAcceptanceId = accRes.body.data.id;
+
+      const critRes = await wsHttp
+        .post(`/_api/acceptance/${evAcceptanceId}/criteria`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({
+          criteriaType: 'functional',
+          content: '充分性联动标准：导出端到端可用',
+          severity: 'critical',
+        });
+      expect(critRes.status).toBe(201);
+      evCriteriaId = critRes.body.data.id;
+
+      const auditRes = await wsHttp
+        .post(`/_api/acceptance/${evAcceptanceId}/audit`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({});
+      expect(auditRes.status).toBe(201);
+      const suggested = auditRes.body.data.result.suggestedItems as Array<{
+        type: string;
+      }>;
+      expect(suggested.filter((i) => i.type === 'evidence')).toHaveLength(0);
+    });
+
+    it('critical 标准仅有判定类当版证据 → 审计建议含 evidence 项（黄牌不拦执行）', async () => {
+      const evRes = await wsHttp
+        .post(`/_api/acceptance/criteria/${evCriteriaId}/evidence`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ evidenceType: 'human_approval', content: '人工确认可用' });
+      expect(evRes.status).toBe(201);
+
+      const auditRes = await wsHttp
+        .post(`/_api/acceptance/${evAcceptanceId}/audit`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({});
+      expect(auditRes.status).toBe(201);
+      const { result, report } = auditRes.body.data;
+      const evItems = (
+        result.suggestedItems as Array<Record<string, string>>
+      ).filter((i) => i.type === 'evidence');
+      expect(evItems).toHaveLength(1);
+      expect(evItems[0].id).toBe(`ev-${evCriteriaId}`);
+      expect(evItems[0].category).toBe('证据充分性');
+      expect(evItems[0].severity).toBe('medium');
+      expect(result.riskLevel).toBe('yellow');
+      // 报告持久化同步包含 evidence 项
+      expect(
+        (report.suggestedItems as Array<Record<string, string>>).some(
+          (i) => i.type === 'evidence',
+        ),
+      ).toBe(true);
+    });
+
+    it('补 test_result 当版证据后重审 → evidence 项消失', async () => {
+      const evRes = await wsHttp
+        .post(`/_api/acceptance/criteria/${evCriteriaId}/evidence`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ evidenceType: 'test_result', content: 'e2e 套件 12/12 绿' });
+      expect(evRes.status).toBe(201);
+
+      const auditRes = await wsHttp
+        .post(`/_api/acceptance/${evAcceptanceId}/audit`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({});
+      expect(auditRes.status).toBe(201);
+      const suggested = auditRes.body.data.result.suggestedItems as Array<{
+        type: string;
+      }>;
+      expect(suggested.filter((i) => i.type === 'evidence')).toHaveLength(0);
+    });
+  });
 });
