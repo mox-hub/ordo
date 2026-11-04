@@ -36,7 +36,7 @@ title: P0-2 数据迁移决策说明
 | `MIGRATE` | `~/.ordo` 为空/不存在，有外部旧根 | 执行迁移 |
 | `ALREADY_NEW` | `~/.ordo` 非空，无旧数据 | 直接启动 |
 | `ABORT` | `~/.ordo` 非空，另有外部旧根或原地旧文件 | **中止，不合并、不覆盖** |
-| `MERGE_REQUIRED` | `~/.ordo` 内旧 db 与 `data/ordo.db` 并存 | **停下等用户裁决合并策略**（未实现） |
+| `ARCHIVE_REQUIRED` | `~/.ordo` 内旧 db 与 `data/ordo.db` 并存 | **保留 ordo.db，旧库移入 `.retired/` 归档（不删）** |
 
 原则：只要 `~/.ordo` 已有非空数据，就绝不覆盖；两库并存一律 `MERGE_REQUIRED`，不自动择一。
 
@@ -52,11 +52,14 @@ title: P0-2 数据迁移决策说明
 
 自检失败 → `rollbackMigration(manifest)`：删除本次新建 `~/.ordo`，把 `*.migrated.bak` 改回原名。因为全程是复制且旧根在校验前不动，回滚后旧数据 sha 不变。
 
-## 六、未决（需用户裁决）
+## 六、用户裁决（2026-11-04）：两库并存取 B
 
-- **两库并存合并策略**：`data/apm.db`/`data/agent-project-manager.db` 与 `data/ordo.db` 同时存在时如何合并（可能两份都是真数据）。当前只报 `MERGE_REQUIRED`，**不合并**。
-- **旧目录清理**：迁移后旧目录保留；稳定运行 N 天且用户显式确认后才清理，绝不自动删。
+- **只保留 `data/ordo.db`**，`agent-project-manager.db` 那批 AI/会话数据放弃使用。
+- 旧库**归档不删**：移入 `~/.ordo/.retired/`，文件名加 `.retired-<ts>`，迁移前记录 sha256/size，可回滚（`restoreArchivedDatabases`）。
+- 不再有「人工合并」分支；正式数据源只认 `ordo.db`，任何情况**不覆盖 ordo.db**。
+- 旧目录清理：稳定运行 N 天且用户显式确认后才清理，绝不自动删。
 
 ## 七、接线
 
-模块已实现并通过单测，但**尚未接到启动流程**。接线（`main.ts` 启动前调用探测/迁移）待合并策略裁决后再生效，避免在用户数据上提前动作。
+已接入 `main.ts` 启动流程（`bootstrap()` 内、目录/首装校验之前调用 `runLegacyDataStartup`）：
+探测 → MIGRATE 迁移 / ARCHIVE_REQUIRED 归档旧库 / ABORT 仅告警。`ORDO_DATA_DIR` 覆盖（e2e/CI）时跳过，避免测试触碰真实主目录数据；任何异常仅告警、不阻断启动。

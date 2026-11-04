@@ -8,11 +8,13 @@
  * server/daemon 意外退出自动重启（指数退避+熔断）；渲染进程崩溃白屏自动重载。
  */
 import { app, BrowserWindow, ipcMain, powerMonitor } from 'electron';
+import os from 'node:os';
 import path from 'node:path';
 import { commandHandlers } from './commands';
 import { isDevMode, resolveAppConfig } from './config';
 import { probeBackendHealth } from './backend';
 import { bootErrorScript, bootScreenUrl, bootStatusScript } from './loading';
+import { runLegacyDataStartup } from './legacy-migration';
 import { initLogger, logger } from './logger';
 import { installApplicationMenu } from './menu';
 import { startRuntimeDaemon, stopRuntimeDaemon } from './runtime-daemon';
@@ -323,6 +325,28 @@ function bootstrap(): void {
       process.env.ORDO_SERVER_TRANSPORT ?? 'utility'
     } devtools=${shouldAutoOpenDevTools() ? 'on' : 'off'} dataDir=${config.userDataDir}`,
   );
+
+  // P0-2 旧数据探测/迁移/旧库归档：在目录与首装校验之前执行，只归档/迁移、绝不覆盖 ordo.db。
+  // ORDO_DATA_DIR 由 e2e/CI 覆盖时跳过，避免测试触碰真实主目录数据。
+  if (process.env.ORDO_DATA_DIR) {
+    logger.info('ORDO_DATA_DIR 覆盖（测试/CI），跳过旧数据探测');
+  } else {
+    try {
+      const legacy = runLegacyDataStartup({
+        homeDir: os.homedir(),
+        appDataDir: app.getPath('appData'),
+        ordoDir: config.userDataDir,
+        timeStamp: new Date().toISOString().replace(/[:.]/g, '-'),
+      });
+      if (legacy.action === 'migrated' || legacy.action === 'archived') {
+        logger.info(`旧数据${legacy.action === 'migrated' ? '迁移' : '归档'}完成: ${legacy.detail}`);
+      } else if (legacy.action === 'aborted') {
+        logger.warn(`旧数据冲突，已中止（未覆盖既有数据）: ${legacy.detail}`);
+      }
+    } catch (err) {
+      logger.warn(`旧数据探测/迁移失败，按原样继续: ${err instanceof Error ? err.message : String(err)}`);
+    }
+  }
 
   // 目录与密钥同步就绪（毫秒级）——服务启动与 db push 都依赖它们，不与后台初始化竞态
   initializeDirs(config);

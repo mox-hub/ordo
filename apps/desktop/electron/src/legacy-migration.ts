@@ -1,5 +1,5 @@
 /**
- * P0-2 T1 旧数据迁移：探测（三态 + 冲突）→ 迁移（复制 + 备份 + sha256 校验 + `.migrated.bak`）→ 回滚。
+ * P0-2 T1 旧数据迁移与旧库归档：探测（三态 + 冲突）→ 迁移 / 归档 → 回滚。
  *
  * 背景：Ordo 历史上有三代数据位置，当前 installer.nsh 只查 `~/.ordo`，`~/.apm` 或
  * `%APPDATA%/agent-project-manager` 的老用户升级上来会被误判「全新安装」→ 旧数据孤儿化。
@@ -9,10 +9,9 @@
  *   ③ `~/.ordo` 内旧文件名残留               （data/apm.db / data/agent-project-manager.db / .apm-backups / apm-config.json）
  *   ④ `~/agent-project-manager/{documents,docs}`（文档库默认值，代码至今未迁）
  *
- * 合并策略未实现：两库并存（旧 db + `data/ordo.db` 同时存在）时返回 `MERGE_REQUIRED`，
- * 本模块不做合并——合并策略待用户裁决（TODO P0-2 merge）。在此之前绝不覆盖任何数据。
- *
- * 参考：退役的 `migrateLegacyUserData`（commit ccb9ae0f 删除）的「白名单搬 + `.migrated.bak` 留档」思路。
+ * 用户裁决（2026-11-04）：两库并存时**只保留 `data/ordo.db`**，`agent-project-manager.db`
+ * 那批 AI/会话数据放弃使用；旧库**归档不改不删**（移入 `~/.ordo/.retired/` 并记录 sha256，可回滚）。
+ * 因此不再有「人工合并」分支——旧库一律归档，正式数据源只认 `ordo.db`，且**绝不覆盖 `ordo.db`**。
  */
 import crypto from 'node:crypto';
 import fs from 'node:fs';
@@ -22,8 +21,8 @@ export type MigrationState =
   | 'FRESH'
   | 'ALREADY_NEW'
   | 'MIGRATE'
-  | 'ABORT'
-  | 'MERGE_REQUIRED';
+  | 'ARCHIVE_REQUIRED'
+  | 'ABORT';
 
 export type LegacyKind = 'appdata' | 'home-apm' | 'documents' | 'docs';
 
@@ -53,6 +52,29 @@ export interface MigrationManifest {
   sources: { from: string; backup: string }[];
   files: Record<string, MigrationFileEntry>;
 }
+
+export interface ArchivedDb {
+  from: string;
+  to: string;
+  size: number;
+  sha: string;
+}
+
+export interface ArchiveManifest {
+  ts: string;
+  retired: ArchivedDb[];
+}
+
+export interface StartupResult {
+  state: MigrationState;
+  action: 'none' | 'migrated' | 'archived' | 'aborted';
+  detail: string;
+}
+
+/** 归档子目录（不参与探测，避免二次归档）。 */
+export const RETIRED_SUBDIR = '.retired';
+const OLD_DB_RELPATHS = ['data/apm.db', 'data/agent-project-manager.db'];
+const NEW_DB_RELPATH = 'data/ordo.db';
 
 function isNonEmptyDir(p: string): boolean {
   try {
@@ -112,14 +134,18 @@ function copyDirInto(from: string, to: string): void {
  * 探测旧数据。纯函数、只读、不写任何东西。
  *
  * 判定：
- * - `~/.ordo` 非空且存在「旧 db + ordo.db」并存 → MERGE_REQUIRED（待用户裁决，不合并）
- * - `~/.ordo` 非空且另有外部旧根/原地旧文件 → ABORT（中止，不覆盖）
- * - `~/.ordo` 非空、无旧数据 → ALREADY_NEW
+ * - `~/.ordo` 有 `data/ordo.db` 且另有旧 db 残留 → ARCHIVE_REQUIRED（归档旧库，保留 ordo.db）
+ * - `~/.ordo` 非空且另有外部旧根 → ABORT（中止，不覆盖）
+ * - `~/.ordo` 非空、无旧 db/外部旧根 → ALREADY_NEW（`.apm-backups`/`apm-config.json` 等无害残留不阻断）
  * - `~/.ordo` 为空/不存在、有外部旧根 → MIGRATE
  * - 都没有 → FRESH
  */
-export function detectLegacyData(homeDir: string, appDataDir: string): MigrationDetection {
-  const ordoDir = path.join(homeDir, '.ordo');
+export function detectLegacyData(
+  homeDir: string,
+  appDataDir: string,
+  ordoDirOverride?: string,
+): MigrationDetection {
+  const ordoDir = ordoDirOverride ?? path.join(homeDir, '.ordo');
   const legacy: LegacyLocation[] = [];
   const reasons: string[] = [];
 
@@ -143,31 +169,28 @@ export function detectLegacyData(homeDir: string, appDataDir: string): Migration
   }
 
   const inPlaceLeftovers: string[] = [];
-  const dbApm = path.join(ordoDir, 'data', 'apm.db');
-  const dbOldName = path.join(ordoDir, 'data', 'agent-project-manager.db');
-  const dbNew = path.join(ordoDir, 'data', 'ordo.db');
-  if (isNonEmptyFile(dbApm)) inPlaceLeftovers.push('data/apm.db');
-  if (isNonEmptyFile(dbOldName)) inPlaceLeftovers.push('data/agent-project-manager.db');
+  const hasOldDb = OLD_DB_RELPATHS.some((rel) => isNonEmptyFile(path.join(ordoDir, ...rel.split('/'))));
+  for (const rel of OLD_DB_RELPATHS) {
+    if (isNonEmptyFile(path.join(ordoDir, ...rel.split('/')))) inPlaceLeftovers.push(rel);
+  }
   if (isNonEmptyFile(path.join(ordoDir, 'apm-config.json'))) inPlaceLeftovers.push('apm-config.json');
   if (isNonEmptyDir(path.join(ordoDir, '.apm-backups'))) inPlaceLeftovers.push('.apm-backups');
 
   const ordoNonEmpty = isNonEmptyDir(ordoDir);
-  const hasLegacy = legacy.length > 0;
-  const hasDbMergeCase =
-    (isNonEmptyFile(dbApm) || isNonEmptyFile(dbOldName)) && isNonEmptyFile(dbNew);
+  const hasOrdoDb = isNonEmptyFile(path.join(ordoDir, ...NEW_DB_RELPATH.split('/')));
 
   if (ordoNonEmpty) {
-    if (hasDbMergeCase) {
-      reasons.push('~/.ordo 内旧 db 与 data/ordo.db 并存，需用户裁决合并策略（未实现）');
-      return { state: 'MERGE_REQUIRED', ordoDir, legacy, inPlaceLeftovers, reasons };
+    if (hasOldDb && hasOrdoDb) {
+      reasons.push('~/.ordo 内旧 db 与 data/ordo.db 并存：按用户裁决保留 ordo.db，旧库归档（不删）');
+      return { state: 'ARCHIVE_REQUIRED', ordoDir, legacy, inPlaceLeftovers, reasons };
     }
-    if (hasLegacy || inPlaceLeftovers.length > 0) {
-      reasons.push('~/.ordo 已有非空数据且存在旧数据，中止不合并覆盖');
+    if (legacy.length > 0) {
+      reasons.push('~/.ordo 已有非空数据且存在外部旧根，中止不合并覆盖');
       return { state: 'ABORT', ordoDir, legacy, inPlaceLeftovers, reasons };
     }
     return { state: 'ALREADY_NEW', ordoDir, legacy, inPlaceLeftovers, reasons };
   }
-  if (hasLegacy) {
+  if (legacy.length > 0) {
     reasons.push('~/.ordo 不存在或为空，存在外部旧数据，需迁移');
     return { state: 'MIGRATE', ordoDir, legacy, inPlaceLeftovers, reasons };
   }
@@ -189,8 +212,24 @@ function targetSubdirFor(kind: LegacyKind): string {
 }
 
 /**
+ * 迁移后归一：老用户数据里 db 可能叫 `apm.db` / `agent-project-manager.db`，而应用只认
+ * `data/ordo.db`。当 `data/ordo.db` 不存在且恰有一个旧 db 时，把它改名为 `ordo.db`。
+ * 已有 `ordo.db` 时绝不覆盖。
+ */
+function normalizeMigratedDb(ordoDir: string): void {
+  const newDb = path.join(ordoDir, ...NEW_DB_RELPATH.split('/'));
+  if (fs.existsSync(newDb)) return;
+  const olds = OLD_DB_RELPATHS.map((rel) => path.join(ordoDir, ...rel.split('/'))).filter((p) =>
+    isNonEmptyFile(p),
+  );
+  if (olds.length === 1) {
+    fs.renameSync(olds[0], newDb);
+  }
+}
+
+/**
  * 执行迁移：复制（非移动）到 `~/.ordo`，先整根备份、逐文件 sha256 校验，成功后把旧根改名
- * `*.migrated.bak` 留档。只处理 MIGRATE 态；MERGE_REQUIRED / ABORT 一律抛错拒绝执行。
+ * `*.migrated.bak` 留档，并归一 db 文件名。只处理 MIGRATE 态；其它态一律抛错拒绝。
  */
 export function migrateLegacyData(
   detection: MigrationDetection,
@@ -201,7 +240,7 @@ export function migrateLegacyData(
   }
   const { ordoDir } = detection;
   if (isNonEmptyDir(ordoDir)) {
-    throw new Error('拒绝迁移：~/.ordo 已存在非空数据');
+    throw new Error('拒绝迁移：目标数据目录已存在非空数据');
   }
   const backupDir = `${ordoDir}-migrate-backup-${timeStamp}`;
   fs.mkdirSync(backupDir, { recursive: true });
@@ -220,15 +259,11 @@ export function migrateLegacyData(
     const target = sub ? path.join(ordoDir, sub) : ordoDir;
     copyDirInto(loc.path, target);
   }
-
-  const files = treeManifest(ordoDir);
-
-  // 校验：每个源备份文件都必须在目标出现且 sha256 一致
+  // 校验：每个源备份文件都必须在目标出现且 sha256 一致（在 db 归一改名前按原始文件名校验）
   for (const src of sources) {
-    const srcManifest = treeManifest(src.backup);
-    for (const [rel, meta] of Object.entries(srcManifest)) {
-      const kind = detection.legacy.find((l) => l.path === src.from)?.kind;
-      const sub = kind ? targetSubdirFor(kind) : '';
+    const kind = detection.legacy.find((l) => l.path === src.from)?.kind;
+    const sub = kind ? targetSubdirFor(kind) : '';
+    for (const [rel, meta] of Object.entries(treeManifest(src.backup))) {
       const relTarget = sub ? path.join(ordoDir, sub, rel) : path.join(ordoDir, rel);
       if (!fs.existsSync(relTarget)) {
         throw new Error(`迁移校验失败：目标缺失 ${relTarget}`);
@@ -239,7 +274,10 @@ export function migrateLegacyData(
     }
   }
 
-  // 全部校验通过后，旧根改名留档（防重复迁移）
+  // 校验通过后再归一 db 文件名（apm.db / agent-project-manager.db → ordo.db）
+  normalizeMigratedDb(ordoDir);
+  const files = treeManifest(ordoDir);
+
   for (const src of sources) {
     fs.renameSync(src.from, `${src.from}.migrated.bak`);
   }
@@ -253,7 +291,7 @@ export function migrateLegacyData(
   return { ts: timeStamp, ordoDir, backupDir, sources, files };
 }
 
-/** 回滚：删除本次新建的 `~/.ordo`，把 `*.migrated.bak` 改回原名。旧数据原样完好。 */
+/** 回滚迁移：删除本次新建的数据目录，把 `*.migrated.bak` 改回原名。旧数据原样完好。 */
 export function rollbackMigration(manifest: MigrationManifest): void {
   if (fs.existsSync(manifest.ordoDir)) {
     fs.rmSync(manifest.ordoDir, { recursive: true, force: true });
@@ -266,5 +304,67 @@ export function rollbackMigration(manifest: MigrationManifest): void {
   }
 }
 
-// TODO(P0-2 merge)：两库并存（MERGE_REQUIRED）时的合并策略待用户裁决后再实现，
-// 本模块当前只报告冲突、绝不合并或覆盖。
+/**
+ * 归档旧库（用户裁决 B）：把 `~/.ordo` 内的旧 db 移入 `~/.ordo/.retired/`，
+ * `*.retired-<ts>` 后缀，记录 sha256/size。**不删除、不碰 `data/ordo.db`**。
+ */
+export function archiveLegacyDatabases(
+  detection: MigrationDetection,
+  timeStamp: string,
+): ArchiveManifest {
+  if (detection.state !== 'ARCHIVE_REQUIRED') {
+    throw new Error(`拒绝归档：当前状态 ${detection.state}`);
+  }
+  const retiredDir = path.join(detection.ordoDir, RETIRED_SUBDIR);
+  fs.mkdirSync(retiredDir, { recursive: true });
+  const retired: ArchivedDb[] = [];
+  for (const rel of detection.inPlaceLeftovers) {
+    if (!OLD_DB_RELPATHS.includes(rel)) continue;
+    const from = path.join(detection.ordoDir, ...rel.split('/'));
+    if (!isNonEmptyFile(from)) continue;
+    const sha = sha256File(from);
+    const size = fs.statSync(from).size;
+    const to = path.join(retiredDir, `${path.basename(from)}.retired-${timeStamp}`);
+    fs.renameSync(from, to);
+    retired.push({ from, to, size, sha });
+  }
+  return { ts: timeStamp, retired };
+}
+
+/** 回滚归档：把 `.retired` 里的旧库移回原位（仅当原位不存在时）。 */
+export function restoreArchivedDatabases(manifest: ArchiveManifest): void {
+  for (const item of manifest.retired) {
+    if (fs.existsSync(item.to) && !fs.existsSync(item.from)) {
+      fs.renameSync(item.to, item.from);
+    }
+  }
+}
+
+/**
+ * 启动流程调用入口：探测后按状态动作。MIGRATE 迁移、ARCHIVE_REQUIRED 归档旧库、
+ * ABORT 仅告警不动、其余不动作。任何异常向上抛，由调用方决定是否阻断启动。
+ */
+export function runLegacyDataStartup(params: {
+  homeDir: string;
+  appDataDir: string;
+  ordoDir: string;
+  timeStamp: string;
+}): StartupResult {
+  const det = detectLegacyData(params.homeDir, params.appDataDir, params.ordoDir);
+  if (det.state === 'MIGRATE') {
+    migrateLegacyData(det, params.timeStamp);
+    return { state: det.state, action: 'migrated', detail: det.reasons.join('；') };
+  }
+  if (det.state === 'ARCHIVE_REQUIRED') {
+    const m = archiveLegacyDatabases(det, params.timeStamp);
+    return {
+      state: det.state,
+      action: 'archived',
+      detail: m.retired.map((r) => `${r.from} → ${r.to} (sha256 ${r.sha})`).join('；'),
+    };
+  }
+  if (det.state === 'ABORT') {
+    return { state: det.state, action: 'aborted', detail: det.reasons.join('；') };
+  }
+  return { state: det.state, action: 'none', detail: det.reasons.join('；') };
+}
