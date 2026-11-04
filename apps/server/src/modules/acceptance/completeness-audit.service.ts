@@ -7,10 +7,14 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '@/core/database/prisma.service';
 import { hasSufficientEvidence } from './acceptance-criteria.service';
+import {
+  evaluateDimensionCoverage,
+  resolveRequiredDimensions,
+} from './acceptance-dimensions';
 import { CompletenessChecklistService } from './completeness-checklist.service';
 
 export interface AuditItem {
-  type: 'dependency' | 'engineering' | 'evidence';
+  type: 'dependency' | 'engineering' | 'evidence' | 'dimension';
   id: string;
   content: string;
   category?: string;
@@ -18,6 +22,10 @@ export interface AuditItem {
   source: string;
   suggestion?: string;
   autoFixable: boolean;
+  /** P0-3 必备维度判定：缺失维度 key（logging/monitoring/dependency/rollback） */
+  dimension?: string;
+  /** P0-3 必备维度判定：怎样算通过 */
+  howToPass?: string;
 }
 
 export interface AuditResult {
@@ -150,6 +158,21 @@ export class CompletenessAuditService {
         ),
       );
     }
+
+    // 2.7 P0-3 必备维度覆盖（日志/监控/依赖/回滚）：**不依赖 checklist 是否存在**，
+    // 拿不到清单也按保守四维判定，避免「无匹配清单静默跳过」导致这些维度从不被检查。
+    const techStack =
+      checklist?.techStack ??
+      this.detectTechStack((acceptance.issue.project as any)?.metadata);
+    const projectType =
+      checklist?.projectType ??
+      this.detectProjectType((acceptance.issue.project as any)?.metadata);
+    const requiredDims = resolveRequiredDimensions({ projectType, techStack });
+    const dimensionCoverage = evaluateDimensionCoverage(
+      acceptance.criteria as any,
+      requiredDims.dimensions,
+    );
+    result.blockedItems.push(...dimensionCoverage.findings);
 
     // 2.5 证据充分性检查（CAP-B-02 × CAP-B-01 联动）：标准已积累证据但不足以
     // 支撑其等级时前移提示——执行前零证据是常态不报；「有凭据但证明不了」的
