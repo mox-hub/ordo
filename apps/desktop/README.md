@@ -189,13 +189,13 @@ pnpm desktop:pack
 
 ```bash
 "release/Ordo_0.6.1_x64-setup.exe" /S   # 静默安装
-# 启动安装后的 exe → 检查 %APPDATA%/agent-project-manager 建库 + health 200
+# 启动安装后的 exe → 检查 ~/.ordo 建库（SQLite）+ health 200
 ```
 
 ## 已知边界（v0.6.1）
 
 - 不含代码签名（SmartScreen 会提示「未知发布者」）、不含自动更新器。
 - ordo-runtime 守护进程随包并由壳自动拉起（设置页可手动启停、维护工作目录）；claude-code/codex 等 CLI 二进制不随包，由守护进程探测用户自装环境。
-- 登录缓存：JWT（7 天）镜像存 `%APPDATA%/agent-project-manager/desktop-state.json`，跨重启免登录，过期后 401 回登录页。
+- 登录缓存：JWT（7 天）镜像存 `~/.ordo/electron/desktop-state.json`，跨重启免登录，过期后 401 回登录页。
 - 升级场景的 schema 演进（migrate deploy）未接入——首版安装只做全新建库。
 - 关闭窗口即退出并杀掉全部托管子进程（server 与守护进程无残留）。

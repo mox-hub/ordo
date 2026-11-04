@@ -384,13 +384,13 @@ Ordo 是一个 **AI 驱动的高吞吐项目管理系统**。我们的产品主�
 
 | 偏离组件 | 现状问题与风格冲突 | 明确整改动作 | 优先级 |
 |---|---|---|---|
-| **`PropertyPanel` 胶囊组**<br>([property-panel.tsx](file:///D:/workspace/agent-project-manager/apps/frontend/src/components/ui/property-panel.tsx)) | 详情页右栏自创了 `CapsuleSelect`、`DateCapsuleField`，全走 `rounded-full` 大药丸圆角，与主表单 `rounded-md` 割裂。 | **全面矩形化**：将圆角统一收敛为 `rounded-md`（6px），与全局 Select / DatePicker 统一设计语言。 | P0 (阻断) |
-| **`DesignSystemPage` 内部 Mock**<br>([design-system-page.tsx](file:///D:/workspace/agent-project-manager/apps/frontend/src/modules/design-system/pages/design-system-page.tsx)) | 存在 276 处非语义 Tailwind 裸色，且手写了 `StatusChip`、`PriorityIcon`、`SeverityBar` 等伪组件。 | **彻底清理**：移除手写伪组件，全面替换为正式的 `StatusPill`、`StatusIconFrame`，裸色全部收敛为语义 Token。 | P0 (阻断) |
-| **`StatsCard` 鲜艳彩底**<br>([stats-card.tsx](file:///D:/workspace/agent-project-manager/apps/frontend/src/components/ui/stats-card.tsx)) | 采用了高饱和度的 `STATS_THEMES.blue / yellow` 大面积纯色彩底，视觉跳脱。 | **改用统一 `bg-card`**：背景统一为低调卡片底，仅数字与微图标采用低饱和点缀。 | P1 |
-| **`Empty` (官方) 双轨**<br>([empty.tsx](file:///D:/workspace/agent-project-manager/apps/frontend/src/components/ui/empty.tsx)) | 官方 5 插槽虚线大框组件无生产页面消费，与自研轻量 `EmptyState` 形成双轨。 | **删除 `empty.tsx`**：全站彻底收敛为统一的 `EmptyState`。 | P1 |
-| **`FloatingDock` & `ChapterScrubber`**<br>([floating-dock.tsx](file:///D:/workspace/agent-project-manager/apps/frontend/src/components/ui/floating-dock.tsx)) | 带有浓厚的 macOS 磁性放大动效与拟物阴影，与 Linear 极简工程风不符。 | 从生产组件目录剥离，不再作为标准件推荐。 | P2 |
+| **`PropertyPanel` 胶囊组**<br>([property-panel.tsx](file:///D:/workspace/ordo/apps/frontend/src/components/ui/property-panel.tsx)) | 详情页右栏自创了 `CapsuleSelect`、`DateCapsuleField`，全走 `rounded-full` 大药丸圆角，与主表单 `rounded-md` 割裂。 | **全面矩形化**：将圆角统一收敛为 `rounded-md`（6px），与全局 Select / DatePicker 统一设计语言。 | P0 (阻断) |
+| **`DesignSystemPage` 内部 Mock**<br>([design-system-page.tsx](file:///D:/workspace/ordo/apps/frontend/src/modules/design-system/pages/design-system-page.tsx)) | 存在 276 处非语义 Tailwind 裸色，且手写了 `StatusChip`、`PriorityIcon`、`SeverityBar` 等伪组件。 | **彻底清理**：移除手写伪组件，全面替换为正式的 `StatusPill`、`StatusIconFrame`，裸色全部收敛为语义 Token。 | P0 (阻断) |
+| **`StatsCard` 鲜艳彩底**<br>([stats-card.tsx](file:///D:/workspace/ordo/apps/frontend/src/components/ui/stats-card.tsx)) | 采用了高饱和度的 `STATS_THEMES.blue / yellow` 大面积纯色彩底，视觉跳脱。 | **改用统一 `bg-card`**：背景统一为低调卡片底，仅数字与微图标采用低饱和点缀。 | P1 |
+| **`Empty` (官方) 双轨**<br>([empty.tsx](file:///D:/workspace/ordo/apps/frontend/src/components/ui/empty.tsx)) | 官方 5 插槽虚线大框组件无生产页面消费，与自研轻量 `EmptyState` 形成双轨。 | **删除 `empty.tsx`**：全站彻底收敛为统一的 `EmptyState`。 | P1 |
+| **`FloatingDock` & `ChapterScrubber`**<br>([floating-dock.tsx](file:///D:/workspace/ordo/apps/frontend/src/components/ui/floating-dock.tsx)) | 带有浓厚的 macOS 磁性放大动效与拟物阴影，与 Linear 极简工程风不符。 | 从生产组件目录剥离，不再作为标准件推荐。 | P2 |
 | **错误页双轨**<br>(`error-page` vs `page-error-fallback`) | 路由级大插画错误页与局部轻量错误条视觉不一致。 | 二合一收敛为统一的轻量卡片式错误降级组件。 | P2 |
-| **`UnifiedCreateDialog` 内部样式**<br>([unified-create-dialog.tsx](file:///D:/workspace/agent-project-manager/apps/frontend/src/shared/components/create-dialog/unified-create-dialog.tsx)) | 1730 行庞大单文件，内嵌了大量老旧边框与大间距。 | 内边距统一紧凑化至 `p-3.5`，后续按业务类型拆分下沉。 | P2 |
+| **`UnifiedCreateDialog` 内部样式**<br>([unified-create-dialog.tsx](file:///D:/workspace/ordo/apps/frontend/src/shared/components/create-dialog/unified-create-dialog.tsx)) | 1730 行庞大单文件，内嵌了大量老旧边框与大间距。 | 内边距统一紧凑化至 `p-3.5`，后续按业务类型拆分下沉。 | P2 |
 
 ---
 

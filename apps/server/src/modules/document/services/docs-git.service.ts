@@ -76,6 +76,8 @@ export class DocsGitService {
     const basePath = (project as any).documentsRepoPath as
       string | null | undefined;
     const home = process.env.HOME || process.env.USERPROFILE || '.';
+    // TODO(P0-2 数据迁移)：默认 docs 仓库仍落 ~/agent-project-manager/docs；
+    // 改为 ~/.ordo 属于数据迁移（需旧目录检测→迁移/软链），勿裸改。见品牌命名方案-v1 §六 高风险项
     const root =
       basePath && String(basePath).trim().length > 0
         ? String(basePath)

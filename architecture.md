@@ -34,7 +34,7 @@ tags: architecture, backend, frontend, cli, runtime
 ## 2. Monorepo 物理结构
 
 ```
-agent-project-manager/
+ordo/
 ├── apps/
 │   ├── server/        # NestJS 10 + Prisma 6 (SQLite)——控制面 REST/WS + 执行核心 + 数据层
 │   ├── frontend/      # React 19 + Vite 7 + Tailwind 4——人类控制面 (web)
