@@ -50,6 +50,8 @@ function slugify(input: string): string {
 function defaultStorageConfig(): StorageConfig {
   const homeDir = os.homedir();
   return {
+    // TODO(P0-2 数据迁移)：默认文档库仍落 ~/agent-project-manager/documents；
+    // 改为 ~/.ordo 属于数据迁移（需旧目录检测→迁移/软链），勿裸改。见品牌命名方案-v1 §六 高风险项
     basePath: path.join(homeDir, 'agent-project-manager', 'documents'),
     autoSync: false,
     syncOnUpdate: true,
