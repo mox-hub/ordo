@@ -714,10 +714,37 @@ export class AcceptanceService {
 
     // 4. 审计红牌：存在强阻断项不得接收
     if (acceptance.auditReport?.riskLevel === 'red') {
-      const blocked = (acceptance.auditReport.blockedItems as unknown[]) ?? [];
+      const blocked =
+        (acceptance.auditReport.blockedItems as Array<
+          Record<string, unknown>
+        >) ?? [];
       failures.push({
         check: 'audit',
         reason: `完整性审计存在 ${blocked.length} 个强阻断项，补全后重新审计才可接收`,
+      });
+      // P0-3 可解释性：逐条展开阻断项（缺哪维 / 在哪个 category / 怎么补 / 怎样算过）
+      for (const b of blocked) {
+        const dim = typeof b.dimension === 'string' ? b.dimension : undefined;
+        const parts: string[] = [String(b.content ?? '阻断项')];
+        if (b.category) parts.push(`category=${String(b.category)}`);
+        if (b.suggestion) parts.push(`补法：${String(b.suggestion)}`);
+        if (b.howToPass) parts.push(`通过标准：${String(b.howToPass)}`);
+        failures.push({
+          check: dim ? 'auditDimension' : 'auditBlocked',
+          reason: parts.join('；'),
+        });
+      }
+    }
+
+    // 4.1 P0-3 审计新鲜度：审计报告存在但标准已变更（或审计后新增标准）→ 审计过期，必须重审
+    const staleness = evaluateAuditStaleness(
+      acceptance.auditReport?.criteriaRevisions,
+      acceptance.criteria.map((c) => ({ id: c.id, revision: c.revision })),
+    );
+    if (staleness.stale) {
+      failures.push({
+        check: 'auditStale',
+        reason: `验收标准已变更（${staleness.staleCriteriaIds.length} 项），完整性审计过期，请重新审计后再接收`,
       });
     }
 

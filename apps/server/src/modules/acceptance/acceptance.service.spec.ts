@@ -492,3 +492,77 @@ describe('AcceptanceService 决策卡选项倾向判定（CAP-A-27 decision_opti
     ).toBe(false);
   });
 });
+
+describe('AcceptanceService.acceptCompletion 审计门禁可解释性（P0-3）', () => {
+  const okCriterion = () => ({
+    id: 'c1',
+    content: '导出文件格式为 xlsx',
+    severity: 'medium',
+    status: 'passed',
+    revision: 1,
+    evidences: [{ id: 'e1', evidenceType: 'test_result', criteriaRevision: 1 }],
+  });
+
+  it('审计红牌含维度阻断 → ACCEPT_BLOCKED 逐条展开维度/补法/通过标准', async () => {
+    const acceptance = makeAcceptance([okCriterion()]) as any;
+    acceptance.auditReport = {
+      riskLevel: 'red',
+      blockedItems: [
+        {
+          type: 'dimension',
+          id: 'dimension-logging',
+          dimension: 'logging',
+          category: '日志',
+          content: '验收标准缺少「日志」维度的覆盖',
+          severity: 'high',
+          source: 'Required Dimension Gate',
+          suggestion: '补一条日志标准',
+          howToPass: '存在 category=日志 的标准',
+          autoFixable: false,
+        },
+      ],
+    };
+    const prisma = buildPrisma(acceptance);
+    const { service } = buildDeps(prisma);
+
+    const err = await service
+      .acceptCompletion('acc1', undefined, 'u1')
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(BadRequestException);
+    const failures = err.response?.failures ?? [];
+    expect(failures.some((f: any) => f.check === 'audit')).toBe(true);
+    const dimFailure = failures.find((f: any) => f.check === 'auditDimension');
+    expect(dimFailure).toBeDefined();
+    expect(dimFailure.reason).toContain('日志');
+    expect(dimFailure.reason).toContain('补法');
+    expect(dimFailure.reason).toContain('通过标准');
+  });
+
+  it('审计快照与标准 revision 不一致 → ACCEPT_BLOCKED（auditStale）', async () => {
+    const acceptance = makeAcceptance([
+      {
+        ...okCriterion(),
+        revision: 2,
+        evidences: [
+          { id: 'e1', evidenceType: 'test_result', criteriaRevision: 2 },
+        ],
+      },
+    ]) as any;
+    acceptance.auditReport = {
+      riskLevel: 'green',
+      blockedItems: [],
+      criteriaRevisions: { c1: 1 },
+    };
+    const prisma = buildPrisma(acceptance);
+    const { service } = buildDeps(prisma);
+
+    const err = await service
+      .acceptCompletion('acc1', undefined, 'u1')
+      .catch((e) => e);
+    expect(err).toBeInstanceOf(BadRequestException);
+    const failures = err.response?.failures ?? [];
+    const stale = failures.find((f: any) => f.check === 'auditStale');
+    expect(stale).toBeDefined();
+    expect(stale.reason).toContain('过期');
+  });
+});

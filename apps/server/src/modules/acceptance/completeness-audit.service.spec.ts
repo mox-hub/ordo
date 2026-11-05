@@ -51,6 +51,46 @@ const makeChecklist = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 });
 
+/**
+ * 维度覆盖夹具（P0-3）：四条标准分别覆盖 日志 / 监控 / 依赖 / 回滚，
+ * 用于把「必备维度门禁」的 finding 从被测断言里隔离出去。
+ * 注意措辞不得命中工程清单项或依赖任务标题，避免干扰原用例判定。
+ */
+const dimCriteria = () => [
+  {
+    id: 'dim-log',
+    content: '关键路径输出结构化日志，含级别与关键字段',
+    status: 'pending',
+    category: '日志',
+    severity: 'medium',
+    source: 'manual',
+  },
+  {
+    id: 'dim-mon',
+    content: '关键指标接入监控并配置阈值告警',
+    status: 'pending',
+    category: '监控',
+    severity: 'medium',
+    source: 'manual',
+  },
+  {
+    id: 'dim-dep',
+    content: '外部服务降级、超时与熔断已验证',
+    status: 'pending',
+    category: '依赖',
+    severity: 'medium',
+    source: 'manual',
+  },
+  {
+    id: 'dim-roll',
+    content: '上线失败可按步骤回滚',
+    status: 'pending',
+    category: '回滚',
+    severity: 'medium',
+    source: 'manual',
+  },
+];
+
 function buildPrisma() {
   const state = {
     acceptances: [] as Array<Record<string, any>>,
@@ -184,25 +224,33 @@ describe('CompletenessAuditService', () => {
     );
   });
 
-  it('auditAcceptance：无依赖无清单无标准 → green 且 upsert 落 create 分支', async () => {
+  it('auditAcceptance：无依赖无清单无标准 → 维度门禁保守判 red（不再静默放行）', async () => {
     const { prisma, state } = buildPrisma();
     state.acceptances.push(makeAcceptance());
     const service = buildService(prisma);
 
     const { report, result } = await service.auditAcceptance('acc1');
 
-    expect(result.riskLevel).toBe('green');
-    expect(result.blockedItems).toHaveLength(0);
+    // P0-3：无标准即四维全缺，保守口径下不再是 green，而是 4 个维度强阻断
+    expect(result.riskLevel).toBe('red');
+    expect(result.blockedItems).toHaveLength(4);
+    expect(result.blockedItems.map((i) => i.type)).toEqual([
+      'dimension',
+      'dimension',
+      'dimension',
+      'dimension',
+    ]);
     expect(result.suggestedItems).toHaveLength(0);
-    expect(result.summary).toBe('验收标准完整，可以执行');
+    expect(result.summary).toContain('4 个强阻断项');
     expect(state.reports).toHaveLength(1);
-    expect(report.riskLevel).toBe('green');
+    expect(report.riskLevel).toBe('red');
   });
 
   it('依赖完备性：blocks 依赖未在验收标准提及 → high 进 blockedItems，riskLevel red', async () => {
     const { prisma, state } = buildPrisma();
     state.acceptances.push(
       makeAcceptance({
+        criteria: dimCriteria(),
         issue: {
           id: 'iss1',
           title: '实现导出功能',
@@ -237,6 +285,7 @@ describe('CompletenessAuditService', () => {
     const { prisma, state } = buildPrisma();
     state.acceptances.push(
       makeAcceptance({
+        criteria: dimCriteria(),
         issue: {
           id: 'iss1',
           title: '实现导出功能',
@@ -289,6 +338,7 @@ describe('CompletenessAuditService', () => {
             severity: 'medium',
             source: 'manual',
           },
+          ...dimCriteria(),
         ],
       }),
     );
@@ -303,7 +353,11 @@ describe('CompletenessAuditService', () => {
 
   it('工程完备性：指定 checklistId → critical/high 缺失项进 blocked，medium 进 suggested', async () => {
     const { prisma, state } = buildPrisma();
-    state.acceptances.push(makeAcceptance());
+    state.acceptances.push(
+      makeAcceptance({
+        criteria: dimCriteria(),
+      }),
+    );
     state.checklists.push(makeChecklist());
     const service = buildService(prisma);
 
@@ -334,6 +388,7 @@ describe('CompletenessAuditService', () => {
             severity: 'medium',
             source: 'manual',
           },
+          ...dimCriteria(),
         ],
       }),
     );
@@ -438,7 +493,7 @@ describe('CompletenessAuditService.applySuggestions', () => {
 
   it('成功：创建 technical 标准（fromAudit 溯源 + order 续接）并返回重审结果', async () => {
     const { prisma, state } = buildPrisma();
-    state.acceptances.push(makeAcceptance());
+    state.acceptances.push(makeAcceptance({ criteria: dimCriteria() }));
     state.existingCriteriaMaxOrder = 2;
     state.reports.push({
       acceptanceId: 'acc1',
@@ -712,6 +767,7 @@ describe('CompletenessAuditService 证据充分性联动（CAP-B-02 × CAP-B-01�
               { evidenceType: 'human_approval', criteriaRevision: 1 },
             ],
           }),
+          ...dimCriteria(),
         ],
       }),
     );
@@ -739,6 +795,7 @@ describe('CompletenessAuditService 证据充分性联动（CAP-B-02 × CAP-B-01�
               { evidenceType: 'test_result', criteriaRevision: 1 },
             ],
           }),
+          ...dimCriteria(),
         ],
       }),
     );
@@ -754,7 +811,9 @@ describe('CompletenessAuditService 证据充分性联动（CAP-B-02 × CAP-B-01�
 
   it('零证据标准（执行前常态）→ 不报 evidence 项', async () => {
     const { prisma, state } = buildPrisma();
-    state.acceptances.push(makeAcceptance({ criteria: [makeCriteria()] }));
+    state.acceptances.push(
+      makeAcceptance({ criteria: [makeCriteria(), ...dimCriteria()] }),
+    );
     const service = buildService(prisma);
 
     const { result } = await service.auditAcceptance('acc1');
@@ -809,5 +868,52 @@ describe('CompletenessAuditService 证据充分性联动（CAP-B-02 × CAP-B-01�
     expect(
       result.suggestedItems.filter((i) => i.type === 'evidence'),
     ).toHaveLength(0);
+  });
+});
+
+describe('CompletenessAuditService 必备维度门禁（P0-3）', () => {
+  it('无清单 + 标准只覆盖日志 → 缺监控/依赖/回滚 3 项 high 强阻断（可解释）', async () => {
+    const { prisma, state } = buildPrisma();
+    state.acceptances.push(
+      makeAcceptance({
+        criteria: [
+          {
+            id: 'c1',
+            content: '关键路径输出结构化日志',
+            status: 'pending',
+            category: '日志',
+            severity: 'medium',
+            source: 'manual',
+          },
+        ],
+      }),
+    );
+    const service = buildService(prisma);
+
+    const { result } = await service.auditAcceptance('acc1');
+
+    expect(result.riskLevel).toBe('red');
+    expect(result.blockedItems).toHaveLength(3);
+    const dims = result.blockedItems.map((i) => i.dimension);
+    expect(dims).toEqual(['monitoring', 'dependency', 'rollback']);
+    for (const item of result.blockedItems) {
+      expect(item.type).toBe('dimension');
+      expect(item.severity).toBe('high');
+      expect(item.howToPass).toBeTruthy();
+      expect(item.suggestion).toBeTruthy();
+    }
+  });
+
+  it('无清单 + 四维均覆盖 → 无维度阻断（green）', async () => {
+    const { prisma, state } = buildPrisma();
+    state.acceptances.push(makeAcceptance({ criteria: dimCriteria() }));
+    const service = buildService(prisma);
+
+    const { result } = await service.auditAcceptance('acc1');
+
+    expect(
+      result.blockedItems.filter((i) => i.type === 'dimension'),
+    ).toHaveLength(0);
+    expect(result.riskLevel).toBe('green');
   });
 });
