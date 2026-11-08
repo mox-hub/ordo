@@ -6679,5 +6679,10 @@
     "estimateHint": "Estimate each criterion success probability from current evidence (AI quick judgment, advisory only)",
     "completionTypeMismatch": "AI suggests {{type}}",
     "coverageHint": "AI review: possibly already covered ({{pct}}%) — verify before applying"
+  },
+  "artifact": {
+    "preview": {
+      "error": "Preview failed to load. Try downloading the file instead."
+    }
   }
 }

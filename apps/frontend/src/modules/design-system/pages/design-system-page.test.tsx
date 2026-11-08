@@ -149,7 +149,9 @@ describe('DesignSystemSectionPage（单页）', () => {
   });
 
   it('redirects unknown section ids back to the index', () => {
+    // 重测试超时对齐（60s）：跳转目标 = 画廊索引，会真实挂载全部分区 demo
+    // （M4 起 demo 经 @mox-hub/ui shim → 包产物模块链，jsdom 首渲染 ~3.5s+，CI 抢资源会破 5s 默认值）
     renderWithRoutes('/app/design-system/section/__nonexistent__');
     expect(screen.getByText('组件画廊')).toBeInTheDocument();
-  });
+  }, 60_000);
 });
