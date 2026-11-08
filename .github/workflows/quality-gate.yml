@@ -100,6 +100,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@mox-hub'
       # --trust-lockfile：lockfile 经维护者本机解析并随 PR 目验（diff 51 行），CI 只消费；
       # pnpm 的 supply-chain 验证步骤对 GitHub Packages 托管 tarball 无公开元数据，fail-closed
       - run: pnpm install --frozen-lockfile --trust-lockfile
@@ -120,6 +122,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@mox-hub'
       - run: pnpm install --frozen-lockfile --trust-lockfile
         env:
           # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
@@ -142,6 +146,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@mox-hub'
       - run: pnpm install --frozen-lockfile --trust-lockfile
         env:
           # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
@@ -178,6 +184,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@mox-hub'
       - run: pnpm install --frozen-lockfile --trust-lockfile
         env:
           # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
@@ -207,6 +215,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@mox-hub'
       - run: pnpm install --frozen-lockfile --trust-lockfile
         env:
           # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
@@ -231,6 +241,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@mox-hub'
       - run: pnpm install --frozen-lockfile --trust-lockfile
         env:
           # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
@@ -261,6 +273,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@mox-hub'
       - run: pnpm install --frozen-lockfile --trust-lockfile
         env:
           # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
@@ -289,6 +303,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@mox-hub'
       - run: pnpm install --frozen-lockfile --trust-lockfile
         env:
           # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
@@ -347,6 +363,8 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@mox-hub'
       - run: pnpm install --frozen-lockfile --trust-lockfile
         env:
           # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
