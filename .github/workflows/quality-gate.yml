@@ -101,6 +101,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        env:
+          # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
+          # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm --filter "./apps/server" run prisma:generate
       - run: pnpm type-check
 
@@ -117,6 +121,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        env:
+          # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
+          # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm lint
       - run: pnpm check:boundaries
 
@@ -135,6 +143,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        env:
+          # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
+          # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: 前端单测（受影响文件）
         if: needs.changes.outputs.full != 'true'
         run: |
@@ -167,6 +179,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        env:
+          # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
+          # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm --filter "./apps/server" run prisma:generate
       - name: server 单测（受影响文件）
         if: needs.changes.outputs.full != 'true'
@@ -192,6 +208,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        env:
+          # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
+          # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm --filter "./packages/ordo-shared" run test
       - run: pnpm --filter "./apps/cli" run test
 
@@ -212,6 +232,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        env:
+          # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
+          # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm --filter "./packages/ordo-shared" run build
       - run: pnpm --filter "./apps/mobile" run type-check
       - run: pnpm --filter "./apps/mobile" run lint
@@ -238,6 +262,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        env:
+          # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
+          # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm --filter "./apps/server" run prisma:generate
       - name: contract:check（导出 openapi 需启动 AppModule，注入 CI 专用 env）
         env:
@@ -262,6 +290,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        env:
+          # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
+          # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm --filter "./apps/server" run prisma:generate
       - name: 准备 CI 数据库（默认库 schema + 工作区模板库）
         working-directory: apps/server
@@ -316,6 +348,10 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+        env:
+          # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
+          # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm check:docs-sync
       - run: pnpm check:ledger
       - run: pnpm check:doc-coverage
