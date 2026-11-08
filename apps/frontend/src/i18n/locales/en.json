@@ -120,7 +120,16 @@
     "grid": "Grid",
     "cards": "Cards",
     "prevPage": "Previous page",
-    "nextPage": "Next page"
+    "nextPage": "Next page",
+    "done": "Done",
+    "formDialog": {
+      "discard": "Discard changes",
+      "keepEditing": "Keep editing",
+      "unsavedDesc": "Unsaved changes will be lost when closed.",
+      "unsavedTitle": "Unsaved changes"
+    },
+    "previousPage": "Previous page",
+    "saving": "Saving…"
   },
   "workspace": {
     "backups": {
@@ -6682,7 +6691,89 @@
   },
   "artifact": {
     "preview": {
-      "error": "Preview failed to load. Try downloading the file instead."
+      "error": "Preview failed to load. Try downloading the file instead.",
+      "dialogTitle": "Artifact preview",
+      "download": "Download",
+      "fallbackHint": "Online preview is not available for this format. Download it to view.",
+      "latestVersion": "Latest",
+      "loading": "Loading preview…",
+      "maximize": "Maximize",
+      "restore": "Restore",
+      "unknownType": "Unknown type"
+    },
+    "title": "Artifacts",
+    "aside": {
+      "basic": "Basic Info",
+      "checksum": "Checksum (SHA-256)",
+      "checksumSkipped": "Not computed",
+      "createdAt": "Created",
+      "document": "Document",
+      "execution": "Source execution",
+      "issue": "Owning issue",
+      "kind": "Source",
+      "lineage": "Lineage",
+      "lineageEmpty": "Manually uploaded artifact",
+      "name": "Name",
+      "openDocument": "Open document",
+      "properties": "Properties",
+      "size": "Size",
+      "type": "Type",
+      "updatedAt": "Updated"
+    },
+    "columns": {
+      "issue": "Issue",
+      "kind": "Source",
+      "name": "Name",
+      "size": "Size",
+      "updatedAt": "Updated"
+    },
+    "detail": {
+      "notFound": "Artifact not found or deleted"
+    },
+    "filter": {
+      "kindGroup": "Source type",
+      "projectGroup": "Project",
+      "searchPlaceholder": "Search artifacts…"
+    },
+    "kind": {
+      "all": "All",
+      "document": "Document",
+      "execution": "Execution output",
+      "upload": "Upload"
+    },
+    "list": {
+      "empty": "No artifacts yet",
+      "emptyDescription": "Upload files or dispatch an AI task — files produced by executions appear here automatically",
+      "upload": "Upload artifact",
+      "versions": "{{count}} versions"
+    },
+    "menu": {
+      "delete": "Delete",
+      "open": "Open"
+    },
+    "metrics": {
+      "total": "Total artifacts"
+    },
+    "section": {
+      "empty": "No artifacts yet; upload files or run AI tasks — execution outputs appear here automatically",
+      "title": "Artifacts",
+      "upload": "Upload"
+    },
+    "upload": {
+      "description": "Multi-select and drag-and-drop supported; 50MB per file.",
+      "dropHint": "Uploaded files enter the artifact library with preview and versioning",
+      "dropTitle": "Drag files here, or click to browse",
+      "dropzone": "Choose or drop files",
+      "failed": "Failed",
+      "more": "Add more",
+      "title": "Upload artifacts",
+      "uploading": "Uploading…"
+    },
+    "versions": {
+      "download": "Download this version",
+      "empty": "No version history",
+      "preview": "Preview this version",
+      "title": "Version history"
     }
   }
 }
