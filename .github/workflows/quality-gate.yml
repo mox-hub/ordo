@@ -100,10 +100,10 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      # --trust-lockfile：lockfile 经维护者本机解析并随 PR 目验（diff 51 行），CI 只消费；
+      # pnpm 的 supply-chain 验证步骤对 GitHub Packages 托管 tarball 无公开元数据，fail-closed
+      - run: pnpm install --frozen-lockfile --trust-lockfile
         env:
-          # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
-          # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm --filter "./apps/server" run prisma:generate
       - run: pnpm type-check
@@ -120,7 +120,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --trust-lockfile
         env:
           # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
           # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
@@ -142,7 +142,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --trust-lockfile
         env:
           # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
           # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
@@ -178,7 +178,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --trust-lockfile
         env:
           # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
           # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
@@ -207,7 +207,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --trust-lockfile
         env:
           # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
           # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
@@ -231,7 +231,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --trust-lockfile
         env:
           # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
           # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
@@ -261,7 +261,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --trust-lockfile
         env:
           # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
           # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
@@ -289,7 +289,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --trust-lockfile
         env:
           # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
           # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
@@ -347,7 +347,7 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+      - run: pnpm install --frozen-lockfile --trust-lockfile
         env:
           # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
           # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
