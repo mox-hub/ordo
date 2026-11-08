@@ -49,7 +49,10 @@ function readSource() {
     console.error(`[ledger] source capability list not found: ${SOURCE}`);
     process.exit(1);
   }
-  return readFileSync(abs, 'utf8');
+  // 哈希前归一化换行（M4 收口修复）：Windows 检出 CRLF / CI 检出 LF 会让
+  // sourceSha256 随检出环境漂移，check:ledger 在 CI 永远误报——策略核对的是
+  // 逻辑内容，行尾不是。parseCards 本就按 /\r?\n/ 分行，归一无损。
+  return readFileSync(abs, 'utf8').replace(/\r\n/g, '\n');
 }
 
 function parseCards(text) {
