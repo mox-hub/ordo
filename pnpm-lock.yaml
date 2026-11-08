@@ -6,6 +6,9 @@ settings:
 
 catalogs:
   default:
+    '@mox-hub/ui':
+      specifier: 0.1.0-alpha.2
+      version: 0.1.0-alpha.2
     '@vitest/coverage-v8':
       specifier: 5.0.0
       version: 5.0.0
@@ -39,9 +42,6 @@ catalogs:
     vitest:
       specifier: 5.0.0
       version: 5.0.0
-
-overrides:
-  '@mox-hub/ui': link:../ordo-ui/packages/ui
 
 patchedDependencies:
   '@nestjs/cli@12.0.0': ecd68bd2921ea87fce3359a9d3ef2c2d0136b74c9d78f2b905c6a5ec0384fcdf
@@ -189,8 +189,8 @@ importers:
         specifier: ^3.1.1
         version: 3.1.1(rollup@4.63.1)(supports-color@10.2.2)
       '@mox-hub/ui':
-        specifier: link:../../../ordo-ui/packages/ui
-        version: link:../../../ordo-ui/packages/ui
+        specifier: 'catalog:'
+        version: 0.1.0-alpha.2(@base-ui/react@1.7.0(@date-fns/tz@1.5.0)(@types/react@19.2.18)(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@dnd-kit/core@6.3.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@dnd-kit/sortable@10.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8))(@dnd-kit/utilities@3.2.2(react@19.2.8))(@tanstack/react-table@8.21.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(date-fns@4.4.0)(lucide-react@0.564.0(react@19.2.8))(react-day-picker@9.14.0(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react-hook-form@7.87.0(react@19.2.8))(react@19.2.8)
       '@tailwindcss/vite':
         specifier: ^4
         version: 4.3.3(vite@7.3.6(@types/node@24.13.3)(jiti@2.7.0)(lightningcss@1.32.0)(terser@5.51.2)(tsx@4.23.13)(yaml@2.9.0))
@@ -2735,6 +2735,21 @@ packages:
   '@modelcontextprotocol/server@2.0.0':
     resolution: {integrity: sha512-YhHWdHfpFMQfd0prsEnxKeS3Qz3ytIGmsS0sth4KDjnacIT7hxk6hXHkJ9KysxlkvTM+WZAtQbbcUhdoP4Hvtw==}
     engines: {node: '>=20'}
+
+  '@mox-hub/ui@0.1.0-alpha.2':
+    resolution: {integrity: sha512-CN3mMnqd5MTdEV6+6JkC1RtGTUcnpBq0PduN0NuxQUfs9B1K8MhJ3alkJR/ihtC74B5TUoAqEK5fmibaF6AKJw==, tarball: https://npm.pkg.github.com/download/@mox-hub/ui/0.1.0-alpha.2/f8fef5d624362c01975643167195d2fb476e6963}
+    peerDependencies:
+      '@base-ui/react': ^1.3.0
+      '@dnd-kit/core': ^6.3.1
+      '@dnd-kit/sortable': ^10.0.0
+      '@dnd-kit/utilities': ^3.2.2
+      '@tanstack/react-table': ^8.21.3
+      date-fns: ^4.1.0
+      lucide-react: ^0.564.0
+      react: ^17 || ^18 || ^19
+      react-day-picker: ^9.14.0
+      react-dom: ^17 || ^18 || ^19
+      react-hook-form: ^7.65.0
 
   '@mswjs/interceptors@0.41.9':
     resolution: {integrity: sha512-VVPPgHyQ6ShqnrmDWuxjmUIsO9gWyOZFmuOfLd9LfBGQJwZfy0gvv9pbHSJuoFNIYC7ZDX9aoFwowjcdSC4E8w==}
@@ -14440,6 +14455,26 @@ snapshots:
     dependencies:
       '@modelcontextprotocol/core': 2.0.0
       zod: 4.5.4
+
+  '@mox-hub/ui@0.1.0-alpha.2(@base-ui/react@1.7.0(@date-fns/tz@1.5.0)(@types/react@19.2.18)(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@dnd-kit/core@6.3.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(@dnd-kit/sortable@10.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8))(@dnd-kit/utilities@3.2.2(react@19.2.8))(@tanstack/react-table@8.21.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(date-fns@4.4.0)(lucide-react@0.564.0(react@19.2.8))(react-day-picker@9.14.0(react@19.2.8))(react-dom@19.2.8(react@19.2.8))(react-hook-form@7.87.0(react@19.2.8))(react@19.2.8)':
+    dependencies:
+      '@base-ui/react': 1.7.0(@date-fns/tz@1.5.0)(@types/react@19.2.18)(date-fns@4.4.0)(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@dnd-kit/core': 6.3.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      '@dnd-kit/sortable': 10.0.0(@dnd-kit/core@6.3.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8))(react@19.2.8)
+      '@dnd-kit/utilities': 3.2.2(react@19.2.8)
+      '@tanstack/react-table': 8.21.3(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      class-variance-authority: 0.7.1
+      clsx: 2.1.1
+      date-fns: 4.4.0
+      input-otp: 1.5.0(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      lucide-react: 0.564.0(react@19.2.8)
+      react: 19.2.8
+      react-colorful: 5.8.1(react-dom@19.2.8(react@19.2.8))(react@19.2.8)
+      react-day-picker: 9.14.0(react@19.2.8)
+      react-dom: 19.2.8(react@19.2.8)
+      react-hook-form: 7.87.0(react@19.2.8)
+      tailwind-merge: 3.6.0
+      tw-animate-css: 1.4.0
 
   '@mswjs/interceptors@0.41.9':
     dependencies:
