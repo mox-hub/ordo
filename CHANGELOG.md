@@ -19,6 +19,16 @@ tags: "changelog,release"
 
 格式约定：每条变更包含 模块 + linked_fr + test_evidence + doc_impact。
 
+## Unreleased
+
+### 组件库独立（ADR-022，feat/ordo-ui-adoption）
+
+- **UI 组件库抽离至独立仓 mox-hub/ordo-ui**（`@mox-hub/ui`，GitHub Packages 私有分发，0.1.0-alpha.1）：ui 68 + raw 3 + 升层 7 件源码迁移，registry 73 条五态治理 + 七护栏（palette/tokens/spacing/undefined/duplicate/icons/registry-coverage）+ Fumadocs 文档站 76 页随仓
+- 前端改走**纯 re-export 转发层**（73 shim，387 处引用零改动）+ 防漂移门禁 `check-ui-forwarding.mjs` 入 lint 链首位；留置实体 3 件（chart/avatar-picker-field/mock-badge，依赖闭包原因见 ordo-ui 迁移对账）
+- 主仓 design-system registry 的 ui/raw/升层条目转**冻结镜像**（画廊覆盖率门禁 100% 不破）；semantic/modules/shared 仍活维护
+- i18n 去耦知情项：5 件组件（context-menu/data-table/async-state/detail-section/definition-row）内部文案缺省中文（与 zh-CN 逐字一致），en 主题暂固定中文
+- 依赖安装需 GitHub Packages 授权（read:packages PAT 或包侧仓库授权），`.npmrc` 以 `${NODE_AUTH_TOKEN}` 占位
+
 ## [Unreleased]
 
 | 模块 | 变更 | linked_fr | test_evidence | doc_impact |

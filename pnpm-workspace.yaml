@@ -5,6 +5,7 @@ packages:
 # 会触发根目录 `pnpm install --prod` 并要求清空 node_modules，破坏开发环境
 verifyDepsBeforeRun: false
 catalog:
+  '@mox-hub/ui': 0.1.0-alpha.2
   '@vitest/coverage-v8': 5.0.0
   '@vitest/ui': 5.0.0
   eslint: ^9.39.5
@@ -51,3 +52,7 @@ minimumReleaseAgeExclude:
 patchedDependencies:
   '@nestjs/cli@12.0.0': patches/@nestjs__cli@12.0.0.patch
   'vitest@5.0.0': patches/vitest@5.0.0.patch
+
+# TEMP(M4 本地验证用，提交前移除): @mox-hub/ui 链接到本地独立仓源码
+overrides:
+  "@mox-hub/ui": "link:../ordo-ui/packages/ui"

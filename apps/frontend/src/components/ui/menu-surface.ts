@@ -1,10 +1,5 @@
-export const MENU_SURFACE_CLASS =
-  "min-w-32 overflow-hidden rounded-md border border-border bg-popover text-popover-foreground shadow-xs"
-
-export const MENU_ITEM_CLASS =
-  "relative flex w-full cursor-default select-none items-center rounded-sm px-2 py-1.5 text-sm outline-none transition-[color,background-color] [transition-duration:var(--motion-fast)] [transition-timing-function:var(--motion-ease-standard)] hover:bg-accent hover:text-accent-foreground"
-
-export const MENU_LABEL_CLASS =
-  "px-2 py-1.5 text-xs font-medium uppercase tracking-wide text-muted-foreground"
-
-export const MENU_SEPARATOR_CLASS = "-mx-1 my-1 h-px bg-border"
+// ordo-ui 迁移转发层（M4，2026-11-08）：组件源码唯一真相在 @mox-hub/ui（mox-hub/ordo-ui 私有仓，
+// GitHub Packages 分发）。本文件为兼容 per-file 引用的纯 re-export shim——禁在此实现任何逻辑；
+// 新增/修改 UI 组件一律进 @mox-hub/ui（registry + 护栏），防漂移门禁：
+// apps/frontend/scripts/check-ui-forwarding.mjs。
+export * from '@mox-hub/ui/components/menu-surface'

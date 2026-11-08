@@ -34,6 +34,12 @@
  * 维护约定：新增 components/ui 组件必须先在此登记，否则 lint:registry 双向对账失败。
  * G 类批 G0 起，`components/raw/`（登记 internal 态、不出画廊，裁决 G6）与
  * `components/semantic/` 的组件同样必须先在此登记（三分目录治理链，见 G 类方案 §四）。
+ *
+ * ⚠️ 冻结镜像（ADR-022，2026-11-08）：ui/raw/升层件（共 73）源码真相已迁
+ * `@mox-hub/ui`（mox-hub/ordo-ui 独立仓，GitHub Packages 分发），主仓侧经纯 re-export
+ * shim 消费。本表这些条目为**冻结镜像快照**——不再增改（画廊 demo 经 shim 仍渲染，
+ * 覆盖率门禁分母与 100% 不变）；ui 层唯一真相 = `@mox-hub/ui/registry`（73 条，
+ * 五态治理在彼仓延续）。semantic/modules/shared 条目仍在本表活维护。
  */
 
 export type ComponentStatus =
