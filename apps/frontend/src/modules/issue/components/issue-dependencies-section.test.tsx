@@ -104,10 +104,10 @@ describe('IssueDependenciesSection（P1-17）', () => {
         }),
       ],
     });
-    const collapseBtn = screen.getByRole('button', { name: 'common.collapse' });
+    const collapseBtn = screen.getByRole('button', { name: '收起' });
     fireEvent.click(collapseBtn);
     // aria 状态翻转；内容容器收起（高度 0fr 语义由 class 断言）
-    expect(screen.getByRole('button', { name: 'common.expand' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: '展开' })).toBeTruthy();
     const section = screen.getByTestId('issue-dependencies-section');
     expect(section.innerHTML).toContain('grid-rows-[0fr]');
   });
