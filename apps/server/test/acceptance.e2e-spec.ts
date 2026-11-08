@@ -183,6 +183,47 @@ describe('Acceptance (e2e)', () => {
           expect(secondCriteriaId).toBeTruthy();
         });
     });
+
+    it('should add required-dimension criteria and mark them passed（P0-3 必备维度门禁夹具）', async () => {
+      // P0-3 必备维度门禁（日志/监控/依赖/回滚）：共享夹具补齐维度覆盖，
+      // 并置 passed（passed 标准豁免 criteriaEvidence 证据要求）——
+      // 后续 accept-completion 成功用例依赖维度已覆盖
+      const res = await wsHttp
+        .post(`/_api/acceptance/${acceptanceId}/criteria/batch`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send([
+          {
+            criteriaType: 'technical',
+            category: '日志',
+            content: 'e2e 维度标准：关键路径有结构化日志',
+          },
+          {
+            criteriaType: 'technical',
+            category: '监控/告警',
+            content: 'e2e 维度标准：关键指标有监控与阈值告警',
+          },
+          {
+            criteriaType: 'technical',
+            category: '依赖',
+            content: 'e2e 维度标准：外部依赖可用性与降级已验证',
+          },
+          {
+            criteriaType: 'technical',
+            category: '回滚',
+            content: 'e2e 维度标准：上线失败可回滚',
+          },
+        ])
+        .expect(201);
+      const ids: string[] = res.body.data.map((c: { id: string }) => c.id);
+      expect(ids).toHaveLength(4);
+      for (const id of ids) {
+        await wsHttp
+          .patch(`/_api/acceptance/criteria/${id}`)
+          .set('Authorization', `Bearer ${accessToken}`)
+          .send({ status: 'passed' })
+          .expect(200);
+      }
+    });
   });
 
   describe('GET /_api/acceptance/:id/criteria', () => {
@@ -679,6 +720,35 @@ describe('Acceptance (e2e)', () => {
         });
       expect(critRes.status).toBe(201);
       evCriteriaId = critRes.body.data.id;
+
+      // P0-3 必备维度覆盖：否则 Required Dimension Gate 把 riskLevel 推到 red，
+      // 本 describe 要断言的黄牌（仅证据充分性 medium 项）会被 4 个 high 维度阻断淹没
+      const dimRes = await wsHttp
+        .post(`/_api/acceptance/${evAcceptanceId}/criteria/batch`)
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send([
+          {
+            criteriaType: 'technical',
+            category: '日志',
+            content: '充分性联动：关键路径有结构化日志',
+          },
+          {
+            criteriaType: 'technical',
+            category: '监控/告警',
+            content: '充分性联动：关键指标有监控与阈值告警',
+          },
+          {
+            criteriaType: 'technical',
+            category: '依赖',
+            content: '充分性联动：外部依赖可用性与降级已验证',
+          },
+          {
+            criteriaType: 'technical',
+            category: '回滚',
+            content: '充分性联动：上线失败可回滚',
+          },
+        ]);
+      expect(dimRes.status).toBe(201);
 
       const auditRes = await wsHttp
         .post(`/_api/acceptance/${evAcceptanceId}/audit`)

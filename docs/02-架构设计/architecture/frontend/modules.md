@@ -54,7 +54,7 @@ ai-audiences: "session:all"
 | AI | `ai` + `@ai-sdk/react`（浏览器端 SDK）|
 | 国际化 | i18next 26 + react-i18next 17（zh/en）|
 | 主题/字体 | 自研 theme-context（无 next-themes）· `@fontsource-variable` inter/jetbrains-mono/noto-sans-sc · lucide-react · @lobehub/icons |
-| 组件根 | `components/ui/`（base-ui/shadcn 基础组件，81 个文件）· `components/brand/` · `components/icons/` |
+| 组件根 | `components/ui/`（**转发 shim 层**，源码真相 = `@mox-hub/ui`，ADR-022）· `components/brand/` · `components/icons/` |
 
 ## 二、真实目录结构
 
@@ -279,7 +279,7 @@ api/components/hooks + `lib/element-picker.ts` + `store/test-mode-store.ts`。�
 ```
 组件类型                 → 放置位置
 ──────────────────────────────────
-UI 原子组件（无业务语义）  → components/ui/（base-ui/shadcn，81 文件）
+UI 原子组件（无业务语义）  → `@mox-hub/ui`（mox-hub/ordo-ui 独立仓，ADR-022；主仓仅转发 shim）
 品牌/图标                → components/brand/ · components/icons/
 跨模块业务组件 / 复杂视图  → shared/components/（board-view、gantt-chart、emoji-picker…）
 模块专用组件             → modules/{module}/components/

@@ -14,28 +14,27 @@
 
 | 状态 | 数量 | 计入 LU 分母 | 必须在画廊展示 | 是否需消费方 |
 |---|---|---|---|---|
-| ✅ canonical | 333 | ✅ 计入 | ✅ 必须 | ✅ 必须 ≥1 |
-| 📦 standby | 19 | ❌ 不计 | ✅ 必须 | ❌ 不要求 |
-| 🔒 internal | 6 | ❌ 不计 | ❌ 免 | — |
-| ⛔ deprecated | 1 | ❌ 不计 | ✅ 标记 deprecated | — |
-| **合计** | **359** | | | |
+| ✅ canonical | 280 | ✅ 计入 | ✅ 必须 | ✅ 必须 ≥1 |
+| 📦 standby | 5 | ❌ 不计 | ✅ 必须 | ❌ 不要求 |
+| 🔒 internal | 2 | ❌ 不计 | ❌ 免 | — |
+| **合计** | **287** | | | |
 
 > **画廊豁免（H 类，2026-09-29 裁决）**：任何状态条目可登记 `galleryExempt`（一句话理由）豁免画廊 demo——豁免后不入覆盖率分母（`check-component-registry.mjs` §4.2 ④ 机器强制），但在设计系统页 Registry 对账区可见；**demo 豁免 ≠ 清退豁免**，五态裁决面不受影响。
+
+> 当前 0 条的状态：`deprecated`。注：`ui/menu-surface.ts` 实测有模块层消费方（document 模块页面直接 import 其中的常量），故按实测登记为 `canonical` 而非方案 §三 E6 建议的 `internal`（差异见批 1 报告）。
 
 分区分布（画廊组件类型 11 组分区口径，2026-09-29 重组；modules / shared 组件不在画廊分区体系、保留 'App Components'）：
 
 | 分区 | 数量 |
 |---|---|
-| Foundations | 1 |
-| Controls | 27 |
-| Data Display | 17 |
-| Feedback | 10 |
-| Navigation | 11 |
-| Overlays | 12 |
-| Layout & Shells | 12 |
+| Data Display | 9 |
+| Feedback | 4 |
+| Navigation | 1 |
+| Overlays | 1 |
+| Layout & Shells | 7 |
 | AI Execution | 25 |
 | App Patterns | 6 |
-| Semantic | 30 |
+| Semantic | 26 |
 | App Components | 208 |
 
 ## 待裁决清单（设计系统页「只看待裁决」视图同源）
@@ -47,120 +46,39 @@
 
 ## 完整清单
 
-### Foundations（1）
+### Data Display（9）
 
-#### UI 原子层 `src/components/ui/`（1）
-
-| 组件 | 路径 | 状态 | 消费方 | 治理说明 |
-|---|---|---|---|---|
-| tone | `src/components/ui/tone.ts` | ✅ canonical | — | —（**画廊豁免**：非可视组件（色彩工具，.ts），无可视 demo） |
-
-### Controls（27）
-
-#### UI 原子层 `src/components/ui/`（25）
+#### UI 原子层 `src/components/ui/`（3）
 
 | 组件 | 路径 | 状态 | 消费方 | 治理说明 |
 |---|---|---|---|---|
-| autocomplete | `src/components/ui/autocomplete.tsx` | ✅ canonical | — | — |
-| button | `src/components/ui/button.tsx` | ✅ canonical | — | — |
-| button-group | `src/components/ui/button-group.tsx` | 📦 standby | — | — |
-| calendar | `src/components/ui/calendar.tsx` | 📦 standby | — | — |
-| checkbox | `src/components/ui/checkbox.tsx` | ✅ canonical | — | — |
-| checkbox-group | `src/components/ui/checkbox-group.tsx` | 🔒 internal | — | — |
-| color-picker | `src/components/ui/color-picker.tsx` | ✅ canonical | — | — |
-| combobox | `src/components/ui/combobox.tsx` | ✅ canonical | — | — |
-| date-picker | `src/components/ui/date-picker.tsx` | ✅ canonical | — | — |
-| field | `src/components/ui/field.tsx` | ✅ canonical | — | — |
-| form | `src/components/ui/form.tsx` | ✅ canonical | — | — |
-| input | `src/components/ui/input.tsx` | ✅ canonical | — | — |
-| input-group | `src/components/ui/input-group.tsx` | ✅ canonical | — | — |
-| input-otp | `src/components/ui/input-otp.tsx` | 📦 standby | — | — |
-| label | `src/components/ui/label.tsx` | ✅ canonical | — | — |
-| select-field | `src/components/ui/select-field.tsx` | ✅ canonical | — | — |
-| number-field | `src/components/ui/number-field.tsx` | 📦 standby | — | — |
-| radio-group | `src/components/ui/radio-group.tsx` | ✅ canonical | — | — |
-| segmented-control | `src/components/ui/segmented-control.tsx` | ✅ canonical | — | — |
-| select | `src/components/ui/select.tsx` | ✅ canonical | — | — |
-| slider | `src/components/ui/slider.tsx` | 📦 standby | — | — |
-| switch | `src/components/ui/switch.tsx` | ✅ canonical | — | — |
-| textarea | `src/components/ui/textarea.tsx` | ✅ canonical | — | — |
-| toggle | `src/components/ui/toggle.tsx` | 📦 standby | — | — |
-| toggle-group | `src/components/ui/toggle-group.tsx` | 📦 standby | — | — |
-
-#### 原语层 `src/components/raw/`（G 类：非动作交互元素具名直通出口，internal 态不出画廊）（2）
-
-| 组件 | 路径 | 状态 | 消费方 | 治理说明 |
-|---|---|---|---|---|
-| raw-button | `src/components/raw/raw-button.tsx` | 🔒 internal | — | — |
-| raw-input | `src/components/raw/raw-input.tsx` | 🔒 internal | — | — |
-
-### Data Display（17）
-
-#### UI 原子层 `src/components/ui/`（10）
-
-| 组件 | 路径 | 状态 | 消费方 | 治理说明 |
-|---|---|---|---|---|
-| avatar | `src/components/ui/avatar.tsx` | ✅ canonical | — | — |
 | avatar-picker-field | `src/components/ui/avatar-picker-field.tsx` | ✅ canonical | — | — |
-| badge | `src/components/ui/badge.tsx` | ✅ canonical | — | — |
 | chart | `src/components/ui/chart.tsx` | ✅ canonical | — | — |
-| data-table | `src/components/ui/data-table.tsx` | ✅ canonical | — | — |
-| kbd | `src/components/ui/kbd.tsx` | ✅ canonical | — | — |
-| meter | `src/components/ui/meter.tsx` | 📦 standby | — | — |
 | mock-badge | `src/components/ui/mock-badge.tsx` | ✅ canonical | — | —（**画廊豁免**：运行时挂载件（入口/错误边界挂载），非画廊可 demo 形态） |
-| progress | `src/components/ui/progress.tsx` | ✅ canonical | — | — |
-| table | `src/components/ui/table.tsx` | ✅ canonical | — | — |
-
-#### 语义组件层 `src/components/semantic/`（G 类：新增组件默认落点）（7）
-
-| 组件 | 路径 | 状态 | 消费方 | 治理说明 |
-|---|---|---|---|---|
-| activity-heatmap | `src/components/semantic/activity-heatmap.tsx` | ✅ canonical | — | — |
-| dual-track-metric-pill | `src/components/semantic/dual-track-metric-pill.tsx` | ✅ canonical | — | — |
-| icon-metric | `src/components/semantic/icon-metric.tsx` | ✅ canonical | — | — |
-| icon-stack | `src/components/semantic/icon-stack.tsx` | ✅ canonical | — | — |
-| status-pill | `src/components/semantic/status-pill.tsx` | ✅ canonical | — | — |
-| file-type-icon | `src/components/semantic/file-type-icon.tsx` | ✅ canonical | — | — |
-| artifact-source-badge | `src/components/semantic/artifact-source-badge.tsx` | ✅ canonical | — | — |
-
-### Feedback（10）
-
-#### UI 原子层 `src/components/ui/`（4）
-
-| 组件 | 路径 | 状态 | 消费方 | 治理说明 |
-|---|---|---|---|---|
-| alert | `src/components/ui/alert.tsx` | ✅ canonical | — | — |
-| skeleton | `src/components/ui/skeleton.tsx` | ✅ canonical | — | — |
-| spinner | `src/components/ui/spinner.tsx` | ✅ canonical | — | — |
-| toast | `src/components/ui/toast.tsx` | ✅ canonical | — | — |
 
 #### 语义组件层 `src/components/semantic/`（G 类：新增组件默认落点）（6）
 
 | 组件 | 路径 | 状态 | 消费方 | 治理说明 |
 |---|---|---|---|---|
-| async-state | `src/components/semantic/async-state.tsx` | ✅ canonical | — | — |
-| empty-state | `src/components/semantic/empty-state.tsx` | ✅ canonical | — | — |
+| activity-heatmap | `src/components/semantic/activity-heatmap.tsx` | ✅ canonical | — | — |
+| dual-track-metric-pill | `src/components/semantic/dual-track-metric-pill.tsx` | ✅ canonical | — | — |
+| icon-stack | `src/components/semantic/icon-stack.tsx` | ✅ canonical | — | — |
+| status-pill | `src/components/semantic/status-pill.tsx` | ✅ canonical | — | — |
+| file-type-icon | `src/components/semantic/file-type-icon.tsx` | ✅ canonical | — | — |
+| artifact-source-badge | `src/components/semantic/artifact-source-badge.tsx` | ✅ canonical | — | — |
+
+### Feedback（4）
+
+#### 语义组件层 `src/components/semantic/`（G 类：新增组件默认落点）（4）
+
+| 组件 | 路径 | 状态 | 消费方 | 治理说明 |
+|---|---|---|---|---|
 | error-boundary | `src/components/semantic/error-boundary.tsx` | ✅ canonical | — | —（**画廊豁免**：运行时挂载件（入口/错误边界挂载），非画廊可 demo 形态） |
 | global-loading-state | `src/components/semantic/global-loading-state.tsx` | ✅ canonical | — | —（**画廊豁免**：运行时挂载件（入口/错误边界挂载），非画廊可 demo 形态） |
 | loading-overlay | `src/components/semantic/loading-overlay.tsx` | ✅ canonical | — | — |
 | page-error-fallback | `src/components/semantic/page-error-fallback.tsx` | ✅ canonical | — | —（**画廊豁免**：运行时挂载件（入口/错误边界挂载），非画廊可 demo 形态） |
 
-### Navigation（11）
-
-#### UI 原子层 `src/components/ui/`（10）
-
-| 组件 | 路径 | 状态 | 消费方 | 治理说明 |
-|---|---|---|---|---|
-| accordion | `src/components/ui/accordion.tsx` | 📦 standby | — | — |
-| breadcrumb | `src/components/ui/breadcrumb.tsx` | 📦 standby | — | — |
-| collapsible | `src/components/ui/collapsible.tsx` | 📦 standby | — | — |
-| command | `src/components/ui/command.tsx` | ✅ canonical | — | — |
-| menu | `src/components/ui/menu.tsx` | ✅ canonical | — | — |
-| menubar | `src/components/ui/menubar.tsx` | 📦 standby | — | — |
-| pagination | `src/components/ui/pagination.tsx` | ✅ canonical | — | — |
-| sortable | `src/components/ui/sortable.tsx` | ✅ canonical | — | — |
-| stepper | `src/components/ui/stepper.tsx` | ✅ canonical | — | — |
-| tabs | `src/components/ui/tabs.tsx` | ✅ canonical | — | — |
+### Navigation（1）
 
 #### 语义组件层 `src/components/semantic/`（G 类：新增组件默认落点）（1）
 
@@ -168,23 +86,7 @@
 |---|---|---|---|---|
 | tab-bar | `src/components/semantic/tab-bar.tsx` | ✅ canonical | — | — |
 
-### Overlays（12）
-
-#### UI 原子层 `src/components/ui/`（11）
-
-| 组件 | 路径 | 状态 | 消费方 | 治理说明 |
-|---|---|---|---|---|
-| alert-dialog | `src/components/ui/alert-dialog.tsx` | ✅ canonical | — | — |
-| anchored-menu | `src/components/ui/anchored-menu.tsx` | 🔒 internal | — | — |
-| context-menu | `src/components/ui/context-menu.tsx` | ✅ canonical | — | — |
-| dialog | `src/components/ui/dialog.tsx` | ✅ canonical | — | — |
-| drawer | `src/components/ui/drawer.tsx` | 📦 standby | — | — |
-| dropdown-menu | `src/components/ui/dropdown-menu.tsx` | ⛔ deprecated | — | —（**清退期限 2026-12-31** · §19.6，逾期 CI 失败） |
-| hover-card | `src/components/ui/hover-card.tsx` | ✅ canonical | — | — |
-| menu-surface | `src/components/ui/menu-surface.ts` | ✅ canonical | — | —（**画廊豁免**：非可视组件（菜单定位工具，.ts），无可视 demo） |
-| popover | `src/components/ui/popover.tsx` | ✅ canonical | — | — |
-| sheet | `src/components/ui/sheet.tsx` | ✅ canonical | — | — |
-| tooltip | `src/components/ui/tooltip.tsx` | ✅ canonical | — | — |
+### Overlays（1）
 
 #### 语义组件层 `src/components/semantic/`（G 类：新增组件默认落点）（1）
 
@@ -192,17 +94,7 @@
 |---|---|---|---|---|
 | view-display-popover | `src/components/semantic/view-display-popover.tsx` | 🔒 internal | — | — |
 
-### Layout & Shells（12）
-
-#### UI 原子层 `src/components/ui/`（5）
-
-| 组件 | 路径 | 状态 | 消费方 | 治理说明 |
-|---|---|---|---|---|
-| aspect-ratio | `src/components/ui/aspect-ratio.tsx` | 📦 standby | — | — |
-| card | `src/components/ui/card.tsx` | ✅ canonical | — | — |
-| item | `src/components/ui/item.tsx` | ✅ canonical | — | — |
-| scroll-area | `src/components/ui/scroll-area.tsx` | ✅ canonical | — | — |
-| separator | `src/components/ui/separator.tsx` | ✅ canonical | — | — |
+### Layout & Shells（7）
 
 #### 语义组件层 `src/components/semantic/`（G 类：新增组件默认落点）（6）
 
@@ -266,9 +158,9 @@
 | sub-page-toolbar | `src/components/semantic/sub-page-toolbar.tsx` | ✅ canonical | — | — |
 | toolbar-row | `src/components/semantic/toolbar-row.tsx` | ✅ canonical | — | — |
 
-### Semantic（30）
+### Semantic（26）
 
-#### 语义组件层 `src/components/semantic/`（G 类：新增组件默认落点）（30）
+#### 语义组件层 `src/components/semantic/`（G 类：新增组件默认落点）（26）
 
 | 组件 | 路径 | 状态 | 消费方 | 治理说明 |
 |---|---|---|---|---|
@@ -280,21 +172,17 @@
 | inline-diff | `src/components/semantic/inline-diff.tsx` | 📦 standby | — | —（**aiNotes**：数据契约：before/after 均为纯文本（\\n 分段，词级 diff 与段落结构由本件按 token 流保持，词法=拉丁词/CJK 逐字/标点逐字/空白串，单侧超 2000 token 整段替换兜底）；逐段裁决默认全部=接受；appliedText 合成口径=逐段走裁决（接受取新增侧 added、拒绝取保留侧 removed）顺序拼接，onApply 只在点击「应用修改」时发出、不随裁决自动发出，onSegmentChange 携带全量段决策（含 unchanged 段恒 accepted）。状态语义：逐段裁决三态——changed 段接受/拒绝二态切换（默认接受）、unchanged 段恒接受不可裁决；预览态经预览开关（aria-pressed）实时合成 appliedText 可预览；before/after 一致只渲染一致性说明、无动作行；源文本变化（消费方回退重传 props）整体重置裁决与预览。禁区：禁引入 jsdiff 等外部 diff 依赖（§22.6 承载件零依赖，tokenize/diffTextSegments/synthesizeAppliedText 已导出可复用）；不做消费方原文持有与应用后回退——组件内无二次撤销态，消费方在 onApply 前自行保存 before、回退时重传 props；禁把本件当编辑器（只裁决不编辑文本）；禁消费方另造第二套 diff 呈现（§10.1 唯一实现）） |
 | subtask-badge | `src/components/semantic/subtask-badge.tsx` | ✅ canonical | — | — |
 | chip | `src/components/semantic/chip.tsx` | ✅ canonical | — | — |
-| nav-status-dot | `src/components/semantic/nav-status-dot.tsx` | ✅ canonical | — | — |
 | theme-mode-card | `src/components/semantic/theme-mode-card.tsx` | ✅ canonical | — | — |
 | chart-card | `src/components/semantic/chart-card.tsx` | ✅ canonical | — | — |
 | confidence-bar | `src/components/semantic/confidence-bar.tsx` | ✅ canonical | — | — |
 | stat-tile | `src/components/semantic/stat-tile.tsx` | ✅ canonical | — | — |
-| metric-row | `src/components/semantic/metric-row.tsx` | ✅ canonical | — | — |
 | stats-card | `src/components/semantic/stats-card.tsx` | ✅ canonical | — | — |
 | donut-chart | `src/components/semantic/donut-chart.tsx` | ✅ canonical | — | — |
 | proportion-bar | `src/components/semantic/proportion-bar.tsx` | ✅ canonical | — | — |
 | chart-legend-grid | `src/components/semantic/chart-legend-grid.tsx` | 🔒 internal | — | — |
-| detail-section | `src/components/semantic/detail-section.tsx` | ✅ canonical | — | — |
 | settings-header | `src/components/semantic/settings-header.tsx` | ✅ canonical | — | — |
 | section-scrubber | `src/components/semantic/section-scrubber.tsx` | ✅ canonical | — | — |
 | settings-section-card | `src/components/semantic/settings-section-card.tsx` | ✅ canonical | — | — |
-| definition-row | `src/components/semantic/definition-row.tsx` | ✅ canonical | — | — |
 | status-definition-list | `src/components/semantic/status-definition-list.tsx` | ✅ canonical | — | — |
 | status-definition-dialog | `src/components/semantic/status-definition-dialog.tsx` | ✅ canonical | — | —（**画廊豁免**：受控表单弹窗（候选/回调由消费方注入），画廊以 status-definition-list demo 间接覆盖） |
 | sticky-save-bar | `src/components/semantic/sticky-save-bar.tsx` | ✅ canonical | — | — |

@@ -79,9 +79,16 @@ describe('ArtifactStorageService', () => {
 
     it('拒绝绝对路径注入越界', async () => {
       const { service } = makeService();
-      await expect(
-        service.resolveAbsolute('C:\\Windows\\system32\\evil.dll'),
-      ).rejects.toThrow(BadRequestException);
+      // 平台感知：注入串须是「本机语义下的绝对路径」——Windows 盘符 / POSIX 根路径
+      // （Linux 上 'C:\...' 是相对文件名，会正常落在 base 内，不触发越界；
+      //   CI = ubuntu，原写法在 CI 必失败。安全属性两边等价：绝对注入一律拒绝）
+      const injected =
+        process.platform === 'win32'
+          ? 'C:\\Windows\\system32\\evil.dll'
+          : '/etc/shadow';
+      await expect(service.resolveAbsolute(injected)).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });

@@ -126,8 +126,14 @@ export class OAuth2Controller {
     description: '断开账号成功',
     type: OAuth2DisconnectResponseDto,
   })
-  async logout(@Query('account_id') accountId: string) {
+  async logout(@Query('account_id') accountId?: string) {
     const userId = 'temp-user-id';
+
+    // 未指定 account_id = 无 OAuth2 断连语义（e2e 登出流不带该参数）——
+    // 直接跳过断连，避免 Prisma where {id: undefined} 500（M4 收口修复）
+    if (!accountId) {
+      return { disconnected: false };
+    }
 
     await this.oauth2Service.disconnectAccount(accountId, userId);
 

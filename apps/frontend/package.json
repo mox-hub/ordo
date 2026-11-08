@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "lint": "pnpm run lint:semantic && pnpm run lint:palette && pnpm run lint:ui-governance && pnpm run lint:tokens && pnpm run lint:registry && pnpm run lint:spacing && pnpm run lint:icons && pnpm run lint:layers && pnpm run lint:duplicate && eslint .",
+    "lint": "pnpm run lint:forwarding && pnpm run lint:semantic && pnpm run lint:palette && pnpm run lint:ui-governance && pnpm run lint:tokens && pnpm run lint:registry && pnpm run lint:spacing && pnpm run lint:icons && pnpm run lint:layers && pnpm run lint:duplicate && eslint .",
     "lint:palette": "node ./scripts/check-palette.mjs",
     "lint:semantic": "node ./scripts/check-semantic-classes.mjs",
     "lint:ui-governance": "node ./scripts/check-ui-governance.mjs",
@@ -26,7 +26,8 @@
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
     "e2e:report": "playwright show-report",
-    "check:bundle": "node ../../scripts/check-bundle.mjs"
+    "check:bundle": "node ../../scripts/check-bundle.mjs",
+    "lint:forwarding": "node scripts/check-ui-forwarding.mjs"
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.93",
@@ -50,6 +51,7 @@
     "@mdx-js/mdx": "^3.1.1",
     "@mdx-js/react": "^3.1.1",
     "@mdx-js/rollup": "^3.1.1",
+    "@mox-hub/ui": "catalog:",
     "@tailwindcss/vite": "^4",
     "@tanstack/react-query": "^5.90.21",
     "@tanstack/react-table": "^8.21.3",

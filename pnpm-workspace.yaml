@@ -5,6 +5,7 @@ packages:
 # 会触发根目录 `pnpm install --prod` 并要求清空 node_modules，破坏开发环境
 verifyDepsBeforeRun: false
 catalog:
+  '@mox-hub/ui': 0.1.0-alpha.2
   '@vitest/coverage-v8': 5.0.0
   '@vitest/ui': 5.0.0
   eslint: ^9.39.5
@@ -44,6 +45,7 @@ minimumReleaseAgeExclude:
   - expo-modules-jsi@58.0.15
   - expo@58.0.14
   - expo-router@58.0.23
+  - '@mox-hub/ui'
 # jest-dom matchers 对 vitest 5 Assertion 的类型增强：vitest 5 将 Assertion
 # 移入内部 chunk 且 'vitest' 顶层为 re-export 别名，jest-dom@6.10 对 'vitest'
 # 的模块增强静默失效（339 个 TS2339）。此 patch 在真实声明模块上追加 extends。

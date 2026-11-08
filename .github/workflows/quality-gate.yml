@@ -100,7 +100,13 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@mox-hub'
+      # --trust-lockfile：lockfile 经维护者本机解析并随 PR 目验（diff 51 行），CI 只消费；
+      # pnpm 的 supply-chain 验证步骤对 GitHub Packages 托管 tarball 无公开元数据，fail-closed
+      - run: pnpm install --frozen-lockfile --trust-lockfile
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm --filter "./apps/server" run prisma:generate
       - run: pnpm type-check
 
@@ -116,7 +122,13 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@mox-hub'
+      - run: pnpm install --frozen-lockfile --trust-lockfile
+        env:
+          # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
+          # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm lint
       - run: pnpm check:boundaries
 
@@ -134,7 +146,13 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@mox-hub'
+      - run: pnpm install --frozen-lockfile --trust-lockfile
+        env:
+          # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
+          # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - name: 前端单测（受影响文件）
         if: needs.changes.outputs.full != 'true'
         run: |
@@ -166,7 +184,13 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@mox-hub'
+      - run: pnpm install --frozen-lockfile --trust-lockfile
+        env:
+          # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
+          # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm --filter "./apps/server" run prisma:generate
       - name: server 单测（受影响文件）
         if: needs.changes.outputs.full != 'true'
@@ -191,7 +215,13 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@mox-hub'
+      - run: pnpm install --frozen-lockfile --trust-lockfile
+        env:
+          # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
+          # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm --filter "./packages/ordo-shared" run test
       - run: pnpm --filter "./apps/cli" run test
 
@@ -211,7 +241,13 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@mox-hub'
+      - run: pnpm install --frozen-lockfile --trust-lockfile
+        env:
+          # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
+          # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm --filter "./packages/ordo-shared" run build
       - run: pnpm --filter "./apps/mobile" run type-check
       - run: pnpm --filter "./apps/mobile" run lint
@@ -237,7 +273,13 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@mox-hub'
+      - run: pnpm install --frozen-lockfile --trust-lockfile
+        env:
+          # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
+          # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm --filter "./apps/server" run prisma:generate
       - name: contract:check（导出 openapi 需启动 AppModule，注入 CI 专用 env）
         env:
@@ -261,7 +303,13 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@mox-hub'
+      - run: pnpm install --frozen-lockfile --trust-lockfile
+        env:
+          # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
+          # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm --filter "./apps/server" run prisma:generate
       - name: 准备 CI 数据库（默认库 schema + 工作区模板库）
         working-directory: apps/server
@@ -315,7 +363,13 @@ jobs:
         with:
           node-version: 22
           cache: pnpm
-      - run: pnpm install --frozen-lockfile
+          registry-url: 'https://npm.pkg.github.com'
+          scope: '@mox-hub'
+      - run: pnpm install --frozen-lockfile --trust-lockfile
+        env:
+          # @mox-hub/ui 走 GitHub Packages（ADR-022）：GITHUB_TOKEN 需要包侧授予
+          # mox-hub/ordo 仓库读取权限（ordo-ui 仓 Package settings），或换用 NPM_TOKEN PAT
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
       - run: pnpm check:docs-sync
       - run: pnpm check:ledger
       - run: pnpm check:doc-coverage
