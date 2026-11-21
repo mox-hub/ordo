@@ -1,20 +1,21 @@
 /**
- * 上下文注入 chip —— 展示当前「正在查看」的实体（详情页自动上报），
- * 用户可一键移除（提前告知语义：移除后随消息附带的上下文即取消）。
+ * AssistantContextChip —— 主仓 store/i18n 适配层。
+ *
+ * 展示实现已迁至 @mox-hub/patterns；本文件读取 app-store 的 viewing 状态
+ * 并注入中文/英文文案，保留既有行为。
  */
 import { useTranslation } from 'react-i18next';
-import { Eye, X } from 'lucide-react';
+import { AssistantContextChip as PatternAssistantContextChip } from '@mox-hub/patterns/components/assistant-context-chip';
 import { useAppStore } from '@/infrastructure/store/app-store';
-import type { ViewingEntityType } from '@/shared/viewing-context';
 
-const TYPE_KEYS: Record<ViewingEntityType, string> = {
+const TYPE_KEYS = {
   task: 'assistant.context.task',
   bug: 'assistant.context.bug',
   document: 'assistant.context.document',
   repository: 'assistant.context.repository',
   member: 'assistant.context.member',
   project: 'assistant.context.project',
-};
+} as const;
 
 export function AssistantContextChip() {
   const { t } = useTranslation();
@@ -22,26 +23,23 @@ export function AssistantContextChip() {
   const setViewing = useAppStore((s) => s.setViewing);
 
   if (!viewing) return null;
-  const label = [t(TYPE_KEYS[viewing.type]), viewing.title]
-    .filter(Boolean)
-    .join(' · ');
 
   return (
-    <div
-      className="flex items-center gap-1.5 rounded-md border border-border bg-content-bg-secondary px-2 py-1 text-2xs text-content-text-muted"
-      data-ai-component="assistant.context-chip"
-    >
-      <Eye className="size-3 shrink-0 text-accent-purple" />
-      <span className="truncate">{label}</span>
-      <button
-        type="button"
-        onClick={() => setViewing(null)}
-        className="shrink-0 rounded-sm p-0.5 hover:bg-accent"
-        aria-label={t('assistant.context.remove')}
-        data-ai-action="assistant.context.remove.click"
-      >
-        <X className="size-3" />
-      </button>
-    </div>
+    <PatternAssistantContextChip
+      type={viewing.type}
+      title={viewing.title ?? ''}
+      onRemove={() => setViewing(null)}
+      labels={{
+        type: {
+          task: t(TYPE_KEYS.task),
+          bug: t(TYPE_KEYS.bug),
+          document: t(TYPE_KEYS.document),
+          repository: t(TYPE_KEYS.repository),
+          member: t(TYPE_KEYS.member),
+          project: t(TYPE_KEYS.project),
+        },
+        remove: t('assistant.context.remove'),
+      }}
+    />
   );
 }

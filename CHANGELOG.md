@@ -29,6 +29,17 @@ tags: "changelog,release"
 - i18n 去耦知情项：5 件组件（context-menu/data-table/async-state/detail-section/definition-row）内部文案缺省中文（与 zh-CN 逐字一致），en 主题暂固定中文
 - 依赖安装需 GitHub Packages 授权（read:packages PAT 或包侧仓库授权），`.npmrc` 以 `${NODE_AUTH_TOKEN}` 占位
 
+### 语义层独立（`@mox-hub/patterns`，W4 接线，2026-11-12；2026-11-22 依赖收口）
+
+- **semantic + AI 展示件共 72 件接入 `@mox-hub/patterns`**（`0.1.0-alpha.2`，GitHub Packages）：47 件 semantic/chart + 25 件 AI Execution；主仓 import 路径零改动
+- 依赖配对：`@mox-hub/patterns@0.1.0-alpha.2` ↔ `@mox-hub/ui@0.1.0-alpha.4`（catalog 统一），`@base-ui/react` ^1.9.0（ui alpha.4 peer 要求）；主仓不再引用本地临时 tarball，lock 可 frozen 安装
+- 接线形态：**35 件纯 `.ts` 转发 shim**（33 semantic + error-boundary + chart）+ **37 件主仓适配层**（12 semantic i18n/router/query/桌面壳 + 11 AI 纯 shim + 14 AI hook/store 适配器）；`assistant-panel` 只迁布局壳，会话/流式/批阅编排留主仓
+- 防漂移门禁扩展：`check-ui-forwarding.mjs` 扫描 `components/semantic/` 全目录，冻结 12 个适配器 + 4 个未迁移实体白名单；新增 `.tsx` 即 CI 红（shim 108 / 留置实体 18）
+- design-system registry 移除 72 条已迁条目（语义画廊分母重算为 **4/4 = 100%**）；COMPONENTS.md 再生（215 条）
+- 行为保持：i18n 组件由主仓集中注入 `t()`；`sub-page-toolbar`/`page-error-fallback` 保留 router Link；`global-loading-state` 保留 query-cache 对账；`assistant-*` 保留 hook/store/query mutation
+- 测试覆盖：22 件被删语义组件单测已随实现落 ordo-ui 同发版 tag（21/22 用例数持平或更多）；`page-header` 两例随内置 `favoriteId` 态移除，收藏态属主改由主仓 `FavoriteToggle` 承担并补 6 例（aria-pressed 翻转 / 页面隔离 / 路由回退 / data-ai）
+- i18n 收口：主仓根节点接 `@mox-hub/ui` 的 `I18nProvider`（`src/app/ui-i18n-provider.tsx`），UI 包内置文案随 i18next 语言切换（en 下 Dialog/Sheet 关闭按钮不再固定中文）
+
 ## [Unreleased]
 
 | 模块 | 变更 | linked_fr | test_evidence | doc_impact |

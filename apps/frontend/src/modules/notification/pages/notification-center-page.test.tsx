@@ -139,7 +139,9 @@ describe('NotificationCenterPage', () => {
     expect(screen.getByText('决策中心 · 就地拍板')).toBeTruthy();
 
     // 点击关闭按钮 → Sheet 收起
-    fireEvent.click(screen.getByRole('button', { name: /close/i }));
+    // @mox-hub/ui 0.1.0-alpha.4 起关闭按钮走包内 zh-CN 默认文案（「关闭」），
+    // 英文名 /close/ 不再命中；两种口径都接受。
+    fireEvent.click(screen.getByRole('button', { name: /close|关闭/i }));
     await vi.waitFor(() => {
       expect(screen.queryByRole('dialog')).toBeNull();
     });

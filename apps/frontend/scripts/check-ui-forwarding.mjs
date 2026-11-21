@@ -1,13 +1,15 @@
 #!/usr/bin/env node
 /**
- * 防漂移门禁（M4，2026-11-08）：迁移涉及的目录只允许两类文件——
- *   ① 纯 re-export 转发 shim（.ts，内容仅限头部注释 + `export * from '@mox-hub/ui/...'`）
- *   ② 登记在 KEEP 实体白名单里的未迁移件（chart / avatar-picker-field / mock-badge）
+ * 防漂移门禁（M4，2026-11-08；W4 扩展 2026-11-12）：迁移涉及的目录只允许三类文件——
+ *   ① 纯 re-export 转发 shim（.ts，内容仅限头部注释 + 一行
+ *      `export * from '@mox-hub/ui/components/…'` 或 `@mox-hub/patterns/components/…'`）
+ *   ② 登记在 KEEP 实体白名单里的未迁移件（avatar-picker-field / mock-badge）
+ *   ③ semantic/ 下冻结的「适配器 / 未迁移实体」白名单（新增 .tsx 即 CI 红）
  * 出现新 .tsx / 非白名单实体实现 / shim 内混入逻辑 = 退出码 1。
- * 扫描面：components/ui/、components/raw/、components/semantic/ 的 7 个升层件路径
- * （semantic 其余实体件留在主仓，不归本门禁管）。组件改动一律进 @mox-hub/ui。
+ * 扫描面：components/ui/、components/raw/ 全目录；components/semantic/ 全目录。
+ * 组件改动一律进 @mox-hub/ui 或 @mox-hub/patterns。
  */
-import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -16,45 +18,47 @@ const SRC = join(PKG_ROOT, 'src', 'components')
 
 // 未迁移实体白名单（依赖闭包或主仓 mock 系统耦合，见 ordo-ui docs/迁移对账-v1.md §三）
 const KEEP_FILES = new Set([
-  'components/ui/chart.tsx',
   'components/ui/avatar-picker-field.tsx',
   'components/ui/mock-badge.tsx',
 ])
 
-// 升层件（迁移进 @mox-hub/ui，主仓留 shim）
-const UPGRADED_SEMANTIC = [
-  'empty-state', 'async-state', 'detail-section', 'definition-row',
-  'metric-row', 'icon-metric', 'nav-status-dot',
-]
+// semantic/ 冻结白名单：12 个 i18n/router/query/桌面壳适配器。
+// 这些件保留主仓 .tsx，只把展示实现转发到 @mox-hub/patterns。
+const SEMANTIC_ADAPTERS = new Set([
+  'ai-verdict-pill',
+  'confidence-bar',
+  'filter-chips',
+  'form-dialog',
+  'global-loading-state',
+  'page-error-fallback',
+  'path-input',
+  'section-scrubber',
+  'sticky-save-bar',
+  'sub-page-toolbar',
+  'toolbar-row',
+  'view-display-popover',
+])
 
-const SHIM_RE = /^export \* from '@mox-hub\/ui\/components\/[^']+'$/
+// semantic/ 未迁移实体（本轮不在 72 件接线面内；冻结，新增必须先迁 patterns）
+const SEMANTIC_UNMIGRATED = new Set([
+  'artifact-source-badge',
+  'status-definition-dialog',
+  'status-definition-list',
+  'tab-bar',
+])
+
+const SHIM_RE = /^export \* from '@mox-hub\/(?:ui|patterns)\/components\/[^']+';?$/
 
 const errors = []
 const counts = { shim: 0, keep: 0 }
 
-function checkFile(rel) {
-  const p = join(SRC, rel.replace(/^components\//, ''))
-  if (KEEP_FILES.has(rel)) {
-    counts.keep++
-    return
-  }
-  if (!existsSync(p)) {
-    errors.push(`components/${rel}: 迁移件缺失转发 shim（应有 ${rel.replace(/\.tsx$/, '.ts')}）`)
-    return
-  }
-  const body = readFileSync(p, 'utf8')
-  const codeLines = body
+/** 去掉块注释与行注释后的有效代码行（shim 只允许 1 行 export）。 */
+function shimCodeLines(body) {
+  return body
+    .replace(/\/\*[\s\S]*?\*\//g, '')
     .split('\n')
-    .filter((l) => !l.trim().startsWith('//') && l.trim() !== '')
-  const ok =
-    codeLines.length === 1 &&
-    codeLines[0].startsWith('export * from') &&
-    SHIM_RE.test(codeLines[0].trim())
-  if (!ok) {
-    errors.push(`components/${rel}: shim 内容漂移（只许一行 export * from '@mox-hub/ui/components/…' + 注释）`)
-    return
-  }
-  counts.shim++
+    .map((line) => line.trim())
+    .filter((line) => line !== '' && !line.startsWith('//'))
 }
 
 function scanMigrated(dir, prefix) {
@@ -75,15 +79,52 @@ function scanMigrated(dir, prefix) {
       continue
     }
     const body = readFileSync(p, 'utf8')
-    const codeLines = body
-      .split('\n')
-      .filter((l) => !l.trim().startsWith('//') && l.trim() !== '')
+    const codeLines = shimCodeLines(body)
     const ok =
       codeLines.length === 1 &&
       codeLines[0].startsWith('export * from') &&
       SHIM_RE.test(codeLines[0].trim())
     if (!ok) {
-      errors.push(`components/${rel}: shim 内容漂移（只许一行 export * from '@mox-hub/ui/components/…' + 注释）`)
+      errors.push(`components/${rel}: shim 内容漂移（只许一行 export * from '@mox-hub/{ui,patterns}/components/…' + 注释）`)
+      continue
+    }
+    counts.shim++
+  }
+}
+
+// semantic/ 冻结扫描：.ts 必须是纯 shim；.tsx 只允许适配器 / 未迁移实体白名单
+function scanSemantic(dir) {
+  for (const name of readdirSync(dir)) {
+    const p = join(dir, name)
+    if (statSync(p).isDirectory()) {
+      errors.push(`components/semantic/${name}: semantic 目录不允许子目录`)
+      continue
+    }
+    if (/\.(test|spec)\.(ts|tsx)$/.test(name)) continue
+    if (name.endsWith('.md')) continue
+    const base = name.replace(/\.(ts|tsx)$/, '')
+    if (name.endsWith('.tsx')) {
+      if (SEMANTIC_ADAPTERS.has(base) || SEMANTIC_UNMIGRATED.has(base)) {
+        counts.keep++
+        continue
+      }
+      errors.push(
+        `components/semantic/${name}: 未登记实体——展示组件应迁 @mox-hub/patterns；确需留主仓请登记白名单`,
+      )
+      continue
+    }
+    if (!name.endsWith('.ts')) {
+      errors.push(`components/semantic/${name}: 只允许 .ts 转发 shim 或白名单 .tsx`)
+      continue
+    }
+    const body = readFileSync(p, 'utf8')
+    const codeLines = shimCodeLines(body)
+    const ok =
+      codeLines.length === 1 &&
+      codeLines[0].startsWith('export * from') &&
+      SHIM_RE.test(codeLines[0].trim())
+    if (!ok) {
+      errors.push(`components/semantic/${name}: shim 内容漂移（只许一行 export * from '@mox-hub/{ui,patterns}/components/…' + 注释）`)
       continue
     }
     counts.shim++
@@ -93,15 +134,12 @@ function scanMigrated(dir, prefix) {
 // ui/ 与 raw/ 全目录扫描（迁移件 + 留置件都在这里）
 scanMigrated(join(SRC, 'ui'), 'ui/')
 scanMigrated(join(SRC, 'raw'), 'raw/')
-// 升层件逐路径校验（semantic 其余实体件不在扫描面内；shim 为 .ts）
-for (const name of UPGRADED_SEMANTIC) {
-  checkFile(`semantic/${name}.ts`)
-}
+scanSemantic(join(SRC, 'semantic'))
 
 if (errors.length > 0) {
   console.error(`✗ UI 转发层防漂移检查失败（${errors.length}）：`)
   for (const e of errors) console.error('  -', e)
-  console.error('\n组件源码唯一真相 = @mox-hub/ui（mox-hub/ordo-ui）。请移改至该仓并走其 registry/护栏流程。')
+  console.error('\n组件源码唯一真相 = @mox-hub/ui（原子）或 @mox-hub/patterns（语义层）。请移改至 mox-hub/ordo-ui 并走其 registry/护栏流程。')
   process.exit(1)
 }
 console.log(

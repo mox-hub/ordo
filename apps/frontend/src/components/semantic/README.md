@@ -1,5 +1,10 @@
 # components/semantic —— 语义组件层
 
+> **2026-11-12（W4）：47 件已迁 `@mox-hub/patterns`**（mox-hub/ordo-ui，GitHub Packages）。
+> 本目录现在只有三类文件：`.ts` 转发 shim、冻结的 i18n/router/query/桌面壳适配器（12 件）、
+> 未迁移实体（`artifact-source-badge` / `status-definition-dialog` / `status-definition-list` / `tab-bar`）。
+> 新增展示组件请先落 `@mox-hub/patterns`；`check-ui-forwarding.mjs` 会拦截未登记 `.tsx`。
+
 G 类三层分层解耦（`docs/design/修改方案-G类-分层解耦-2026-09-29.md`）定义的**新增组件默认落点**。
 本目录组件在 raw 原语与 ui 存量原子之上封装出「带基线的语义整体」，是基线变更的隔离层。
 
