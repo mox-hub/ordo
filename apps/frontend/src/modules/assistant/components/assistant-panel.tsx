@@ -17,8 +17,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
-import { Bot, Clock, Maximize2, Minimize2, X } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { Clock, Maximize2, Minimize2, X } from 'lucide-react';
+import { AssistantPanelLayout } from '@mox-hub/patterns/components/assistant-panel-layout';
 import { toast } from '@/components/ui/toast';
 import { HeaderActionButton } from '@/components/semantic/header-action-button';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -48,7 +48,6 @@ import { AssistantQuickPrompts } from './assistant-quick-prompts';
 import { AssistantRunLine } from './assistant-run-line';
 import { AssistantHistoryMenu } from './assistant-history-menu';
 import { AssistantContextChip } from './assistant-context-chip';
-import { AssistantStatusDot, STATE_TEXT } from './assistant-status-dot';
 import { DecisionReviewModal } from '@/shared/decision-card/decision-review-modal';
 
 /** 当前路由所属项目（/app/projects/:id/*，排除 dashboard） */
@@ -284,45 +283,23 @@ export function AssistantPanel() {
   const [reviewOpen, setReviewOpen] = useState(false);
 
   return (
-    <div
-      className="flex h-full w-full items-stretch justify-center gap-3 select-none"
-      data-ai-component="assistant.panel-wrapper"
-    >
-      {/* 待决卡片缩小挂条（默认伴随形态）：点击开全屏集中批阅遮罩 */}
-      {hasDecisions && (
-        <AssistantDecisionTab
-          count={stripItems.length}
-          hasBlocking={hasBlocking}
-          onOpen={() => setReviewOpen(true)}
-        />
-      )}
-
-      {/* 主对话面板 */}
-      <div
-        className={cn(
-          'relative flex flex-col overflow-hidden rounded-xl border border-border/80 bg-background/95 shadow-xs backdrop-blur-xl',
-          assistantExpanded
-            ? 'flex-1 min-w-0'
-            : 'w-120 max-w-[calc(100vw-2rem)]',
-        )}
-        data-ai-component="assistant.panel"
-      >
-
-        {/* 头部：人格名 + 状态 + 历史 + 放大/还原 + 关闭（模型选择与办公室跳转已裁撤） */}
-        <div className="flex h-12 shrink-0 items-center gap-2 border-b border-border px-3">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-accent-purple-light text-accent-purple">
-            <Bot className="size-4.5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold text-content-text">{personaName}</p>
-            <p className="flex items-center gap-1.5 truncate text-2xs text-content-text-muted">
-              <AssistantStatusDot state={status.state} />
-              <span className={STATE_TEXT[status.state]}>{t(`assistant.status.${status.state}`)}</span>
-              <span aria-hidden="true">·</span>
-              <span className="truncate">{t('assistant.personaRole')}</span>
-            </p>
-          </div>
-
+    <AssistantPanelLayout
+      expanded={assistantExpanded}
+      personaName={personaName}
+      statusState={status.state}
+      statusLabel={t(`assistant.status.${status.state}`)}
+      personaRole={t('assistant.personaRole')}
+      decisionTab={
+        hasDecisions ? (
+          <AssistantDecisionTab
+            count={stripItems.length}
+            hasBlocking={hasBlocking}
+            onOpen={() => setReviewOpen(true)}
+          />
+        ) : undefined
+      }
+      headerActions={
+        <>
           <AssistantHistoryMenu
             conversations={conversations ?? []}
             isLoading={conversationsLoading}
@@ -355,76 +332,76 @@ export function AssistantPanel() {
             onClick={() => setAiPanelOpen(false)}
             data-ai-action="assistant.panel.close.click"
           />
-        </div>
-
-        {/* 滚动区：早报 → 消息流。
-            AssistantChatSession 以 key 重挂载切换会话，提供 useChat helpers 上下文 */}
-        {sessionReady ? (
-          <AssistantChatSession
-            key={chatKey}
-            chatId={chatKey}
-            conversationId={activeConversationId ?? undefined}
-            initialMessages={
-              pendingNew ? [] : toAssistantUiMessages(session?.messages ?? [])
-            }
-            onFinished={() => {
-              void queryClient.invalidateQueries({
-                queryKey: assistantKeys.conversations(projectId),
-              });
-            }}
-          >
-            <AssistantOutboundDispatcher
-              outbound={outbound}
-              consumedNonce={consumedOutboundNonce}
-              onConsumed={setConsumedOutboundNonce}
-              projectId={projectId}
-              activeConversationId={activeConversationId ?? undefined}
-              ensureConversation={ensureConversation}
-            />
-            <div className="min-h-0 flex-1 overflow-hidden">
-              <ScrollArea className="h-full w-full">
-                <div className="flex flex-col gap-4 p-3">
-                  <AssistantOpeningReport status={status} personaName={personaName} />
-                  <AssistantMessageList />
-                </div>
-              </ScrollArea>
-            </div>
-            <AssistantChatFooter
-              runEntries={runEntries ?? []}
-              projectId={projectId}
-              activeConversationId={activeConversationId ?? undefined}
-              ensureConversation={ensureConversation}
-            />
-          </AssistantChatSession>
-        ) : (
-          <>
-            <div className="min-h-0 flex-1 overflow-hidden">
-              <ScrollArea className="h-full w-full">
-                <div className="flex flex-col gap-4 p-3">
-                  <AssistantOpeningReport status={status} personaName={personaName} />
-                  <div className="space-y-2 px-1">
-                    <SkeletonText lines={3} />
-                  </div>
-                </div>
-              </ScrollArea>
-            </div>
-            <div className="shrink-0 space-y-2.5 border-t border-border p-3">
-              <div className="space-y-2 px-1">
-                <SkeletonText lines={2} />
+        </>
+      }
+      reviewModal={
+        <DecisionReviewModal
+          open={reviewOpen}
+          onClose={() => setReviewOpen(false)}
+          decisions={stripItems}
+          busyId={busyId}
+          onAction={handleAction}
+        />
+      }
+    >
+      {/* 滚动区：早报 → 消息流。
+          AssistantChatSession 以 key 重挂载切换会话，提供 useChat helpers 上下文 */}
+      {sessionReady ? (
+        <AssistantChatSession
+          key={chatKey}
+          chatId={chatKey}
+          conversationId={activeConversationId ?? undefined}
+          initialMessages={
+            pendingNew ? [] : toAssistantUiMessages(session?.messages ?? [])
+          }
+          onFinished={() => {
+            void queryClient.invalidateQueries({
+              queryKey: assistantKeys.conversations(projectId),
+            });
+          }}
+        >
+          <AssistantOutboundDispatcher
+            outbound={outbound}
+            consumedNonce={consumedOutboundNonce}
+            onConsumed={setConsumedOutboundNonce}
+            projectId={projectId}
+            activeConversationId={activeConversationId ?? undefined}
+            ensureConversation={ensureConversation}
+          />
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <ScrollArea className="h-full w-full">
+              <div className="flex flex-col gap-4 p-3">
+                <AssistantOpeningReport status={status} personaName={personaName} />
+                <AssistantMessageList />
               </div>
+            </ScrollArea>
+          </div>
+          <AssistantChatFooter
+            runEntries={runEntries ?? []}
+            projectId={projectId}
+            activeConversationId={activeConversationId ?? undefined}
+            ensureConversation={ensureConversation}
+          />
+        </AssistantChatSession>
+      ) : (
+        <>
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <ScrollArea className="h-full w-full">
+              <div className="flex flex-col gap-4 p-3">
+                <AssistantOpeningReport status={status} personaName={personaName} />
+                <div className="space-y-2 px-1">
+                  <SkeletonText lines={3} />
+                </div>
+              </div>
+            </ScrollArea>
+          </div>
+          <div className="shrink-0 space-y-2.5 border-t border-border p-3">
+            <div className="space-y-2 px-1">
+              <SkeletonText lines={2} />
             </div>
-          </>
-        )}
-      </div>
-
-      {/* 全屏集中批阅遮罩（Portal 到 body；开启期间 Esc 与点击均不连带关闭对话面板） */}
-      <DecisionReviewModal
-        open={reviewOpen}
-        onClose={() => setReviewOpen(false)}
-        decisions={stripItems}
-        busyId={busyId}
-        onAction={handleAction}
-      />
-    </div>
+          </div>
+        </>
+      )}
+    </AssistantPanelLayout>
   );
 }

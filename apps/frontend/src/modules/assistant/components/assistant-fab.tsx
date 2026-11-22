@@ -1,11 +1,12 @@
 /**
- * AI 助理浮窗入口 —— 右下角圆形按钮。
- * 点击开合浮窗；面板常挂载（关闭仅隐藏，流式回复与会话状态不丢）；
- * 放大态 ≈ 屏幕 1/4（50vw × 50vh），默认 380×560 固定右下。
+ * AssistantFab —— 主仓 store/ESC/点击外部适配层。
+ *
+ * 浮窗外壳已迁至 @mox-hub/patterns（AssistantFabShell）；本文件保留 store
+ * 开合状态、点击外部关闭与 ESC 分层拦截，并挂载 AssistantPanel。
  */
 import { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
-import { cn } from '@/lib/utils';
+import { AssistantFabShell } from '@mox-hub/patterns/components/assistant-fab';
 import { useAppStore } from '@/infrastructure/store/app-store';
 import { hasOpenInnerLayer, isWithinAiCollabSurface } from '@/shared/lib/floating-layers';
 import { AssistantPanel } from './assistant-panel';
@@ -44,19 +45,12 @@ export function AssistantFab() {
   }, [aiPanelOpen, setAiPanelOpen]);
 
   return (
-    <div
-      role="dialog"
-      aria-label={t('assistant.personaName')}
-      className={cn(
-        'fixed bottom-28 left-1/2 -translate-x-1/2 z-modal pointer-events-auto transition-all duration-normal',
-        assistantExpanded
-          ? 'h-dialog-scroll w-[min(96vw,1000px)]'
-          : 'h-[560px] w-auto max-w-[calc(100vw-2rem)]',
-        !aiPanelOpen && 'pointer-events-none hidden',
-      )}
-      data-ai-component="assistant.fab-window"
+    <AssistantFabShell
+      open={aiPanelOpen}
+      expanded={assistantExpanded}
+      label={t('assistant.personaName')}
     >
       <AssistantPanel />
-    </div>
+    </AssistantFabShell>
   );
 }

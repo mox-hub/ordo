@@ -40,6 +40,10 @@
  * shim 消费。本表这些条目为**冻结镜像快照**——不再增改（画廊 demo 经 shim 仍渲染，
  * 覆盖率门禁分母与 100% 不变）；ui 层唯一真相 = `@mox-hub/ui/registry`（73 条，
  * 五态治理在彼仓延续）。semantic/modules/shared 条目仍在本表活维护。
+ *
+ * 2026-11-12（W4）：semantic/chart + AI Execution 共 72 条已迁 `@mox-hub/patterns`
+ * （mox-hub/ordo-ui），本表对应条目移除；semantic 仅保留 4 件未迁移实体
+ * （artifact-source-badge / status-definition-dialog / status-definition-list / tab-bar）。
  */
 
 export type ComponentStatus =
@@ -65,134 +69,84 @@ export interface ComponentEntry {
 }
 
 export const COMPONENT_REGISTRY: ComponentEntry[] = [
-  { name: 'activity-heatmap', file: 'semantic/activity-heatmap.tsx', section: 'Data Display', status: 'canonical' },
-  { name: 'ai-agent-badge', file: 'modules/issue/components/ai-agent-badge.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'ai-context-summary', file: 'modules/project/components/ai-context-summary.tsx', section: 'AI Execution', status: 'canonical' },
   // G7 倒置收编迁出 ui/，保留登记保 LU（2026-09-29）
-  { name: 'ai-execution-badge', file: 'modules/issue/components/ai-execution-badge.tsx', section: 'App Components', status: 'canonical' },
   // JEV 快速判断徽注（CAP-A-27 扩展批）：离散判定+置信度统一呈现，advisory 声明恒挂
-  { name: 'ai-verdict-pill', file: 'semantic/ai-verdict-pill.tsx', section: 'Semantic', status: 'canonical' },
   // 审批操作统一件（组件规划账本 B2 · CAP-A-27）：Agent 行动前请示的风险档 + 行动预览 +
   // 单键批准/拒绝 + 决后收场仪式（确认层 1s → 凭证行）。消费方：executions 审批段。
-  { name: 'approval-card', file: 'semantic/approval-card.tsx', section: 'Semantic', status: 'canonical', aiNotes: '数据契约：title 必填（请求做什么）；riskSignal 为四档信号（复用 ai-verdict-pill 的 ConfidenceSignal 枚举，经 normalizeConfidenceSignal 防御归一，null=未知灰档），风险方向渲染内置于本件（3=红/2=黄/1=蓝/0=灰，与置信方向相反——高风险必须红），消费方只折算枚举不配色；riskLabel/preview/riskNote/requester 为 ReactNode 槽位，aiJudge advisory 附注由消费方组装传入。状态语义：resolved===undefined 为非受控，本件自管收场仪式（提交→确认覆盖层 role=status 约 1s→凭证行 决定+时间）；resolved 非 undefined 为受控，终态由父级数据驱动（null 待决 / approve / reject / neutral 系统处置），本件只发 onResolve；onResolve 返回 Promise 时等待落定再进确认态，reject 视为未决回滚待决态（错误呈现归消费方）。快捷键 Ctrl+Enter 批准 / Esc 拒绝，焦点在输入类控件内自动让路。禁区：禁绕过本件手写审批操作对（§22.4 收场仪式内置于本件，重写即丢仪式）；禁把 riskSignal 当置信度传（方向相反，高风险落绿档即事故）；禁在有 aiJudge 数据时省略 riskNote 附注（§22.3 观察位不丢）；消费方不得在卡内重复注册同键位快捷键' },
   // 自治边界拨盘（账本 B5）：「哪些动作它可以自己跑、哪些必先问我」的运行时边界操作 UI。
   // 三档段选（锁定必问/先问我/自己跑，从严到宽），locked 档带锁标；滑块 translateX 归位
   // 对齐 segmented-control 视觉语言；样例滑轨展示该成员近期真实动作的落档分布（只读）。
   // 已接真：adjust-trust-dialog 拨盘即选择器，映射 Member.trustLevel 三级后走既有
   // PATCH /members/:id 持久化。
-  { name: 'autonomy-dial', file: 'semantic/autonomy-dial.tsx', section: 'Semantic', status: 'canonical', aiNotes: '数据契约：value 走自治语义词表 locked/ask/auto 且必受控（配置入口，不持有态）；真实持久化形状是 Member.trustLevel（1/2/3），tier↔档位映射（观察者=locked/协助者=ask/受托者=auto，1:1 无损）由消费方持有，领域词表不进语义层；samples 只收真实动作样例（label+level），无动作→档位映射数据前禁造假样例（§9）。状态语义：三档即三态，selected 由 aria-checked 承载、滑块仅视觉；locked 档锁标 + lockedLabel 说明（为什么锁定）；disabled 整件退出键盘流。禁区：禁造第二套授权档位配置模型（B-07 唯一真相是 trustLevel 三级）、禁做非受控用法、禁绕过本件手写档位段选（宪法 §22.1 等人一等状态律的配置面承载件）' },
   { name: 'avatar-picker-field', file: 'ui/avatar-picker-field.tsx', section: 'Data Display', status: 'canonical' },
   { name: 'chapter-scrubber', file: 'modules/document/components/chapter-scrubber.tsx', section: 'Layout & Shells', status: 'canonical' },
-  { name: 'chart', file: 'ui/chart.tsx', section: 'Data Display', status: 'canonical' },
   // 上下文占用格场（账本 B4）：上下文窗口渲染为定量格排，分区（系统提示/工具/记忆/对话/文件）
   // 按 token 占比填充、尾部虚框（free）；悬停点亮 + tooltip「分区名 · token 数 · 占比」；
   // 阈值语义色 <70 中性 / 70-90 warning / >90 danger 只落汇总读数；防御归一（负数/NaN 归零、
   // 总和超限等比收缩到满）。role=img + 结论式 aria（§17.6）。登记 standby（chip 先例：组件
   // 已落地、消费前置缺失——服务端需先暴露窗口上限（contextWindow）契约，禁消费方手造
   // limit（§22.2），接线后升 canonical；接线方案留 .roadmap-handoff 交接快照）。
-  { name: 'context-usage', file: 'semantic/context-usage.tsx', section: 'Semantic', status: 'standby', aiNotes: '数据契约：segments（分区 key/label/tokens）+ limit（窗口总量）双输入；前端尚无窗口上限契约，禁传估算 limit 冒充（诚实渲染，§22.2）；tokens 负数/NaN/Infinity 内部归一为 0，分区总和超限等比收缩渲染到 100%。状态语义：data-usage-level = neutral/warning/danger（<70/70-90/>90，常量已导出），格子恒用分区色不参与阈值染色；compaction（压缩）占比变化直接反映为格场变化，收敛动画二期。禁区：禁绕过本件手写上下文格场、禁传 key=free 的分区（free 由组件派生）、禁在有窗口上限数据前挂载本件（无 limit 即整件 null）' },
   // G7 倒置收编迁出 ui/，保留登记保 LU（2026-09-29）
   { name: 'data-list', file: 'shared/components/data-list.tsx', section: 'App Components', status: 'canonical' },
-  { name: 'data-table-shell', file: 'semantic/data-table-shell.tsx', section: 'Layout & Shells', status: 'canonical' },
   // G7 倒置收编迁出 ui/，保留登记保 LU（2026-09-29）
   { name: 'document-preview-dialog', file: 'modules/document/components/document-preview-dialog.tsx', section: 'App Components', status: 'canonical' },
-  { name: 'dual-track-metric-pill', file: 'semantic/dual-track-metric-pill.tsx', section: 'Data Display', status: 'canonical' },
-  { name: 'error-boundary', file: 'semantic/error-boundary.tsx', section: 'Feedback', status: 'canonical', galleryExempt: '运行时挂载件（入口/错误边界挂载），非画廊可 demo 形态' },
   // 执行编排树（组件规划账本 B1 · P0 · CAP-A-04/B-03/C-06/G5）：「一个编排者+多个子执行」的
   // 纵向缩进树视图——六态、等人琥珀高亮可计数（§22.1）、成本沿分支现算折叠不隐账（§22.2）、
   // 失败分支保留可重试（§22.3）。消费方：run-details-dialog（单根退化态）。
-  { name: 'exec-tree', file: 'semantic/exec-tree.tsx', section: 'Semantic', status: 'canonical', aiNotes: '数据契约：root 每次全量传入、节点以 id 保位（展开面板等局部状态挂行组件，id 稳定即不丢）；cost/tokens 只传节点自身值，分支与全树汇总由本件遍历现算（汇总与折叠态无关，折叠不隐账）；重试产生新节点（新 id）由数据层挂 children，本件只渲染不覆盖。状态语义：六态 queued/running/waiting/done/failed/stopped——waiting=等人一等态（琥珀徽+「需要你处理」+头部计数 aria-live，视觉权级最高，禁 muted 降级）；running=蓝呼吸点+live 计时+CostFigure running 动效；done=绿勾；failed=红+可展开错误（mono 红字）+重试入口；queued/stopped=muted 降权。ExecutionRunStatus 映射：draft/planned→queued、in_progress→running、pending_approval→waiting、completed/approved→done、failed→failed、blocked/superseded/rejected→stopped。折叠=条件渲染（卸载，§22.5 inert 最强保证+深树渲染窗口），受控 collapsedIds/非受控 defaultCollapsedIds 双模。禁区：禁传预汇总成本值（§22.2 两处口径必漂移）；禁为演示伪造 children 假数据进生产（数据层平铺期只挂单根退化态）；禁把 waiting 渲染成 muted 灰态（§22.1）；禁覆盖式重试抹掉失败节点（§22.3，UI 层不得先于数据层抹历史）；连线/状态色必须走 TONE_CLASS 词表，禁自配色' },
-  { name: 'filter-chips', file: 'semantic/filter-chips.tsx', section: 'App Patterns', status: 'canonical' },
-  { name: 'global-loading-state', file: 'semantic/global-loading-state.tsx', section: 'Feedback', status: 'canonical', galleryExempt: '运行时挂载件（入口/错误边界挂载），非画廊可 demo 形态' },
-  { name: 'header-action-button', file: 'semantic/header-action-button.tsx', section: 'App Patterns', status: 'canonical' },
-  { name: 'icon-stack', file: 'semantic/icon-stack.tsx', section: 'Data Display', status: 'canonical' },
   // diff 优先律承载件（宪法 §22.6 / 组件规划账本 B6）：AI 修改既有内容默认 diff 形态
   // （改前/改后对照）而非替换后成品；零依赖词级 LCS、逐段接受/拒绝、应用前实时预览合成结果。
   // 登记 standby（chip 先例：组件与 20 例测试已落地、消费接线留后续批——候选消费方
   // document-enhance / PromptEditor / member-profile-draft，接线同批升 canonical）。
-  { name: 'inline-diff', file: 'semantic/inline-diff.tsx', section: 'Semantic', status: 'standby', aiNotes: '数据契约：before/after 均为纯文本（\\n 分段，词级 diff 与段落结构由本件按 token 流保持，词法=拉丁词/CJK 逐字/标点逐字/空白串，单侧超 2000 token 整段替换兜底）；逐段裁决默认全部=接受；appliedText 合成口径=逐段走裁决（接受取新增侧 added、拒绝取保留侧 removed）顺序拼接，onApply 只在点击「应用修改」时发出、不随裁决自动发出，onSegmentChange 携带全量段决策（含 unchanged 段恒 accepted）。状态语义：逐段裁决三态——changed 段接受/拒绝二态切换（默认接受）、unchanged 段恒接受不可裁决；预览态经预览开关（aria-pressed）实时合成 appliedText 可预览；before/after 一致只渲染一致性说明、无动作行；源文本变化（消费方回退重传 props）整体重置裁决与预览。禁区：禁引入 jsdiff 等外部 diff 依赖（§22.6 承载件零依赖，tokenize/diffTextSegments/synthesizeAppliedText 已导出可复用）；不做消费方原文持有与应用后回退——组件内无二次撤销态，消费方在 onApply 前自行保存 before、回退时重传 props；禁把本件当编辑器（只裁决不编辑文本）；禁消费方另造第二套 diff 呈现（§10.1 唯一实现）' },
-  { name: 'loading-overlay', file: 'semantic/loading-overlay.tsx', section: 'Feedback', status: 'canonical' },
   { name: 'mock-badge', file: 'ui/mock-badge.tsx', section: 'Data Display', status: 'canonical', galleryExempt: '运行时挂载件（入口/错误边界挂载），非画廊可 demo 形态' },
-  { name: 'page-error-fallback', file: 'semantic/page-error-fallback.tsx', section: 'Feedback', status: 'canonical', galleryExempt: '运行时挂载件（入口/错误边界挂载），非画廊可 demo 形态' },
-  { name: 'page-header', file: 'semantic/page-header.tsx', section: 'App Patterns', status: 'canonical' },
-  { name: 'page-shell', file: 'semantic/page-shell.tsx', section: 'Layout & Shells', status: 'canonical' },
   // G7 倒置收编迁出 ui/，保留登记保 LU（2026-09-29）
   { name: 'property-panel', file: 'shared/components/property-panel.tsx', section: 'App Components', status: 'canonical' },
-  { name: 'quick-cards-toggle', file: 'semantic/quick-cards-toggle.tsx', section: 'App Patterns', status: 'canonical' },
-  { name: 'right-sidebar', file: 'semantic/right-sidebar.tsx', section: 'Layout & Shells', status: 'canonical' },
-  { name: 'section-card', file: 'semantic/section-card.tsx', section: 'Layout & Shells', status: 'canonical' },
-  { name: 'sidebar-panel', file: 'semantic/sidebar-panel.tsx', section: 'Layout & Shells', status: 'canonical' },
-  { name: 'status-pill', file: 'semantic/status-pill.tsx', section: 'Data Display', status: 'canonical' },
-  { name: 'sub-page-toolbar', file: 'semantic/sub-page-toolbar.tsx', section: 'App Patterns', status: 'canonical' },
   // Task Atoms 套件件：子任务进度徽章（进度环+计数，22px 外框标准）。提取自 task-rows /
   // task-simple-list / 画廊三份重复实现，提取同批接好三个消费方，登记 canonical。
-  { name: 'subtask-badge', file: 'semantic/subtask-badge.tsx', section: 'Semantic', status: 'canonical' },
   { name: 'tab-bar', file: 'semantic/tab-bar.tsx', section: 'Navigation', status: 'canonical' },
-  { name: 'toolbar-row', file: 'semantic/toolbar-row.tsx', section: 'App Patterns', status: 'canonical' },
-  { name: 'view-display-popover', file: 'semantic/view-display-popover.tsx', section: 'Overlays', status: 'internal' },
 
   // ── 语义组件层：src/components/semantic/（G 类批 G1 起：新增组件默认落点）──
   // props 面封闭（不接 className/variant，口径见 semantic/README.md）；业务面可直接消费。
-  { name: 'chip', file: 'semantic/chip.tsx', section: 'Semantic', status: 'canonical' },
   // 第三件语义组件：主题模式卡片（三档意图）。提取自 appearance-section 的内联 JSX，
   // 消费方同批接好（设置页外观分区），故同 nav-status-dot 登记 canonical。
   // 预览缩略图的字面色单列豁免：宪法附录 A.1 行 A8 + check-palette.mjs 同名谓词。
-  { name: 'theme-mode-card', file: 'semantic/theme-mode-card.tsx', section: 'Semantic', status: 'canonical' },
   // 批二三件（chart-card / stat-tile / metric-row）登记 standby：首消费同批接入
   // （project-overview-charts 两块 / dashboard-page 弹窗 tile 簇 / team-stats-section 进度列），
   // 消费簇尚小，按 chip 先例留复核窗口观察泛化形态是否立得住。
-  { name: 'chart-card', file: 'semantic/chart-card.tsx', section: 'Semantic', status: 'canonical' },
   // JEV 概率条（CAP-A-27 扩展批）：0-100% 概率统一呈现，紫系=AI 预估与真实数据区分
-  { name: 'confidence-bar', file: 'semantic/confidence-bar.tsx', section: 'Semantic', status: 'canonical' },
-  { name: 'stat-tile', file: 'semantic/stat-tile.tsx', section: 'Semantic', status: 'canonical' },
   // 统计卡归一批（2026-09-29）：原 ui/stats-card 升格语义层标准件 + 原 ui/stat-card 收编为
   // featured 变种（layout 封闭枚举，非样式透传）；卡底（surface）与数值彩色（coloredValue）
   // 为封闭可选项。analytics / dashboard-page / settings ai overview / acceptance / team-stats
   // 五处本地与内联实现同批退役，旧 ui/stats-card 十页消费全部改道本件。
-  { name: 'stats-card', file: 'semantic/stats-card.tsx', section: 'Semantic', status: 'canonical' },
   // 图表重设计批（2026-10-11，参考 dsh-context 仪表盘风格）：环形占比图 + 分段比例条
   // 首消费同批接入（global-overview-charts 成本环形图 + 优先级构成条）。
-  { name: 'donut-chart', file: 'semantic/donut-chart.tsx', section: 'Semantic', status: 'canonical' },
-  { name: 'proportion-bar', file: 'semantic/proportion-bar.tsx', section: 'Semantic', status: 'canonical' },
   // 图例网格登记 internal（LU 口径：仅被 donut-chart / proportion-bar 两个 semantic 兄弟
   // 组件内建消费，无 modules/shared 直引——同 checkbox-group 先例「仅被其他组件消费的件
   // 不占 canonical LU 分母」）；画廊仍陈列 demo（internal 免门禁非禁展示）。
-  { name: 'chart-legend-grid', file: 'semantic/chart-legend-grid.tsx', section: 'Semantic', status: 'internal' },
   // 详情页语义化批四（2026-10-02）：L2 详情页双栏母版——收编 task/bug/member/team 四页
   // 逐字重复骨架（PageShell+SubPageToolbar+主栏自滚动居中宽档+RightSidebar），侧栏二态
   // 内聚受控/非受控双模，主栏宽度走 page-shell 的 L1 总表分发（§20.2）。
-  { name: 'detail-page-frame', file: 'semantic/detail-page-frame.tsx', section: 'Layout & Shells', status: 'canonical' },
   // 设置页语义组件批（2026-10-01，用户四裁决：scrubber 嵌吸顶卡第二行 / 新件先行 /
   // 毛玻璃卡+text-2xl / 三件+试点页）：settings-header 双态吸顶头（替代 PageHeader 在
   // 设置域的角色）、section-scrubber 栏目跳转（与 modules/document 的 chapter-scrubber
   // 刻度轨为不同组件，撞名裁决改名见组件头）、settings-section-card 栏目卡（与旧
   // section-card 并存，旧件另批评估归并——存量 24 消费文件不一次改写）。
-  { name: 'settings-header', file: 'semantic/settings-header.tsx', section: 'Semantic', status: 'canonical' },
-  { name: 'section-scrubber', file: 'semantic/section-scrubber.tsx', section: 'Semantic', status: 'canonical' },
-  { name: 'settings-section-card', file: 'semantic/settings-section-card.tsx', section: 'Semantic', status: 'canonical' },
   { name: 'status-definition-list', file: 'semantic/status-definition-list.tsx', section: 'Semantic', status: 'canonical' },
   { name: 'status-definition-dialog', file: 'semantic/status-definition-dialog.tsx', section: 'Semantic', status: 'canonical', galleryExempt: '受控表单弹窗（候选/回调由消费方注入），画廊以 status-definition-list demo 间接覆盖' },
   // 设置页语义组件批二（2026-10-01）：sticky-save-bar 脏状态保存栏（收编设置域三种
   // 保存落点并存——页头 Save 钮/控件旁/卡底钮，GitHub/Vercel 惯例 sticky bottom 毛玻璃条）；
   // settings-field-row 左说明右控件字段行（收编 settings 域 10+ 处同构散写）。
-  { name: 'sticky-save-bar', file: 'semantic/sticky-save-bar.tsx', section: 'Semantic', status: 'canonical' },
   // 统一创建面板优化批四（2026-10-27）：form-dialog 标准化实体创建/编辑对话框——
   // Dialog 骨架+RHF+Zod（§13.1）+提交态（§10.6）+脏确认（§20.1）+§10.8 尺寸档一次封死，
   // 面板外独立创建对话框收敛承载件；字段段 render prop 注入，props 封闭（G8）
-  { name: 'form-dialog', file: 'semantic/form-dialog.tsx', section: 'Semantic', status: 'canonical' },
-  { name: 'settings-field-row', file: 'semantic/settings-field-row.tsx', section: 'Semantic', status: 'canonical' },
   // path-input 路径输入统一件（CAP-A-28，2026-10-03）：手输+桌面壳系统选择器
   // （choose_directory/choose_file）+后端实测验证+失效一键创建+保底报错，
   // 收编 git/workspace/project/settings 四域 6 处路径手输。
-  { name: 'path-input', file: 'semantic/path-input.tsx', section: 'Semantic', status: 'canonical' },
   // 成本一等公民承载件（宪法 §22.2 / 组件规划账本 A3，2026-10-27）：金额+token 双轨、
   // mono tabular-nums、运行态数字滚动+微光（240ms 预算、reduced-motion 直出）、双缺席
   // 「—」诚实降级禁造假数。由 run-overview-card / run-info-panel 内联成本展示抽出收编
   // （两消费方同批接好，登记 canonical）。aiNotes 为 §22.7 登记范式首例。
-  { name: 'cost-figure', file: 'semantic/cost-figure.tsx', section: 'Semantic', status: 'canonical', aiNotes: '数据契约：amount/tokens 双轨且单边可缺席（null 或非有限数=无数据），本件只渲染调用方传入的自身值，组/分支级汇总必须由父级从成员值现算后传单值。状态语义：running=爬升中动效态（数字滚动 240ms+微光扫过，reduced-motion 直出终值），终态不传 running 即静默；双轨均缺席渲染「—」占位诚实降级。禁区：禁传预汇总值、禁传 0 冒充无数据、禁绕过本件手写成本展示（宪法 §22.2 成本一等公民律）' },
   // 产物管理标准件（CAP-A-32，2026-10-27）：文件类型图标按扩展名→MIME 两级映射
   // （扩展名优先），tone 走 §19.5 封闭词表；产物列表/预览/上传唯一出口，禁页面自拼 File* 映射
-  { name: 'file-type-icon', file: 'semantic/file-type-icon.tsx', section: 'Data Display', status: 'canonical' },
   // 产物来源徽标（CAP-A-32）：upload/execution/document 三源标注；传 to 即整枚为溯源跳转
   { name: 'artifact-source-badge', file: 'semantic/artifact-source-badge.tsx', section: 'Data Display', status: 'canonical' },
 
@@ -248,29 +202,7 @@ export const COMPONENT_REGISTRY: ComponentEntry[] = [
   { name: 'user-accounts-section', file: 'modules/admin/components/user-accounts-section.tsx', section: 'App Components', status: 'canonical' },
   { name: 'user-create-dialog', file: 'modules/admin/components/user-create-dialog.tsx', section: 'App Components', status: 'canonical' },
   { name: 'user-edit-dialog', file: 'modules/admin/components/user-edit-dialog.tsx', section: 'App Components', status: 'canonical' },
-  { name: 'central-watch-dial', file: 'modules/ai-surface/components/central-watch-dial.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'decision-queue-panel', file: 'modules/ai-surface/components/decision-queue-panel.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'omni-dock', file: 'modules/ai-surface/components/omni-dock.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'pipeline-lane-strip', file: 'modules/ai-surface/components/pipeline-lane-strip.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'sample-tag', file: 'modules/ai-surface/components/sample-tag.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'screenplay-controls', file: 'modules/ai-surface/components/screenplay-controls.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'station-card', file: 'modules/ai-surface/components/station-card.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'surface-liveness', file: 'modules/ai-surface/components/surface-liveness.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'surface-narration-bar', file: 'modules/ai-surface/components/surface-narration-bar.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'watch-deck', file: 'modules/ai-surface/components/watch-deck.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'anchor-qa-thread', file: 'modules/assistant/components/anchor-qa-thread.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'assistant-colleague-slot', file: 'modules/assistant/components/assistant-colleague-slot.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'assistant-context-chip', file: 'modules/assistant/components/assistant-context-chip.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'assistant-decision-tab', file: 'modules/assistant/components/assistant-decision-tab.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'assistant-fab', file: 'modules/assistant/components/assistant-fab.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'assistant-history-menu', file: 'modules/assistant/components/assistant-history-menu.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'assistant-message-list', file: 'modules/assistant/components/assistant-message-list.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'assistant-opening-report', file: 'modules/assistant/components/assistant-opening-report.tsx', section: 'AI Execution', status: 'canonical' },
   { name: 'assistant-panel', file: 'modules/assistant/components/assistant-panel.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'assistant-quick-prompts', file: 'modules/assistant/components/assistant-quick-prompts.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'assistant-run-line', file: 'modules/assistant/components/assistant-run-line.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'assistant-status-dot', file: 'modules/assistant/components/assistant-status-dot.tsx', section: 'AI Execution', status: 'canonical' },
-  { name: 'assistant-tool-card', file: 'modules/assistant/components/assistant-tool-card.tsx', section: 'AI Execution', status: 'canonical' },
   { name: 'admin-guard', file: 'modules/auth/components/admin-guard.tsx', section: 'App Components', status: 'canonical' },
   { name: 'auth-guard', file: 'modules/auth/components/auth-guard.tsx', section: 'App Components', status: 'canonical' },
   { name: 'auth-shell', file: 'modules/auth/components/auth-shell.tsx', section: 'App Components', status: 'canonical' },

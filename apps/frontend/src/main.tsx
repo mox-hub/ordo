@@ -10,6 +10,7 @@ import { ConfirmProvider } from "@/shared/confirm/confirm-provider"
 import { PromptProvider } from "@/shared/prompt/prompt-provider"
 import { ToastProvider } from "@/components/ui/toast"
 import { router } from "./app/router"
+import { UiI18nProvider } from "./app/ui-i18n-provider"
 import { renderStartupFailure } from "./app/startup-failure"
 import { restoreDesktopSession } from "@/shared/lib/desktop-session"
 import { LoadingProvider } from "@/components/semantic/loading-overlay"
@@ -33,20 +34,22 @@ const root = createRoot(document.getElementById("root")!)
 function renderApp(): void {
   root.render(
     <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <LoadingProvider defaultMode="bar">
-          <ThemeProvider>
-            <ConfirmProvider>
-              <PromptProvider>
-                <RouterProvider router={router} />
-                <GlobalLoadingState />
-                <ToastProvider position="top-right" />
-                <MockBadge />
-              </PromptProvider>
-            </ConfirmProvider>
-          </ThemeProvider>
-        </LoadingProvider>
-      </QueryClientProvider>
+      <UiI18nProvider>
+        <QueryClientProvider client={queryClient}>
+          <LoadingProvider defaultMode="bar">
+            <ThemeProvider>
+              <ConfirmProvider>
+                <PromptProvider>
+                  <RouterProvider router={router} />
+                  <GlobalLoadingState />
+                  <ToastProvider position="top-right" />
+                  <MockBadge />
+                </PromptProvider>
+              </ConfirmProvider>
+            </ThemeProvider>
+          </LoadingProvider>
+        </QueryClientProvider>
+      </UiI18nProvider>
     </StrictMode>
   )
 }

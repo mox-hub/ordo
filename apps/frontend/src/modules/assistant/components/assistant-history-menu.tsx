@@ -1,141 +1,60 @@
 /**
- * 历史对话菜单 —— 头部时钟按钮弹出：新建对话 + 历史会话列表（相对时间，
- * 当前会话高亮；点选切换、空会话显示「新对话」占位）。
- * AssistantHistoryList 独立导出便于测试。
+ * AssistantHistoryMenu —— 主仓 i18n 适配层。
+ *
+ * 展示实现已迁至 @mox-hub/patterns；本文件注入 react-i18next 文案与相对时间，
+ * 保留既有语言切换行为。
  */
+import type { ComponentProps } from 'react';
 import { useTranslation } from 'react-i18next';
-import { History, SquarePen } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
-import { HeaderActionButton } from '@/components/semantic/header-action-button';
-import type { AssistantConversationSummary } from '../api/assistant-api';
+  AssistantHistoryList as PatternAssistantHistoryList,
+  AssistantHistoryMenu as PatternAssistantHistoryMenu,
+} from '@mox-hub/patterns/components/assistant-history-menu';
 
-function formatRelativeParts(iso: string): { key: string; n?: number } | null {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return null;
-  const diffMs = Date.now() - date.getTime();
-  const diffMins = Math.floor(diffMs / (1000 * 60));
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-  if (diffMins < 1) return { key: 'assistant.history.justNow' };
-  if (diffMins < 60) return { key: 'assistant.history.minutesAgo', n: diffMins };
-  if (diffHours < 24) return { key: 'assistant.history.hoursAgo', n: diffHours };
-  if (diffDays < 7) return { key: 'assistant.history.daysAgo', n: diffDays };
-  return null; // 更老直接显示日期
+type ListProps = ComponentProps<typeof PatternAssistantHistoryList>;
+type MenuProps = ComponentProps<typeof PatternAssistantHistoryMenu>;
+
+function useHistoryAdapters() {
+  const { t } = useTranslation();
+  const labels = {
+    new: t('assistant.history.new'),
+    empty: t('assistant.history.empty'),
+    untitled: t('assistant.history.untitled'),
+    open: t('assistant.history.open'),
+  };
+  const formatUpdatedAt = (iso: string): string => {
+    const date = new Date(iso);
+    if (Number.isNaN(date.getTime())) return '';
+    const diffMins = Math.floor((Date.now() - date.getTime()) / (1000 * 60));
+    const diffHours = Math.floor(diffMins / 60);
+    const diffDays = Math.floor(diffHours / 24);
+    if (diffMins < 1) return t('assistant.history.justNow');
+    if (diffMins < 60) return t('assistant.history.minutesAgo', { n: diffMins });
+    if (diffHours < 24) return t('assistant.history.hoursAgo', { n: diffHours });
+    if (diffDays < 7) return t('assistant.history.daysAgo', { n: diffDays });
+    return date.toLocaleDateString();
+  };
+  return { labels, formatUpdatedAt };
 }
 
-export function AssistantHistoryList({
-  conversations,
-  isLoading,
-  activeConversationId,
-  currentConversationId,
-  onSelect,
-  onCreate,
-}: {
-  conversations: AssistantConversationSummary[];
-  isLoading?: boolean;
-  /** 菜单持有者当前展示的会话（跟随模式为 currentConversationId） */
-  activeConversationId: string | null;
-  /** 服务端「当前会话」（最新 updatedAt），空会话占位与高亮用它兜底 */
-  currentConversationId: string | null;
-  onSelect: (id: string) => void;
-  onCreate: () => void;
-}) {
-  const { t } = useTranslation();
-
+export function AssistantHistoryList(props: ListProps) {
+  const { labels, formatUpdatedAt } = useHistoryAdapters();
   return (
-    <div className="flex flex-col gap-1" data-ai-component="assistant.history-list">
-      <Button
-        type="button"
-        variant="outline"
-        disabled={isLoading}
-        onClick={onCreate}
-        className="h-8 justify-start gap-2 text-xs"
-        data-ai-action="assistant.history.new.click"
-      >
-        <SquarePen className="size-3.5" />
-        {t('assistant.history.new')}
-      </Button>
-      {isLoading ? null : conversations.length === 0 ? (
-        <p className="px-2 py-3 text-2xs text-content-text-muted">
-          {t('assistant.history.empty')}
-        </p>
-      ) : (
-        <div className="max-h-100 overflow-y-auto">
-          {conversations.map((conversation) => {
-            const isActive = conversation.id === (activeConversationId ?? currentConversationId);
-            const title =
-              conversation.messageCount > 0 && conversation.title
-                ? conversation.title
-                : t('assistant.history.untitled');
-            const rel = formatRelativeParts(conversation.updatedAt);
-            return (
-              <Button
-                key={conversation.id}
-                type="button"
-                variant="ghost"
-                onClick={() => onSelect(conversation.id)}
-                className={cn(
-                  'h-auto w-full justify-between gap-2 px-2 py-1.5 text-left font-normal',
-                  isActive && 'bg-accent',
-                )}
-              >
-                <span className="min-w-0 flex-1 truncate text-xs text-content-text">
-                  {title}
-                </span>
-                <span className="shrink-0 text-2xs text-content-text-muted">
-                  {rel
-                    ? t(rel.key, rel.n !== undefined ? { n: rel.n } : {})
-                    : new Date(conversation.updatedAt).toLocaleDateString()}
-                </span>
-              </Button>
-            );
-          })}
-        </div>
-      )}
-    </div>
+    <PatternAssistantHistoryList
+      {...props}
+      labels={{ ...labels, ...props.labels }}
+      formatUpdatedAt={props.formatUpdatedAt ?? formatUpdatedAt}
+    />
   );
 }
 
-export function AssistantHistoryMenu({
-  conversations,
-  isLoading,
-  activeConversationId,
-  currentConversationId,
-  onSelect,
-  onCreate,
-}: {
-  conversations: AssistantConversationSummary[];
-  isLoading?: boolean;
-  activeConversationId: string | null;
-  currentConversationId: string | null;
-  onSelect: (id: string) => void;
-  onCreate: () => void;
-}) {
-  const { t } = useTranslation();
-
+export function AssistantHistoryMenu(props: MenuProps) {
+  const { labels, formatUpdatedAt } = useHistoryAdapters();
   return (
-    <Popover>
-      <PopoverTrigger
-        render={
-          <HeaderActionButton icon={History} label={t('assistant.history.open')} />
-        }
-      />
-      <PopoverContent align="end" className="w-72 p-2">
-        <AssistantHistoryList
-          conversations={conversations}
-          isLoading={isLoading}
-          activeConversationId={activeConversationId}
-          currentConversationId={currentConversationId}
-          onSelect={onSelect}
-          onCreate={onCreate}
-        />
-      </PopoverContent>
-    </Popover>
+    <PatternAssistantHistoryMenu
+      {...props}
+      labels={{ ...labels, ...props.labels }}
+      formatUpdatedAt={props.formatUpdatedAt ?? formatUpdatedAt}
+    />
   );
 }

@@ -293,14 +293,6 @@ function consumersOf(entry, accept) {
  * 或补真实消费方，都不是删除。
  */
 const LU_BASELINE = new Map([
-  [
-    "global-loading-state",
-    "仅被 app 入口 src/main.tsx 引用（不在 modules/shared 内 ⇒ 按 §19.3 口径判 0）",
-  ],
-  [
-    "loading-overlay",
-    "仅被原子层内部（ui/global-loading-state.tsx）与 app 入口引用 ⇒ 按 §19.3 表应改判 internal",
-  ],
   ["mock-badge", "仅被 app 入口 src/main.tsx 引用 ⇒ 同上"],
 ]);
 

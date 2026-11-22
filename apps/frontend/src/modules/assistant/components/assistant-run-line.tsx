@@ -1,16 +1,14 @@
 /**
- * 执行行卡片 —— 「转执行」后的运行条目：轮询 run 状态（5s，终态停轮），
- * 终态时失效 decisions 缓存让建议卡回流；运行详情面板直开 + 执行中心入口；
- * 失败/阻塞卡提供一键重试（同内容重新派发 CLI）。
+ * AssistantRunLine —— 主仓轮询/事件/mutation 适配层。
+ *
+ * 展示壳已迁至 @mox-hub/patterns；本文件保留 5s 轮询、run.updated 事件失效、
+ * 失败重试 mutation、运行详情弹窗与执行中心跳转。
  */
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { Bot, CheckCircle2, ExternalLink, FileText, RotateCcw, XCircle } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { Button } from '@/components/ui/button';
-import { Spinner } from '@/components/ui/spinner';
+import { AssistantRunLine as PatternAssistantRunLine } from '@mox-hub/patterns/components/assistant-run-line';
 import { toast } from '@/components/ui/toast';
 import { eventClient } from '@/infrastructure/event-client';
 import { RunDetailsDialog } from '@/modules/executions';
@@ -90,81 +88,26 @@ export function AssistantRunLine({
   }, [isTerminal, qc]);
 
   return (
-    <div className="flex items-start gap-2" data-ai-component="assistant.run-line">
-      <span className="flex size-6 shrink-0 items-center justify-center rounded-lg bg-accent-purple-light text-accent-purple">
-        <Bot className="size-3.5" />
-      </span>
-      <div
-        className={cn(
-          'max-w-4/5 flex-1 rounded-lg border px-3 py-2 text-xs',
-          isFailed
-            ? 'border-accent-red/30 bg-accent-red-light/60 text-accent-red'
-            : isTerminal
-              ? 'border-accent-green/30 bg-accent-green-light/60 text-content-text'
-              : 'border-border bg-content-bg-secondary/60 text-content-text-secondary',
-        )}
-      >
-        <p className="flex items-center gap-1.5 font-medium">
-          {!isTerminal ? (
-            <Spinner size="sm" className="size-3 text-accent-blue" />
-          ) : isFailed ? (
-            <XCircle className="size-3" />
-          ) : (
-            <CheckCircle2 className="size-3 text-accent-green" />
-          )}
-          {!isTerminal
-            ? t('assistant.run.running')
-            : isFailed
-              ? t('assistant.run.failed')
-              : t('assistant.run.completed')}
-        </p>
-        <p className="mt-0.5 line-clamp-2 text-2xs text-content-text-muted">{entry.content}</p>
-        {isFailed && data?.error ? (
-          <p className="mt-0.5 break-words text-2xs">{data.error}</p>
-        ) : null}
-        <div className="mt-1 flex items-center gap-1">
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => setDetailOpen(true)}
-            className="h-5 gap-1 px-1 text-2xs text-accent-blue underline-offset-2 hover:underline"
-          >
-            <FileText className="size-3" />
-            {t('runDetails.viewDetail')}
-          </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            onClick={() => navigate('/app/executions')}
-            className="h-5 gap-1 px-1 text-2xs text-content-text-muted underline-offset-2 hover:underline"
-          >
-            <ExternalLink className="size-3" />
-            {t('assistant.run.viewDetail')}
-          </Button>
-          {isFailed && projectId ? (
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={retry.isPending}
-              onClick={() => retry.mutate()}
-              className="ml-auto h-5 gap-1 px-1 text-2xs underline-offset-2 hover:underline"
-            >
-              {retry.isPending ? (
-                <Spinner size="sm" className="size-3" />
-              ) : (
-                <RotateCcw className="size-3" />
-              )}
-              {t('assistant.run.retry')}
-            </Button>
-          ) : null}
-        </div>
-      </div>
-
-      <RunDetailsDialog
-        runId={entry.runId}
-        open={detailOpen}
-        onOpenChange={setDetailOpen}
+    <>
+      <PatternAssistantRunLine
+        entry={entry}
+        status={status}
+        error={data?.error}
+        retrying={retry.isPending}
+        onViewDetail={() => setDetailOpen(true)}
+        onOpenExecutions={() => navigate('/app/executions')}
+        onRetry={isFailed && projectId ? () => retry.mutate() : undefined}
+        labels={{
+          running: t('assistant.run.running'),
+          failed: t('assistant.run.failed'),
+          completed: t('assistant.run.completed'),
+          retry: t('assistant.run.retry'),
+          viewDetail: t('runDetails.viewDetail'),
+          openExecutions: t('assistant.run.viewDetail'),
+        }}
       />
-    </div>
+
+      <RunDetailsDialog runId={entry.runId} open={detailOpen} onOpenChange={setDetailOpen} />
+    </>
   );
 }

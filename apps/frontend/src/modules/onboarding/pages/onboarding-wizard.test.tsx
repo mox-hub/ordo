@@ -138,7 +138,12 @@ function mockStateAt(
 /** 结构性断言：透传键名模式下渲染区不得出现任何中文字符（硬编码文案 = 违规）。
  *  base-ui Dialog 走 Portal 挂 document.body——必须扫 baseElement 而非 container。 */
 function assertNoHardcodedChinese(baseElement: HTMLElement) {
-  const text = baseElement.textContent ?? '';
+  // @mox-hub/ui 0.1.0-alpha.4 起内置 zh-CN 文案目录，Dialog/Sheet 关闭按钮
+  // 渲染 sr-only「关闭」（data-slot="dialog-close"）。这是 UI 基线默认值，
+  // 不是向导硬编码；扫描前剔除第三方关闭控件，保留对向导自身文案的检查。
+  const scoped = baseElement.cloneNode(true) as HTMLElement;
+  scoped.querySelectorAll('[data-slot$="-close"]').forEach((el) => el.remove());
+  const text = scoped.textContent ?? '';
   const cjk = text.match(/[\u4e00-\u9fff]/g);
   expect(cjk, `发现硬编码中文字符：${cjk?.join('')}（上下文：${text.slice(0, 200)}）`).toBeNull();
 }
